@@ -13,7 +13,7 @@ export const Logo: React.FC<LogoProps> = ({
   fill = "#70D4E1",
 }) => {
   return (
-    <Svg width="400" height="400" viewBox="0 0 400 400">
+    <Svg width={width} height={height} viewBox="0 0 400 400">
       <Rect width="100%" height="100%" fill="#fff" fillOpacity="0"></Rect>
       <G
         className="watermark-logodesign"
