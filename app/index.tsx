@@ -1,26 +1,39 @@
-import { Pressable, Text, View } from "react-native";
-import { Logo } from "@/components/Logo/Logo";
 import React from "react";
 import { useTheme } from "@/hooks/useTheme";
-import { initStravaAuth } from "@/auth/strava";
+import { HomeScreen } from "@/containers/HomeScreen";
+import { ThemedText } from "@/components/ThemedText";
+import { Link } from "expo-router";
+import { View } from "react-native";
 
 export default function Index() {
   const [theme] = useTheme();
 
+  const noRoutesAvailable = true;
+
+  if (noRoutesAvailable) {
+    return (
+      <HomeScreen>
+        <View style={{ marginTop: 140 }}>
+          <Link
+            href={{ pathname: "/authorise" }}
+            style={{
+              width: "100%",
+              textAlign: "center",
+              padding: 20,
+              borderWidth: 1,
+              borderColor: "green",
+            }}
+          >
+            <ThemedText>Add routes</ThemedText>
+          </Link>
+        </View>
+      </HomeScreen>
+    );
+  }
+
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: theme.background,
-      }}
-    >
-      <Logo />
-      {/*<Text style={{ color: theme.text }}> Hello </Text>*/}
-      <Pressable onPress={initStravaAuth}>
-        <Text>Sync your Strava</Text>
-      </Pressable>
-    </View>
+    <HomeScreen>
+      <ThemedText>Hello</ThemedText>
+    </HomeScreen>
   );
 }

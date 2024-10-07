@@ -1,7 +1,8 @@
-import { Stack } from "expo-router";
+import { Slot } from "expo-router";
 import { AppThemeProvider } from "@/providers/Theme";
 import * as SplashScreen from "expo-splash-screen";
 import { useLoading } from "@/hooks";
+import { StatusBar } from "expo-status-bar";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().then();
@@ -14,9 +15,8 @@ export default function RootLayout() {
 
   return (
     <AppThemeProvider>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-      </Stack>
+      <Slot />
+      <StatusBar style="auto" />
     </AppThemeProvider>
   );
 }
