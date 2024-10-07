@@ -1,6 +1,6 @@
 import { appConfig } from "@/constants/config";
 import { Linking } from "react-native";
-import { StravaAuthResponse } from "@/auth/strava/types";
+import { StravaAuthResponse, StravaRoute } from "@/auth/strava/types";
 
 export const initStravaAuth = () => {
   const url = new URL("https://www.strava.com/oauth/authorize");
@@ -20,7 +20,7 @@ export const handleStravaAuthorisation = async (urlParams: URLSearchParams) => {
   if (error || !code) {
     console.error("Error when authorising Strava: ", error);
 
-    // TODO: Handle error or no authorisation
+    // TODO: Handle error or no authorisation scenario
     return new Response("Error");
   }
 
@@ -31,6 +31,10 @@ export const handleStravaAuthorisation = async (urlParams: URLSearchParams) => {
   console.log("Strava: Auth response: ", stravaAuth);
 
   // TODO: Save the Strava auth response to the user's account
+  const routes = await getStravaRoutes(stravaAuth.access_token)(
+    stravaAuth.athlete.id,
+  );
+  console.log(routes);
 
   return new Response("Strava: Authorised successfully");
 };
@@ -50,4 +54,19 @@ const getStravaAuthResponse = async (code: string) => {
   });
 
   return (await response.json()) as StravaAuthResponse;
+};
+
+const getStravaRoutes = (accessToken: string) => async (athleteId: number) => {
+  const url = new URL(
+    `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
+  );
+
+  // TODO: is this data being paged? fix it so we always get all
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  return (await response.json()) as StravaRoute[];
 };
