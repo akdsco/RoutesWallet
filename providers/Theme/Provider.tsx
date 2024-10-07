@@ -12,6 +12,7 @@ export const AppThemeProvider = ({ children }: React.PropsWithChildren) => {
   console.log("Rendering theme: ", colorScheme);
 
   useEffect(() => {
+    console.log("Changing theme: ", colorScheme);
     setTheme(colorScheme === "light" ? baseTheme.light : baseTheme.dark);
   }, [colorScheme]);
 
