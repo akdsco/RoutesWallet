@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "RoutesWallet",
-    "slug": "RoutesWallet",
+    "slug": "routeswallet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -31,6 +31,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6a53160b-99d0-4c40-bed4-00358d699f94"
+      }
+    },
+    "owner": "akdsco"
   }
 }
