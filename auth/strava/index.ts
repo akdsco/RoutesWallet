@@ -1,13 +1,32 @@
 import { appConfig } from "@/constants/config";
-import { Linking } from "react-native";
+import { Linking, Platform } from "react-native";
 import { StravaAuthResponse, StravaRoute } from "@/auth/strava/types";
 
 export const initStravaAuth = () => {
-  const url = new URL("https://www.strava.com/oauth/authorize");
+  // TODO: check if user is using android/ios or web and based on that use appropriate authentication code
+
+  let url = new URL("https://www.strava.com/oauth/authorize");
+
+  if (Platform.OS === "ios") {
+    // TODO: Work in progress
+  }
+
+  if (Platform.OS === "android") {
+    url = new URL("https://www.strava.com/oauth/mobile/authorize");
+    // url.searchParams.set("approval_prompt", "auto");
+    url.searchParams.set("redirect_uri", appConfig.stravaRedirect.android);
+  }
+
+  if (Platform.OS === "web") {
+    url.searchParams.set("redirect_uri", appConfig.stravaRedirect.web);
+  }
+
+  // Set most important query params
   url.searchParams.set("client_id", appConfig.stravaClientId);
-  url.searchParams.set("redirect_uri", appConfig.stravaRedirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "activity:read_all");
+
+  console.log("About to link to Strava APP: ", url.toString());
 
   // Open the browser to the Strava authorisation page
   Linking.openURL(url.toString()).catch(console.error);
