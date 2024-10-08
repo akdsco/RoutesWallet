@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { useTheme } from "@/hooks/useTheme";
-import { SafeAreaView, View } from "react-native";
+import { Platform, SafeAreaView, View } from "react-native";
 
 export const HomeScreen = ({ children }: { children: ReactNode }) => {
   const [theme] = useTheme();
@@ -12,6 +12,7 @@ export const HomeScreen = ({ children }: { children: ReactNode }) => {
         flexGrow: 1,
         backgroundColor: theme.background,
         alignItems: "center",
+        marginTop: Platform.OS === "android" ? 30 : undefined,
       }}
     >
       <View style={{ maxWidth: 960 }}>{children}</View>
