@@ -15,7 +15,7 @@ const Container = ({ children }: { children: ReactNode }) => {
         marginTop: Platform.OS === "android" ? 30 : undefined,
       }}
     >
-      <View style={{ maxWidth: 960 }}>{children}</View>
+      <View style={{ maxWidth: 1200 }}>{children}</View>
     </SafeAreaView>
   );
 };

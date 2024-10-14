@@ -15,6 +15,7 @@ export type Theme = {
   icon: string;
   tabIconDefault: string;
   tabIconSelected: string;
+  shadowColor: string;
 };
 
 const tintColorLight = "#70d4e1";
@@ -25,6 +26,7 @@ export const theme: Themes = {
     text: "#4e535a",
     background: "#fff",
     tint: tintColorLight,
+    shadowColor: "#000",
     icon: "#687076",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
@@ -33,6 +35,7 @@ export const theme: Themes = {
     text: "#fff",
     background: "#11111f",
     tint: tintColorDark,
+    shadowColor: "#bfbfbf",
     icon: "#9BA1A6",
     tabIconDefault: "#9BA1A6",
     tabIconSelected: tintColorDark,

@@ -1,46 +1,59 @@
 import { stravaRoutesExamples } from "@/auth/strava/routes";
 import Container from "@/components/Container";
-import { FlatList, View, StyleSheet, useWindowDimensions } from "react-native";
+import {
+  View,
+  StyleSheet,
+  useWindowDimensions,
+  ScrollView,
+} from "react-native";
 import { RouteItem } from "./RouteItem";
 
 export const Routes = () => {
   const { width } = useWindowDimensions();
 
   const getNumColumns = (screenWidth: number) => {
-    if (screenWidth >= 768) return 4; // Desktop and larger tablets
-    if (screenWidth >= 480) return 3; // Smaller tablets
-    return 2; // Mobile
+    if (screenWidth >= 980) return 4; // Desktop and larger tablets
+    if (screenWidth >= 650) return 3; // Smaller tablets
+    if (screenWidth >= 320) return 2; // Mobile
+    return 1; // Small Mobile
   };
 
   const numColumns = getNumColumns(width);
-  const maxWidth = Math.min(width, 960);
+  const maxWidth = Math.min(width, 1200);
   const itemWidth = (maxWidth - 20) / numColumns - 10; // 20px for container padding, 10px for item margin
 
   return (
     <Container>
-      <View style={[styles.container, { maxWidth: 960 }]}>
-        <FlatList
-          data={stravaRoutesExamples}
-          renderItem={({ item }) => (
-            <RouteItem {...{ item, itemWidth }} />
-          )}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={numColumns}
-          contentContainerStyle={styles.gridContainer}
-        />
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+        <View style={styles.innerContainer}>
+          {/* // TODO: Potentially move to FlatList for mobile devices only */}
+          <View style={styles.gridContainer}>
+            {stravaRoutesExamples.map((item) => (
+              <RouteItem
+                key={item.id.toString()}
+                item={item}
+                itemWidth={itemWidth}
+              />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     </Container>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollViewContent: {
+    flexGrow: 1,
+  },
+  innerContainer: {
     flex: 1,
-    alignSelf: "center",
+    maxWidth: 1200,
     width: "100%",
-    padding: 10,
   },
   gridContainer: {
-    justifyContent: "space-between",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
 });
