@@ -1,13 +1,13 @@
 export type StravaAthlete = {
   id: number;
-  username: string;
+  username: string | null;
   resource_state: number;
   firstname: string;
   lastname: string;
-  bio: string;
+  bio: string | null;
   city: string;
-  state: string;
-  country: string;
+  state: string | null;
+  country: string | null;
   sex: string;
   premium: boolean;
   summit: boolean;
