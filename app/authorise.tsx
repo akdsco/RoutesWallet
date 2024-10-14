@@ -1,31 +1,37 @@
-import { HomeScreen } from "@/containers/HomeScreen";
 import { ThemedText } from "@/components/ThemedText";
 import { Pressable, View } from "react-native";
-import { initStravaAuth } from "@/auth/strava";
+import { handleStravaAuthorisation, initStravaAuth } from "@/auth/strava";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import * as Linking from "expo-linking";
 import { EventType } from "expo-linking";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import Container from "@/components/Container";
 
 export default function Authorise() {
-  useEffect(() => {
-    const handleDeepLink = (event: EventType) => {
-      let data = Linking.parse(event.url);
-      // TODO: most likely will move strava OAuth here...?
-      console.log("Process deep link data: ", data); // Process the deep link data
-    };
+  const hasHandledDeepLink = useRef(false);
 
-    // Add event listener for incoming links
+  const handleDeepLink = useCallback((event: EventType) => {
+    if (hasHandledDeepLink.current) {
+      return;
+    }
+
+    const { searchParams } = new URL(event.url);
+    handleStravaAuthorisation(searchParams);
+
+    console.log("Process deep link data: ", searchParams);
+    hasHandledDeepLink.current = true;
+  }, []);
+
+  useEffect(() => {
     const sub = Linking.addEventListener("url", handleDeepLink);
 
     return () => {
-      // Remove the listener when the component is unmounted
       sub.remove();
     };
-  }, []);
+  }, [handleDeepLink]);
 
   return (
-    <HomeScreen>
+    <Container>
       <Pressable onPress={initStravaAuth} style={{ marginTop: 140 }}>
         <View
           style={{
@@ -43,6 +49,6 @@ export default function Authorise() {
           <ThemedText>Add routes from Strava</ThemedText>
         </View>
       </Pressable>
-    </HomeScreen>
+    </Container>
   );
 }

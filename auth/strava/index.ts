@@ -32,9 +32,13 @@ export const initStravaAuth = () => {
   Linking.openURL(url.toString()).catch(console.error);
 };
 
-export const handleStravaAuthorisation = async (urlParams: URLSearchParams) => {
-  const error = urlParams.get("error");
-  const code = urlParams.get("code");
+export const handleStravaAuthorisation = async (searchParams: URLSearchParams) => {
+  const error = searchParams.get("error");
+  const code = searchParams.get("code");
+
+  if (!code && !error) {
+    return;
+  }
 
   if (error || !code) {
     console.error("Error when authorising Strava: ", error);
@@ -44,7 +48,7 @@ export const handleStravaAuthorisation = async (urlParams: URLSearchParams) => {
   }
 
   console.log("Strava: Authorisation code: ", code);
-  console.log("Strava: Authorisation scope: ", urlParams.get("scope"));
+  console.log("Strava: Authorisation scope: ", searchParams.get("scope"));
 
   const stravaAuth = await getStravaAuthResponse(code);
   console.log("Strava: Auth response: ", stravaAuth);
@@ -53,6 +57,7 @@ export const handleStravaAuthorisation = async (urlParams: URLSearchParams) => {
   const routes = await getStravaRoutes(stravaAuth.access_token)(
     stravaAuth.athlete.id,
   );
+
   console.log(routes);
 
   return new Response("Strava: Authorised successfully");
