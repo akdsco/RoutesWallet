@@ -1,4 +1,4 @@
-type StravaAthlete = {
+export type StravaAthlete = {
   id: number;
   username: string;
   resource_state: number;
@@ -14,11 +14,11 @@ type StravaAthlete = {
   created_at: string;
   updated_at: string;
   badge_type_id: number;
-  weight: number;
   profile_medium: string;
   profile: string;
   friend: null;
   follower: null;
+  weight?: number;
 };
 
 export type StravaAuthResponse = {
@@ -30,24 +30,28 @@ export type StravaAuthResponse = {
   athlete: StravaAthlete;
 };
 
+type StravaMap = {
+  id: string;
+  summary_polyline: string;
+  resource_state: number;
+};
+
+type StravaMapUrls = {
+  url: string;
+  retina_url: string;
+  light_url: string;
+  dark_url: string;
+};
+
 export type StravaRoute = {
   athlete: StravaAthlete;
-  description: string;
+  description: string | null;
   distance: number;
   elevation_gain: number;
   id: number;
   id_str: string;
-  map: {
-    id: string;
-    summary_polyline: string;
-    resource_state: number;
-  };
-  map_urls: {
-    url: string;
-    retina_url: string;
-    light_url: string;
-    dark_url: string;
-  };
+  map: StravaMap;
+  map_urls: StravaMapUrls;
   name: string;
   private: boolean;
   resource_state: number;

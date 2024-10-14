@@ -2,7 +2,7 @@ import React, { ReactNode } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { Platform, SafeAreaView, View } from "react-native";
 
-export const HomeScreen = ({ children }: { children: ReactNode }) => {
+const Container = ({ children }: { children: ReactNode }) => {
   const [theme] = useTheme();
 
   return (
@@ -19,3 +19,5 @@ export const HomeScreen = ({ children }: { children: ReactNode }) => {
     </SafeAreaView>
   );
 };
+
+export default Container;

@@ -3,6 +3,6 @@ export const appConfig = {
   stravaRedirect: {
     ios: "routeswallet://authorise?platform_type=strava",
     android: "routeswallet://routeswallet.app",
-    web: "http://localhost:8081?platform_type=strava",
+    web: "http://localhost:8081/authorise?platform_type=strava",
   },
 };
