@@ -1,3 +1,4 @@
+import "expo-dev-client";
 import React, { useEffect, useState } from "react";
 import { Routes } from "@/containers/StravaRoutes";
 import { useRouter } from "expo-router";
@@ -50,6 +51,6 @@ const checkIfRoutesAreAvailable = async (): Promise<boolean> => {
     setTimeout(() => {
       // Replace this with your actual check
       resolve(true);
-    }, 2000);
+    }, 500);
   });
 };
