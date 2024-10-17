@@ -3,7 +3,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { Platform, SafeAreaView, View } from "react-native";
 
 const Container = ({ children }: { children: ReactNode }) => {
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   return (
     <SafeAreaView

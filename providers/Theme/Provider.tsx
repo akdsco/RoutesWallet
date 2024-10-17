@@ -1,24 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { theme as baseTheme } from "@/constants/theme";
-import { useColorScheme } from "react-native";
+import { PropsWithChildren } from "react";
 import { ThemeContext } from "./Context";
+import { useAppThemeProvider } from "./Provider.hook";
 
-export const AppThemeProvider = ({ children }: React.PropsWithChildren) => {
-  const colorScheme = useColorScheme();
-  const initialScheme =
-    colorScheme === "light" ? baseTheme.light : baseTheme.dark;
-  const [theme, setTheme] = useState(initialScheme);
-
-  console.log("Rendering theme: ", colorScheme);
-
-  useEffect(() => {
-    console.log("Changing theme: ", colorScheme);
-    setTheme(colorScheme === "light" ? baseTheme.light : baseTheme.dark);
-  }, [colorScheme]);
+export const AppThemeProvider = ({ children }: PropsWithChildren) => {
+  const theme = useAppThemeProvider();
 
   return (
-    <ThemeContext.Provider value={[theme, setTheme]}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
   );
 };

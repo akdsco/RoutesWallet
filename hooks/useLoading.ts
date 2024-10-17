@@ -19,7 +19,7 @@ export const useLoading = () => {
     if (fontLoaded && !loading) {
       SplashScreen.hideAsync().then();
     }
-  }, [fontLoaded]);
+  }, [loading, fontLoaded]);
 
   useEffect(() => {
     setTimeout(() => {

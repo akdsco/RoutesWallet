@@ -1,5 +1,6 @@
 import { Slot } from "expo-router";
 import { AppThemeProvider } from "@/providers/Theme";
+import { FirebaseProvider } from "@/providers/Firebase";
 import * as SplashScreen from "expo-splash-screen";
 import { useLoading } from "@/hooks";
 import { StatusBar } from "expo-status-bar";
@@ -8,15 +9,14 @@ import { StatusBar } from "expo-status-bar";
 SplashScreen.preventAutoHideAsync().then();
 
 export default function RootLayout() {
-  const loading = useLoading();
-  if (!loading) {
-    return null;
-  }
+  useLoading();
 
   return (
-    <AppThemeProvider>
-      <Slot />
-      <StatusBar style="auto" />
-    </AppThemeProvider>
+    <FirebaseProvider>
+      <AppThemeProvider>
+        <Slot />
+        <StatusBar style="auto" />
+      </AppThemeProvider>
+    </FirebaseProvider>
   );
 }

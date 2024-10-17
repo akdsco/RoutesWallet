@@ -14,7 +14,7 @@ export const Logo: React.FC<LogoProps> = ({
   height = 400,
   fill = "#70D4E1",
 }) => {
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   return (
     <Svg width={width} height={height} viewBox="0 0 400 400">

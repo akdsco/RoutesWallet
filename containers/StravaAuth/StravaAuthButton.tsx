@@ -1,14 +1,17 @@
-import { View } from "react-native";
+import { Platform, View } from "react-native";
 
 import { useEffect } from "react";
-import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { Pressable } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import { appConfig } from "@/constants/config";
+import * as WebBrowser from "expo-web-browser";
+import { handleStravaAuthorisation } from "@/auth/strava";
 
-WebBrowser.maybeCompleteAuthSession();
+if (Platform.OS === "web") {
+  WebBrowser.maybeCompleteAuthSession();
+}
 
 const discovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -17,45 +20,44 @@ const discovery = {
 };
 
 export const StravaAuthButton = () => {
-  console.log("StravaAuthButton");
-
   const [request, response, promptAsync] = useAuthRequest(
     {
       clientId: appConfig.stravaClientId,
       scopes: ["activity:read_all"],
       redirectUri: makeRedirectUri({
         // the "redirect" must match your "Authorization Callback Domain" in the Strava dev console.
-        // native: "routeswallet://localhost?platform_type=strava",
-        path: "localhost?platform_type=strava",
-        scheme: "routeswallet",
+        native: "routeswallet://localhost",
+        // scheme: "routeswallet",
       }),
     },
     discovery
   );
 
   useEffect(() => {
-    console.log(
-      "StravaAuthButton response: ",
-      JSON.stringify(response, undefined, 2)
-    );
-
     if (response?.type === "success") {
-      const { code } = response.params;
+      console.log("2) Strava auth response: ", response);
 
-      console.log("2) Strava auth code: ", code);
+      const { code, scope } = response.params;
+      handleStravaAuthorisation(code, scope);
+    }
+
+    if (response?.type === "error") {
+      console.error("Error when authorising Strava: ", response.error);
     }
   }, [response]);
+
+  const startStravaAuth = () => {
+    console.log(
+      "1) Strava auth request: ",
+      JSON.stringify(request, undefined, 2)
+    );
+    return promptAsync();
+  };
 
   return (
     <Pressable
       disabled={!request}
-      onPress={() => {
-        console.log(
-          "1) Strava auth request: ",
-          JSON.stringify(request, undefined, 2)
-        );
-        return promptAsync();
-      }}
+      onPress={startStravaAuth}
       style={{ marginTop: 140 }}
     >
       <View

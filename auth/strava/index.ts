@@ -39,24 +39,10 @@ const setSearchParams = (url: URL) => {
 };
 
 export const handleStravaAuthorisation = async (
-  searchParams: URLSearchParams
+  code: string,
+  scope: string
 ) => {
-  const error = searchParams.get("error");
-  const code = searchParams.get("code");
-
-  if (!code && !error) {
-    return;
-  }
-
-  if (error || !code) {
-    console.error("Error when authorising Strava: ", error);
-
-    // TODO: Handle error or no authorisation scenario
-    return new Response("Error");
-  }
-
   console.log("Strava: Authorisation code: ", code);
-  console.log("Strava: Authorisation scope: ", searchParams.get("scope"));
 
   const stravaAuth = await getStravaAuthResponse(code);
   console.log("Strava: Auth response: ", stravaAuth);

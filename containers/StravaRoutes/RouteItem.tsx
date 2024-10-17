@@ -18,7 +18,7 @@ export const RouteItem = ({
   item: StravaRoute;
   itemWidth: number;
 }) => {
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   const distanceInKms = (distanceInMeters: number) => {
     const distanceInKm = distanceInMeters / 1000;

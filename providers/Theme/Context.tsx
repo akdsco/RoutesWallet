@@ -1,6 +1,4 @@
-import React, { createContext } from "react";
+import { createContext } from "react";
 import { Theme, theme } from "@/constants/theme";
 
-export const ThemeContext = createContext<
-  [Theme, React.Dispatch<React.SetStateAction<Theme>>]
->([theme.light, () => {}]);
+export const ThemeContext = createContext<Theme>(theme.light);

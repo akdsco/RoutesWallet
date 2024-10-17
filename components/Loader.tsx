@@ -4,7 +4,7 @@ import { View } from "react-native";
 import { useTheme } from "@/hooks";
 
 export const Loader = () => {
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   return (
     <View
