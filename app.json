@@ -23,14 +23,15 @@
         "backgroundColor": "#ffffff"
       },
       "package": "app.akdscompany.routeswallet",
+      "bundleIdentifier": "app.akdscompany.routeswallet",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
           "data": [
             {
-              "scheme": "routeswallet",
-              "host": "*",
+              "scheme": "https",
+              "host": "*.routeswallet.app",
               "pathPrefix": "/"
             }
           ],
