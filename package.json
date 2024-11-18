@@ -54,6 +54,9 @@
     "test": "jest --watchAll",
     "lint": "expo lint",
     "prebuild": "expo prebuild",
-    "build-android-device": "eas build --profile development --platform android"
+    "build": "eas build --profile development",
+    "build-ios": "eas build --profile development --platform ios",
+    "build-simulator-ios": "eas build -p ios --profile preview",
+    "build-android": "eas build --profile development --platform android"
   }
 }
