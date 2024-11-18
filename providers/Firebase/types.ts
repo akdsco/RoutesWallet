@@ -1,7 +1,7 @@
-import { Firestore } from "firebase/firestore";
+import { Database } from "@firebase/database";
 
 export type FirebaseData = {
-  database: Firestore;
+  database: Database;
   user: User | null;
   isUserLoading: boolean;
 };
