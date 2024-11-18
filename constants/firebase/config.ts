@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore/lite";
+import { getDatabase } from "firebase/database";
 
 import { getAnalyticsIfSupported, getFirebaseAuth } from "./functions";
 
@@ -25,7 +25,7 @@ export const app = initializeApp(firebaseConfig);
 
 // Export Firebase variables
 export const analytics = getAnalyticsIfSupported(app);
-export const database = getFirestore(app);
+export const database = getDatabase(app);
 export const auth = getFirebaseAuth(app);
 
 // For more information on how to access Firebase in your project,
