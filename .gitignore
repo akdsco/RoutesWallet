@@ -22,3 +22,7 @@ expo-env.d.ts
 # Native App Builds
 /android/
 /ios/
+
+# Google Firebase setup (should be per user, so no commiting to git)
+/GoogleService-Info.plist
+/google-services.json

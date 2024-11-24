@@ -67,7 +67,8 @@ const getStravaAccessToken = async (athleteId: number) => {
   //   return auth.access_token;
   // }
 
-  // const refreshToken = getNewAccessToken(auth.refresh_token);
+  // TODO: implement DB, then get the token from DB / re-auth
+  const refreshToken = getNewAccessToken(auth.refresh_token);
 };
 
 const getNewAccessToken = async (refreshToken: string) => {};

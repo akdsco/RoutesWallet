@@ -9,8 +9,8 @@ export const useStravaAuthButton = () => {
 
       const { code, scope } = response.params;
 
-      if (scope !== "change me") {
-        // TODO: "scope is not as expected, send user back to auth page"
+      if (scope !== "read,activity:read_all") {
+        // TODO: "scope is not as expected, send user back to auth page", improve scope checking
         console.log("Scope is not as expected, send user back to auth page");
         return;
       }
