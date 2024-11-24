@@ -24,5 +24,6 @@ expo-env.d.ts
 /ios/
 
 # Google Firebase setup (should be per user, so no commiting to git)
+# https://stackoverflow.com/questions/44937175/firebase-should-i-add-googleservice-info-plist-to-gitignore
 /GoogleService-Info.plist
 /google-services.json
