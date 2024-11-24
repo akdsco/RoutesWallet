@@ -1,69 +1,26 @@
 import { appConfig } from "@/constants/config";
-import { Linking, Platform } from "react-native";
 import { StravaAuthResponse, StravaRoute } from "@/auth/strava/types";
-
-export const initStravaAuth = async () => {
-  // TODO: check if user is using android/ios or web and based on that use appropriate authentication code
-
-  if (Platform.OS === "ios") {
-    // Currently not implemented
-  }
-
-  let url: URL = new URL("https://www.strava.com/");
-
-  if (Platform.OS === "android") {
-    url = new URL("https://www.strava.com/oauth/mobile/authorize");
-    setSearchParams(url);
-    // url.searchParams.set("approval_prompt", "auto");
-    url.searchParams.set("redirect_uri", appConfig.stravaRedirect.android);
-  }
-
-  if (Platform.OS === "web") {
-    url = new URL("https://www.strava.com/oauth/authorize");
-    setSearchParams(url);
-    url.searchParams.set("redirect_uri", appConfig.stravaRedirect.web);
-  }
-
-  console.log("1) Strava Authorize URL: ", url.toString());
-
-  // Open the browser to the Strava authorisation page
-  Linking.openURL(url.toString()).catch(console.error);
-};
-
-const setSearchParams = (url: URL) => {
-  url.searchParams.set("client_id", appConfig.stravaClientId);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "activity:read_all");
-
-  return url;
-};
 
 export const handleStravaAuthorisation = async (
   code: string,
-  scope: string
+  scope: string,
 ) => {
-  console.log("Strava: Authorisation code: ", code);
+  const stravaAuth = { scope, ...(await getStravaAuthResponse(code)) };
 
-  const stravaAuth = await getStravaAuthResponse(code);
   console.log("Strava: Auth response: ", stravaAuth);
+  // TODO: save response in the Database (decide how to store it as well, read docs)
 
-  // TODO: Save the Strava auth response to the user's account
-  const routes = await getStravaRoutes(stravaAuth.access_token)(
-    stravaAuth.athlete.id
-  );
-
-  console.log(routes);
-
-  return new Response("Strava: Authorised successfully");
+  return stravaAuth;
 };
 
 const getStravaAuthResponse = async (code: string) => {
   const url = new URL("https://www.strava.com/oauth/token");
   url.searchParams.set("code", code);
   url.searchParams.set("client_id", appConfig.stravaClientId);
+  // TODO: should this client secret be protected?
   url.searchParams.set(
     "client_secret",
-    "ec3d9679315852b95d3bd4222dc4f4ca5262009b"
+    "ec3d9679315852b95d3bd4222dc4f4ca5262009b",
   );
   url.searchParams.set("grant_type", "authorization_code");
 
@@ -74,17 +31,43 @@ const getStravaAuthResponse = async (code: string) => {
   return (await response.json()) as StravaAuthResponse;
 };
 
-const getStravaRoutes = (accessToken: string) => async (athleteId: number) => {
+export const getStravaRoutes = async (athleteId: number) => {
   const url = new URL(
-    `https://www.strava.com/api/v3/athletes/${athleteId}/routes`
+    `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
   );
 
-  // TODO: is this data being paged? fix it so we always get all
+  return await getDataFromStravaApi<StravaRoute[]>(athleteId, url.toString());
+};
+
+const getDataFromStravaApi = async <T>(
+  athleteId: number,
+  url: string,
+): Promise<T> => {
+  const accessToken = getStravaAccessToken(athleteId);
+
   const response = await fetch(url.toString(), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
-  return (await response.json()) as StravaRoute[];
+  return (await response.json()) as T;
 };
+
+const getStravaAccessToken = async (athleteId: number) => {
+  // TODO: check if we already have access token for such user in the database
+
+  // TODO: if token is not in db at all... we are not authorised at all, we should not end up here.
+  //  We should let user know we need to re-auth and send to appropriate screen.
+
+  // TODO: if the token is there but is old, should be refreshed, saved in the DB and served
+  const nowTimestamp = new Date().getTime();
+
+  // if (auth.expires_at < nowTimestamp) {
+  //   return auth.access_token;
+  // }
+
+  // const refreshToken = getNewAccessToken(auth.refresh_token);
+};
+
+const getNewAccessToken = async (refreshToken: string) => {};
