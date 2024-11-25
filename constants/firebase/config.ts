@@ -1,8 +1,9 @@
 import { Platform } from "react-native";
 import { getDatabase } from "@react-native-firebase/database";
 import { getApp, initializeApp } from "@react-native-firebase/app";
+import auth from "@react-native-firebase/auth";
 
-// import { getAnalyticsIfSupported, getFirebaseAuth } from "./functions";
+import { getAnalyticsIfSupported } from "./functions";
 
 if (Platform.OS === "web") {
   const firebaseConfig = {
@@ -16,16 +17,15 @@ if (Platform.OS === "web") {
   };
 
   initializeApp(firebaseConfig);
+
+  //TODO check if below setup also works on mobile, if not, probably have to re-structure
 }
 
 export const app = getApp();
 
-// Export Firebase variables
-export const database = getDatabase(app);
-
-// TODO: unlock analytics and auth once database is working
-// export const analytics = getAnalyticsIfSupported(app);
-// export const auth = getFirebaseAuth(app);
+export const db = getDatabase(app);
+export const analytics = getAnalyticsIfSupported(app);
+export { auth };
 
 // For more information on how to access Firebase in your project,
 // see the Firebase documentation: https://firebase.google.com/docs/web/setup#access-firebase

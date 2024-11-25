@@ -1,3 +1,3 @@
-export { database } from "./config";
+export { db } from "./config";
 export { auth } from "./config";
-export { onAuthStateChanged } from "firebase/auth";
+export { onAuthStateChanged } from "@react-native-firebase/auth";

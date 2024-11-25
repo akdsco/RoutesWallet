@@ -1,17 +1,25 @@
 import { appConfig } from "@/constants/config";
 import { StravaAuthResponse, StravaRoute } from "@/auth/strava/types";
+import { FirebaseDatabaseTypes } from "@react-native-firebase/database";
 
-export const handleStravaAuthorisation = async (
-  code: string,
-  scope: string,
-) => {
-  const stravaAuth = { scope, ...(await getStravaAuthResponse(code)) };
+export const handleStravaAuthorisation =
+  (db: FirebaseDatabaseTypes.Module) => async (code: string, scope: string) => {
+    const { athlete, ...authStuff } = {
+      scope,
+      ...(await getStravaAuthResponse(code)),
+    };
 
-  console.log("Strava: Auth response: ", stravaAuth);
-  // TODO: save response in the Database (decide how to store it as well, read docs)
+    console.log("Strava: Auth response saved ");
 
-  return stravaAuth;
-};
+    const athleteId = athlete.id;
+
+    const userRef = db.ref(`/users/${athleteId}`);
+    const stravaAuthRef = db.ref(`/stravaAuth/${athleteId}`);
+
+    await Promise.all([userRef.set(athlete), stravaAuthRef.set(authStuff)]);
+
+    return athleteId;
+  };
 
 const getStravaAuthResponse = async (code: string) => {
   const url = new URL("https://www.strava.com/oauth/token");
@@ -31,44 +39,59 @@ const getStravaAuthResponse = async (code: string) => {
   return (await response.json()) as StravaAuthResponse;
 };
 
-export const getStravaRoutes = async (athleteId: number) => {
-  const url = new URL(
-    `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
-  );
+export const saveStravaRoutesInDb =
+  (db: FirebaseDatabaseTypes.Module) => async (athleteId: number) => {
+    const url = new URL(
+      `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
+    );
 
-  return await getDataFromStravaApi<StravaRoute[]>(athleteId, url.toString());
-};
+    const stravaRoutes = await getDataFromStravaApi(db)<StravaRoute[]>(
+      athleteId,
+      url.toString(),
+    );
 
-const getDataFromStravaApi = async <T>(
-  athleteId: number,
-  url: string,
-): Promise<T> => {
-  const accessToken = getStravaAccessToken(athleteId);
+    const routesRef = db.ref(`/routes/${athleteId}`);
+    await routesRef.set(stravaRoutes);
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+    return stravaRoutes;
+  };
 
-  return (await response.json()) as T;
-};
+const getDataFromStravaApi =
+  (db: FirebaseDatabaseTypes.Module) =>
+  async <T>(athleteId: number, url: string): Promise<T> => {
+    const accessToken = getStravaAccessToken(db)(athleteId);
 
-const getStravaAccessToken = async (athleteId: number) => {
-  // TODO: check if we already have access token for such user in the database
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
-  // TODO: if token is not in db at all... we are not authorised at all, we should not end up here.
-  //  We should let user know we need to re-auth and send to appropriate screen.
+    return (await response.json()) as T;
+  };
 
-  // TODO: if the token is there but is old, should be refreshed, saved in the DB and served
-  const nowTimestamp = new Date().getTime();
+const getStravaAccessToken =
+  (db: FirebaseDatabaseTypes.Module) => async (athleteId: number) => {
+    const stravaAuthRef = db.ref(`/stravaAuth/${athleteId}`);
 
-  // if (auth.expires_at < nowTimestamp) {
-  //   return auth.access_token;
-  // }
+    const accessTokenData = (
+      await stravaAuthRef.once("value")
+    ).val() as StravaAuthResponse;
 
-  // TODO: implement DB, then get the token from DB / re-auth
-  const refreshToken = getNewAccessToken(auth.refresh_token);
-};
+    console.log(accessTokenData);
+
+    // TODO: if token is not in db at all... we are not authorised at all, we should not end up here.
+    //  We should let user know we need to re-auth and send to appropriate screen?
+
+    const { expires_at, access_token, refresh_token } = accessTokenData;
+
+    const nowTimestamp = new Date().getTime();
+    if (expires_at < nowTimestamp) {
+      return access_token;
+    }
+
+    // TODO: implement toke refreshing, saved new token in the db and return new access token
+    const refreshToken = getNewAccessToken(refresh_token);
+  };
 
 const getNewAccessToken = async (refreshToken: string) => {};

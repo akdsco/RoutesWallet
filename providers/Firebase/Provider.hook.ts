@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { FirebaseData, User } from "./types";
-import { auth, database, onAuthStateChanged } from "@/constants/firebase";
+import { auth, db, onAuthStateChanged } from "@/constants/firebase";
 
 export const useFirebaseProvider = (): FirebaseData => {
   const [user, setUser] = useState<User | null>(null);
@@ -9,7 +9,7 @@ export const useFirebaseProvider = (): FirebaseData => {
   useEffect(() => {
     let isCurrent = true;
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = auth().onAuthStateChanged((user) => {
       if (!isCurrent) {
         return;
       }
@@ -39,6 +39,6 @@ export const useFirebaseProvider = (): FirebaseData => {
   return {
     user,
     isUserLoading,
-    database,
+    db,
   };
 };

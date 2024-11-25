@@ -1,7 +1,7 @@
-import { Database } from "@firebase/database";
+import { FirebaseDatabaseTypes } from "@react-native-firebase/database";
 
 export type FirebaseData = {
-  database: Database;
+  db: FirebaseDatabaseTypes.Module;
   user: User | null;
   isUserLoading: boolean;
 };
