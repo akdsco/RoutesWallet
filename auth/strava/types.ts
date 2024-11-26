@@ -1,6 +1,6 @@
 export type StravaAthlete = {
   id: number;
-  username: number | null;
+  username: string | null;
   resource_state: number;
   firstname: string;
   lastname: string;
