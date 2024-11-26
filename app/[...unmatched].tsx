@@ -24,7 +24,7 @@ export default function Unmatched() {
 
   return (
     <View>
-      <Text>Nothing</Text>
+      <Text>Unmatched route</Text>
     </View>
   );
 }
