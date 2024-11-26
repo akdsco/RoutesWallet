@@ -9,7 +9,7 @@ export const handleStravaAuthorisation =
       ...(await getStravaAuthResponse(code)),
     };
 
-    console.log("Strava: Auth response saved ");
+    console.log("Strava: Auth response saving ", authStuff, athlete);
 
     const athleteId = athlete.id;
 
@@ -49,6 +49,8 @@ export const saveStravaRoutesInDb =
       athleteId,
       url.toString(),
     );
+
+    console.log("Strava: Routes saving ", stravaRoutes);
 
     const routesRef = db.ref(`/routes/${athleteId}`);
     await routesRef.set(stravaRoutes);

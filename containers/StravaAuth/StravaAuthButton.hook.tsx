@@ -1,6 +1,7 @@
 import { AuthSessionResult } from "expo-auth-session";
 import { saveStravaRoutesInDb, handleStravaAuthorisation } from "@/auth/strava";
 import { useFirebase } from "@/hooks/useFirebase";
+import firestore from "@react-native-firebase/firestore";
 
 export const useStravaAuthButton = () => {
   const { db } = useFirebase();
@@ -33,6 +34,8 @@ export const useStravaAuthButton = () => {
         // TODO: "No routes found, notify user and send them back to auth page?"
         return;
       }
+
+      console.log("Should redirect to routes screen");
 
       //   TODO redirect user to routes screen ?
     }
