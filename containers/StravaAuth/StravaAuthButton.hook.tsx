@@ -1,11 +1,7 @@
 import { AuthSessionResult } from "expo-auth-session";
 import { saveStravaRoutesInDb, handleStravaAuthorisation } from "@/auth/strava";
-import { useFirebase } from "@/hooks/useFirebase";
-import firestore from "@react-native-firebase/firestore";
 
 export const useStravaAuthButton = () => {
-  const { db } = useFirebase();
-
   const handleStravaResponse = async (response: AuthSessionResult) => {
     if (response?.type === "error") {
       console.error("Error when authorising Strava: ", response.error);
@@ -24,6 +20,8 @@ export const useStravaAuthButton = () => {
         console.log("Scope is not as expected, send user back to auth page");
         return;
       }
+
+      const db = {};
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
 
