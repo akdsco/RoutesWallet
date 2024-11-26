@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { FirebaseData, User } from "./types";
-import { auth, db, onAuthStateChanged } from "@/constants/firebase";
+import { auth, db } from "@/constants/firebase";
 
 export const useFirebaseProvider = (): FirebaseData => {
   const [user, setUser] = useState<User | null>(null);

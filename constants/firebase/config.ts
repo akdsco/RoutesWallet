@@ -21,11 +21,11 @@ if (Platform.OS === "web") {
   //TODO check if below setup also works on mobile, if not, probably have to re-structure
 }
 
-export const app = getApp();
+const app = getApp();
+const db = getDatabase();
+const analytics = getAnalyticsIfSupported(app);
 
-export const db = getDatabase(app);
-export const analytics = getAnalyticsIfSupported(app);
-export { auth };
+export { app, db, analytics, auth };
 
 // For more information on how to access Firebase in your project,
 // see the Firebase documentation: https://firebase.google.com/docs/web/setup#access-firebase
