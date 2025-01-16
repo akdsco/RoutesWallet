@@ -1,7 +1,12 @@
 import { AuthSessionResult } from "expo-auth-session";
-import { saveStravaRoutesInDb, handleStravaAuthorisation } from "@/auth/strava";
+import { handleStravaAuthorisation } from "@/auth/strava";
+import { useSQLiteContext } from "expo-sqlite";
+import { useRouter } from "expo-router";
 
 export const useStravaAuthButton = () => {
+  const db = useSQLiteContext();
+  const router = useRouter();
+
   const handleStravaResponse = async (response: AuthSessionResult) => {
     if (response?.type === "error") {
       console.error("Error when authorising Strava: ", response.error);
@@ -21,21 +26,10 @@ export const useStravaAuthButton = () => {
         return;
       }
 
-      const db = {};
+      await handleStravaAuthorisation(db)(code, scope);
 
-      const athleteId = await handleStravaAuthorisation(db)(code, scope);
-
-      const routes = await saveStravaRoutesInDb(db)(athleteId);
-
-      if (!routes.length) {
-        console.log("No routes found after authorising with Strava");
-        // TODO: "No routes found, notify user and send them back to auth page?"
-        return;
-      }
-
-      console.log("Should redirect to routes screen");
-
-      //   TODO redirect user to routes screen ?
+      console.log("Redirecting to routes screen");
+      router.navigate("/routes");
     }
   };
 

@@ -8,8 +8,10 @@ import {
 } from "react-native";
 import { RouteItem } from "./RouteItem";
 
-export const Routes = () => {
+export const StravaRoutes = () => {
   const { width } = useWindowDimensions();
+  const { routes } = useRoutes();
+  const db = useSQLiteContext();
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -22,13 +24,31 @@ export const Routes = () => {
   const maxWidth = Math.min(width, 1200);
   const itemWidth = (maxWidth - 20) / numColumns - 10; // 20px for container padding, 10px for item margin
 
+  if (routes.length === 0) {
+    return (
+      <Container>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ThemedText>No routes found, please authorise with Strava</ThemedText>
+          <Link href={"/authorise"} style={{ margin: 15 }}>
+            Authorise with Strava
+          </Link>
+          <Pressable onPress={handleDbOperation}>
+            <ThemedText>Run db operation</ThemedText>
+          </Pressable>
+        </View>
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.innerContainer}>
           {/* // TODO: Potentially move to FlatList for mobile devices only */}
           <View style={styles.gridContainer}>
-            {stravaRoutesExamples.map((item) => (
+            {routes.map((item) => (
               <RouteItem
                 key={item.id.toString()}
                 item={item}

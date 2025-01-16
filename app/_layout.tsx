@@ -13,7 +13,7 @@ export default function RootLayout() {
   useLoading();
 
   return (
-    <SQLiteProvider databaseName="local.db" onInit={migrateDbIfNeeded}>
+    <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
       <AppThemeProvider>
         <Slot />
         <StatusBar style="auto" />

@@ -1,1 +1,1 @@
-export { Routes } from "./Routes";
+export { StravaRoutes } from "./StravaRoutes";
