@@ -1,5 +1,9 @@
 import { appConfig } from "@/constants/config";
-import { StravaAuthResponse, StravaRoute } from "@/auth/strava/types";
+import {
+  StravaAuthResponse,
+  StravaRoute,
+  StravaRouteFlat,
+} from "@/auth/strava/types";
 import { SQLiteDatabase } from "expo-sqlite";
 import { saveUserData, SECURE } from "@/db/secureStore";
 
@@ -109,23 +113,22 @@ const getStravaAuthResponse = async (code: string) => {
 
 export const getStravaRoutesFromDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    // TODO: This does not work, as we're not saving all the data in tables we're joining. TO BE FIXED
     try {
       const query = `
       SELECT 
-        sr.id AS route_id,
-        sr.name AS route_name,
-        sr.description AS route_description,
-        sr.distance AS route_distance,
-        sr.elevation_gain AS route_elevation_gain,
-        sr.private AS is_private,
-        sr.starred AS is_starred,
-        sr.sub_type AS route_sub_type,
-        sr.created_at AS route_created_at,
-        sr.updated_at AS route_updated_at,
-        sr.timestamp AS route_timestamp,
-        sr.type AS route_type,
-        sr.estimated_moving_time AS estimated_time,
+        sr.id AS id,
+        sr.name AS name,
+        sr.description AS description,
+        sr.distance AS distance,
+        sr.elevation_gain AS elevation_gain,
+        sr.private AS private,
+        sr.starred AS starred,
+        sr.sub_type AS sub_type,
+        sr.created_at AS created_at,
+        sr.updated_at AS updated_at,
+        sr.timestamp AS timestamp,
+        sr.type AS type,
+        sr.estimated_moving_time AS estimated_moving_time,
         sr.waypoints AS waypoints,
         
         -- Athlete details
@@ -138,25 +141,25 @@ export const getStravaRoutesFromDb =
         sa.state AS athlete_state,
         sa.country AS athlete_country,
         sa.sex AS athlete_sex,
-        sa.premium AS is_premium,
-        sa.summit AS is_summit,
+        sa.premium AS athlete_premium,
+        sa.summit AS athlete_summit,
         sa.created_at AS athlete_created_at,
         sa.updated_at AS athlete_updated_at,
-        sa.badge_type_id AS badge_type,
-        sa.profile_medium AS profile_medium,
-        sa.profile AS profile,
-        sa.weight AS weight,
+        sa.badge_type_id AS athlete_badge_type,
+        sa.profile_medium AS athlete_profile_medium,
+        sa.profile AS athlete_profile,
+        sa.weight AS athlete_weight,
     
         -- Map details
         sm.id AS map_id,
-        sm.summary_polyline AS summary_polyline,
+        sm.summary_polyline AS map_summary_polyline,
         sm.resource_state AS map_resource_state,
     
         -- Map URL details
-        smu.url AS map_url,
-        smu.retina_url AS retina_url,
-        smu.light_url AS light_url,
-        smu.dark_url AS dark_url
+        smu.url AS map_urls_url,
+        smu.retina_url AS map_urls_retina_url,
+        smu.light_url AS map_urls_light_url,
+        smu.dark_url AS map_urls_dark_url
       FROM 
           StravaRoute sr
       JOIN 
@@ -167,15 +170,72 @@ export const getStravaRoutesFromDb =
           StravaMapUrls smu ON sr.map_urls_id = smu.url;
     `;
 
-      const routes = await db.getAllAsync<StravaRoute>(query, [athleteId]);
-      console.log("Routes", routes);
+      const flatRoutes = await db.getAllAsync<StravaRouteFlat>(query, [
+        athleteId,
+      ]);
 
-      return routes;
+      return mapToStravaRoutes(flatRoutes);
     } catch (e) {
       console.error(e);
       return [];
     }
   };
+
+const mapToStravaRoutes = (flatRoutes: StravaRouteFlat[]): StravaRoute[] => {
+  return flatRoutes.map((flatRoute) => {
+    return {
+      athlete: {
+        id: flatRoute.athlete_id,
+        username: flatRoute.athlete_username,
+        resource_state: flatRoute.athlete_resource_state,
+        firstname: flatRoute.athlete_firstname,
+        lastname: flatRoute.athlete_lastname,
+        bio: flatRoute.athlete_bio,
+        city: flatRoute.athlete_city,
+        state: flatRoute.athlete_state,
+        country: flatRoute.athlete_country,
+        created_at: flatRoute.athlete_created_at,
+        updated_at: flatRoute.athlete_updated_at,
+        badge_type_id: flatRoute.athlete_badge_type_id,
+        premium: flatRoute.athlete_premium,
+        summit: flatRoute.athlete_summit,
+        profile_medium: flatRoute.athlete_profile_medium,
+        profile: flatRoute.athlete_profile,
+        sex: flatRoute.athlete_sex,
+        follower: flatRoute.athlete_follower,
+        friend: flatRoute.athlete_friend,
+        weight: flatRoute.athlete_weight,
+      },
+      id: flatRoute.id,
+      id_str: flatRoute.id_str,
+      name: flatRoute.name,
+      starred: flatRoute.starred,
+      created_at: flatRoute.created_at,
+      updated_at: flatRoute.updated_at,
+      description: flatRoute.description,
+      distance: flatRoute.distance,
+      elevation_gain: flatRoute.elevation_gain,
+      private: flatRoute.private,
+      resource_state: flatRoute.resource_state,
+      estimated_moving_time: flatRoute.estimated_moving_time,
+      sub_type: flatRoute.sub_type,
+      timestamp: flatRoute.timestamp,
+      type: flatRoute.type,
+      waypoints: flatRoute.waypoints,
+      map_urls: {
+        url: flatRoute.map_urls_url,
+        retina_url: flatRoute.map_urls_retina_url,
+        light_url: flatRoute.map_urls_light_url,
+        dark_url: flatRoute.map_urls_dark_url,
+      },
+      map: {
+        id: flatRoute.map_id,
+        summary_polyline: flatRoute.map_summary_polyline,
+        resource_state: flatRoute.map_resource_state,
+      },
+    };
+  });
+};
 
 export const saveStravaRoutesInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
@@ -190,7 +250,7 @@ export const saveStravaRoutesInDb =
 
     if (stravaRoutes.length > 0) {
       console.log("Strava: Routes exist, saving in db");
-      insertStravaRoutes(db, stravaRoutes);
+      await insertStravaRoutes(db)(athleteId, stravaRoutes);
     }
 
     return stravaRoutes;
@@ -242,7 +302,7 @@ const getStravaAccessToken =
     console.debug("expires_at", expires_at);
     console.debug("nowTimestamp", nowTimestamp);
 
-    if (expires_at > nowTimestamp) {
+    if (expires_at < nowTimestamp) {
       console.log("Token fresh", access_token);
       return access_token;
     }
@@ -287,47 +347,73 @@ const getNewAccessToken =
     return stravaAuthResponse.access_token;
   };
 
-const insertStravaRoutes = async (
-  db: SQLiteDatabase,
-  routes: StravaRoute[],
-) => {
-  const insertStravaRoutesSQL = `
+const insertStravaRoutes =
+  (db: SQLiteDatabase) => async (athleteId: number, routes: StravaRoute[]) => {
+    const insertStravaRoutesSQL = `
         INSERT INTO StravaRoute (
           athlete_id, description, distance, elevation_gain, id, id_str, map_id, map_urls_id, name, private, resource_state, starred, sub_type, created_at, updated_at, timestamp, type, estimated_moving_time, waypoints
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
-  await db.execAsync("BEGIN TRANSACTION");
-  try {
-    for (const route of routes) {
-      await db.runAsync(insertStravaRoutesSQL, [
-        route.athlete.id,
-        route.description,
-        route.distance,
-        route.elevation_gain,
-        route.id,
-        route.id_str,
-        route.map.id,
-        route.map_urls.url,
-        route.name,
-        route.private,
-        route.resource_state,
-        route.starred,
-        route.sub_type,
-        route.created_at,
-        route.updated_at,
-        route.timestamp,
-        route.type,
-        route.estimated_moving_time,
-        JSON.stringify(route.waypoints),
-      ]);
+    const insertStravaMapSQL = `
+    INSERT INTO StravaMap (
+      id, summary_polyline, resource_state
+    ) VALUES (?, ?, ?);
+  `;
+
+    const insertIntoStravaMapUrlsSQL = `
+    INSERT INTO StravaMapUrls (
+      url, retina_url, light_url, dark_url
+    ) VALUES (?, ?, ?, ?);
+  `;
+
+    await db.execAsync("BEGIN TRANSACTION");
+
+    try {
+      for (const route of routes) {
+        const routePromise = db.runAsync(insertStravaRoutesSQL, [
+          athleteId,
+          route.description,
+          route.distance,
+          route.elevation_gain,
+          route.id,
+          route.id_str,
+          route.map.id,
+          route.map_urls.url,
+          route.name,
+          route.private,
+          route.resource_state,
+          route.starred,
+          route.sub_type,
+          route.created_at,
+          route.updated_at,
+          route.timestamp,
+          route.type,
+          route.estimated_moving_time,
+          JSON.stringify(route.waypoints),
+        ]);
+
+        const mapPromise = db.runAsync(insertStravaMapSQL, [
+          route.map.id,
+          route.map.summary_polyline,
+          route.map.resource_state,
+        ]);
+
+        const mapUrlsPromise = db.runAsync(insertIntoStravaMapUrlsSQL, [
+          route.map_urls.url,
+          route.map_urls.retina_url,
+          route.map_urls.light_url,
+          route.map_urls.dark_url,
+        ]);
+
+        await Promise.all([routePromise, mapPromise, mapUrlsPromise]);
+      }
+      await db.execAsync("COMMIT");
+    } catch (error) {
+      await db.execAsync("ROLLBACK");
+      throw error;
     }
-    await db.execAsync("COMMIT");
-  } catch (error) {
-    await db.execAsync("ROLLBACK");
-    throw error;
-  }
-};
+  };
 
 const fetchFromStravaApi = async <T>(
   url: string,

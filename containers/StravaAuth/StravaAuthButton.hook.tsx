@@ -1,5 +1,5 @@
 import { AuthSessionResult } from "expo-auth-session";
-import { handleStravaAuthorisation } from "@/auth/strava";
+import { handleStravaAuthorisation, saveStravaRoutesInDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { useRouter } from "expo-router";
 
@@ -26,7 +26,8 @@ export const useStravaAuthButton = () => {
         return;
       }
 
-      await handleStravaAuthorisation(db)(code, scope);
+      const athleteId = await handleStravaAuthorisation(db)(code, scope);
+      await saveStravaRoutesInDb(db)(athleteId);
 
       console.log("Redirecting to routes screen");
       router.navigate("/routes");
