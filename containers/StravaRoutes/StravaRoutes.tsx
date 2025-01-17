@@ -1,4 +1,3 @@
-import { stravaRoutesExamples } from "@/auth/strava/routes";
 import Container from "@/components/Container";
 import {
   View,

@@ -5,9 +5,9 @@ import { makeRedirectUri, useAuthRequest } from "expo-auth-session";
 import { Pressable } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
-import { appConfig } from "@/constants/config";
 import * as WebBrowser from "expo-web-browser";
 import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
+import Config from "react-native-config";
 
 const discovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -19,7 +19,7 @@ const discovery = {
 // "profile:read_all"
 
 const authRequestInit = {
-  clientId: appConfig.stravaClientId,
+  clientId: Config.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
   redirectUri: makeRedirectUri({
     // the "redirect" must match your "Authorization Callback Domain" in the Strava dev console.

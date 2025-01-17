@@ -1,8 +1,0 @@
-export const appConfig = {
-  stravaClientId: "136750",
-  stravaRedirect: {
-    ios: "routeswallet://authorise?platform_type=strava",
-    android: "routeswallet.com",
-    web: "http://localhost:8081/authorise?platform_type=strava",
-  },
-};

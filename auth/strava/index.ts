@@ -1,4 +1,3 @@
-import { appConfig } from "@/constants/config";
 import {
   StravaAuthResponse,
   StravaRoute,
@@ -6,6 +5,7 @@ import {
 } from "@/auth/strava/types";
 import { SQLiteDatabase } from "expo-sqlite";
 import { saveUserData, SECURE } from "@/db/secureStore";
+import Config from "react-native-config";
 
 export const handleStravaAuthorisation =
   (db: SQLiteDatabase) => async (code: string, scope: string) => {
@@ -100,8 +100,8 @@ export const handleStravaAuthorisation =
 const getStravaAuthResponse = async (code: string) => {
   const url = new URL("https://www.strava.com/oauth/token");
   url.searchParams.set("code", code);
-  url.searchParams.set("client_id", appConfig.stravaClientId);
-  url.searchParams.set("client_secret", appConfig.stravaClientSecret);
+  url.searchParams.set("client_id", Config.STRAVA_CLIENT_ID);
+  url.searchParams.set("client_secret", Config.STRAVA_CLIENT_SECRET);
   url.searchParams.set("grant_type", "authorization_code");
 
   const response = await fetch(url.toString(), {
@@ -315,8 +315,8 @@ const getNewAccessToken =
     const url = new URL("https://www.strava.com/oauth/token");
 
     url.searchParams.set("grant_type", "refresh_token");
-    url.searchParams.set("client_id", appConfig.stravaClientId);
-    url.searchParams.set("client_secret", appConfig.stravaClientSecret);
+    url.searchParams.set("client_id", Config.STRAVA_CLIENT_ID);
+    url.searchParams.set("client_secret", Config.STRAVA_CLIENT_ID);
     url.searchParams.set("refresh_token", refreshToken);
 
     const stravaAuthResponse = await fetchFromStravaApi<StravaAuthResponse>(
