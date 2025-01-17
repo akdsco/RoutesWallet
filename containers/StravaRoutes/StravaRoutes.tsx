@@ -6,11 +6,13 @@ import {
   ScrollView,
 } from "react-native";
 import { RouteItem } from "./RouteItem";
+import { ThemedText } from "@/components/ThemedText";
+import { Link } from "expo-router";
+import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 
 export const StravaRoutes = () => {
   const { width } = useWindowDimensions();
   const { routes } = useRoutes();
-  const db = useSQLiteContext();
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -21,7 +23,7 @@ export const StravaRoutes = () => {
 
   const numColumns = getNumColumns(width);
   const maxWidth = Math.min(width, 1200);
-  const itemWidth = (maxWidth - 20) / numColumns - 10; // 20px for container padding, 10px for item margin
+  const itemWidth = (maxWidth - 20) / numColumns - 10; // 20 px for container padding, 10 px for item margin
 
   if (routes.length === 0) {
     return (
@@ -33,9 +35,6 @@ export const StravaRoutes = () => {
           <Link href={"/authorise"} style={{ margin: 15 }}>
             Authorise with Strava
           </Link>
-          <Pressable onPress={handleDbOperation}>
-            <ThemedText>Run db operation</ThemedText>
-          </Pressable>
         </View>
       </Container>
     );
