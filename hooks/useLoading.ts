@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
+import { getUserData, SECURE } from "@/db/secureStore";
 
 export const useLoading = () => {
   const [loading, setLoading] = useState(true);
   const [fontLoaded, fontError] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
+  const [athleteId, setAthleteId] = useState<number | null>(null);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -22,12 +24,18 @@ export const useLoading = () => {
   }, [loading, fontLoaded]);
 
   useEffect(() => {
-    setTimeout(() => {
+    const fn = async () => {
+      const athleteId = await getUserData<number>(SECURE.USER_ID);
+      setAthleteId(null);
+    };
+
+    fn().then(() => {
       setLoading(false);
-    }, 3000);
+    });
   }, [loading]);
 
   return {
+    athleteId,
     loading: !loading && fontLoaded,
     setLoading,
   };

@@ -6,19 +6,29 @@ import { useLoading } from "@/hooks";
 import { StatusBar } from "expo-status-bar";
 import { SQLiteProvider } from "expo-sqlite";
 import { migrateDbIfNeeded } from "@/constants/dbInit";
+import Container from "@/components/Container";
+import React from "react";
+import Authorise from "@/app/authorise";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().then();
 
 export default function Layout() {
-  useLoading();
+  const { athleteId } = useLoading();
 
   return (
     <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
       <AppThemeProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+        {athleteId ? (
+          <Stack>
+            <StatusBar style="auto" />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        ) : (
+          <Container>
+            <Authorise />
+          </Container>
+        )}
       </AppThemeProvider>
     </SQLiteProvider>
   );
