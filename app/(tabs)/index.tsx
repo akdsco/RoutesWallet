@@ -1,16 +1,27 @@
-import "expo-dev-client";
-import React, { useEffect, useState } from "react";
-import { StravaRoutes } from "@/containers/StravaRoutes";
 import { useRouter } from "expo-router";
-import { Loader } from "@/components/Loader";
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
+import React, { useEffect, useState } from "react";
 import { getUserData, SECURE } from "@/db/secureStore";
+import { Loader } from "@/components/Loader";
+import { StravaRoutes } from "@/containers/StravaRoutes";
 
 export default function Index() {
   const router = useRouter();
   const db = useSQLiteContext();
   const [isLoading, setIsLoading] = useState(true);
   const [noRoutesAvailable, setNoRoutesAvailable] = useState(true);
+
+  const areAnyRoutesAvailable =
+    (db: SQLiteDatabase) =>
+    async (athleteId: number): Promise<boolean> => {
+      // TODO change to check only if there is at least one route
+      console.debug("Getting routes for athleteId", athleteId);
+
+      const query = `SELECT * FROM StravaRoute WHERE athlete_id = ?`;
+      const allRoutes = await db.getAllAsync(query, [athleteId]);
+
+      return allRoutes.length > 0;
+    };
 
   useEffect(() => {
     const checkRoutes = async () => {
@@ -47,15 +58,3 @@ export default function Index() {
 
   return <StravaRoutes />;
 }
-
-const areAnyRoutesAvailable =
-  (db: SQLiteDatabase) =>
-  async (athleteId: number): Promise<boolean> => {
-    // TODO change to check only if there is at least one route
-    console.debug("Getting routes for athleteId", athleteId);
-
-    const query = `SELECT * FROM StravaRoute WHERE athlete_id = ?`;
-    const allRoutes = await db.getAllAsync(query, [athleteId]);
-
-    return allRoutes.length > 0;
-  };
