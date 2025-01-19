@@ -6,7 +6,7 @@ import {
   Image,
   useColorScheme,
 } from "react-native";
-import { StravaRoute } from "@/auth/strava/types";
+import { StravaRoute } from "@/auth/strava";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";

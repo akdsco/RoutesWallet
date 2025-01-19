@@ -1,10 +1,5 @@
-import { StravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton";
-import Container from "@/components/Container";
+import { Settings as AppSettings } from "@/containers/Settings/Settings";
 
 export default function Settings() {
-  return (
-    <Container>
-      <StravaAuthButton />
-    </Container>
-  );
+  return <AppSettings />;
 }

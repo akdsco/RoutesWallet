@@ -7,8 +7,8 @@ import {
 } from "react-native";
 import { RouteItem } from "./RouteItem";
 import { ThemedText } from "@/components/ThemedText";
-import { Link } from "expo-router";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
+import { Button } from "@/components/Button/Buttons";
 
 export const StravaRoutes = () => {
   const { width } = useWindowDimensions();
@@ -31,10 +31,12 @@ export const StravaRoutes = () => {
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-          <ThemedText>No routes found, please authorise with Strava</ThemedText>
-          <Link href={"/authorise"} style={{ margin: 15 }}>
-            Authorise with Strava
-          </Link>
+          <ThemedText>No routes available.</ThemedText>
+          <Button
+            title="Refresh"
+            onPress={() => {}}
+            accessibilityLabel="This will pull in your latest routes from Strava."
+          />
         </View>
       </Container>
     );

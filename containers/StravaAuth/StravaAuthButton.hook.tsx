@@ -1,11 +1,41 @@
-import { AuthSessionResult } from "expo-auth-session";
+import {
+  AuthSessionResult,
+  makeRedirectUri,
+  useAuthRequest,
+} from "expo-auth-session";
 import { handleStravaAuthorisation, saveStravaRoutesInDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { useRouter } from "expo-router";
+import { stravaApiDiscovery } from "@/auth/strava";
+import Config from "react-native-config";
+import { useEffect } from "react";
+
+// TODO: check below scope, is it really not possible to use it?
+// "profile:read_all"
+const authRequestInit = {
+  clientId: Config.STRAVA_CLIENT_ID,
+  scopes: ["activity:read_all"],
+  redirectUri: makeRedirectUri({
+    // the "redirect" must match your "Authorization Callback Domain" in the Strava dev console.
+    native: "routeswallet://localhost",
+    // scheme: "routeswallet",
+  }),
+};
 
 export const useStravaAuthButton = () => {
   const db = useSQLiteContext();
   const router = useRouter();
+
+  const [request, response, promptAsync] = useAuthRequest(
+    authRequestInit,
+    stravaApiDiscovery,
+  );
+
+  useEffect(() => {
+    if (response) {
+      handleStravaResponse(response).then();
+    }
+  }, [response]);
 
   const handleStravaResponse = async (response: AuthSessionResult) => {
     if (response?.type === "error") {
@@ -35,6 +65,7 @@ export const useStravaAuthButton = () => {
   };
 
   return {
-    handleStravaResponse,
+    request,
+    promptAsync,
   };
 };
