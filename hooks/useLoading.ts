@@ -26,7 +26,7 @@ export const useLoading = () => {
   useEffect(() => {
     const fn = async () => {
       const athleteId = await getUserData<number>(SECURE.USER_ID);
-      setAthleteId(null);
+      setAthleteId(athleteId);
     };
 
     fn().then(() => {

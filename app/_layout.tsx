@@ -25,9 +25,7 @@ export default function Layout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           </Stack>
         ) : (
-          <Container>
-            <Authorise />
-          </Container>
+          <Authorise />
         )}
       </AppThemeProvider>
     </SQLiteProvider>

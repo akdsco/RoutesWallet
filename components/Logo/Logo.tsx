@@ -3,21 +3,16 @@ import Svg, { G, Path, Rect, SvgProps } from "react-native-svg";
 import { useTheme } from "@/hooks";
 
 type LogoProps = SvgProps & {
-  width?: number;
-  height?: number;
+  size?: number;
   fill?: string;
   background?: string;
 };
 
-export const Logo: React.FC<LogoProps> = ({
-  width = 400,
-  height = 400,
-  fill = "#70D4E1",
-}) => {
+export const Logo: React.FC<LogoProps> = ({ size = 400, fill = "#70D4E1" }) => {
   const theme = useTheme();
 
   return (
-    <Svg width={width} height={height} viewBox="0 0 400 400">
+    <Svg width={size} height={size} viewBox="0 0 400 400">
       <Rect
         data-name="background"
         width="100%"

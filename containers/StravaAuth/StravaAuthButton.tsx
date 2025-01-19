@@ -46,11 +46,7 @@ export const StravaAuthButton = () => {
   }, [response]);
 
   return (
-    <Pressable
-      disabled={!request}
-      onPress={() => promptAsync()}
-      style={{ marginTop: 140 }}
-    >
+    <Pressable disabled={!request} onPress={() => promptAsync()}>
       <View
         style={{
           display: "flex",
@@ -64,7 +60,7 @@ export const StravaAuthButton = () => {
         <View style={{ marginRight: 15 }}>
           <LogoStravaSquare width={40} height={40} />
         </View>
-        <ThemedText>Add routes from Strava</ThemedText>
+        <ThemedText>Sign in with Strava</ThemedText>
       </View>
     </Pressable>
   );
