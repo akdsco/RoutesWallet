@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
+import { useSQLiteContext } from "expo-sqlite";
 import { useFonts } from "expo-font";
 import { getUserData, SECURE } from "@/db/secureStore";
 import { checkRoutesAvailable, checkStravaConnection } from "@/auth/strava";
-import { useSQLiteContext } from "expo-sqlite";
 
-export const useLoading = () => {
+export const useAppProvider = () => {
   const [internalLoader, setInternalLoader] = useState(true);
   const [externalLoader, setExternalLoader] = useState(true);
 
   const db = useSQLiteContext();
   const [fontLoaded, fontError] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
   const [athleteId, setAthleteId] = useState<number | null>(null);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
+  const [routesAvailable, setRoutesAvailable] = useState<boolean>(false);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -39,6 +40,10 @@ export const useLoading = () => {
       if (isStravaAuthed && routesAvailable) {
         setIsStravaAuthed(true);
       }
+
+      if (routesAvailable) {
+        setRoutesAvailable(true);
+      }
     };
 
     run().then(() => {
@@ -46,11 +51,20 @@ export const useLoading = () => {
     });
   }, [internalLoader]);
 
+  const setLoader = (value: boolean) => {
+    setInternalLoader(value);
+  };
+
+  const setStravaAuth = (value: boolean) => {
+    setIsStravaAuthed(value);
+  };
+
   return {
     athleteId,
+    routesAvailable,
     isStravaAuthed: isStravaAuthed && !externalLoader,
     loading: externalLoader,
-    setInternalLoader,
-    setIsStravaAuthed,
+    setInternalLoader: setLoader,
+    setIsStravaAuthed: setStravaAuth,
   };
 };

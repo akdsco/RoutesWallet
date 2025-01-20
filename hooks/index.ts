@@ -1,2 +1,2 @@
 export { useTheme } from "./useTheme";
-export { useLoading } from "./useLoading";
+export { useApp } from "./useApp";

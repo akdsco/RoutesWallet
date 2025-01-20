@@ -1,18 +1,26 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { useLoading } from "@/hooks";
+import { useApp } from "@/hooks";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import { View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
+import { disconnectStrava, saveStravaRoutesInDb } from "@/auth/strava/api";
+import { useSQLiteContext } from "expo-sqlite";
+import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
 
 export const Settings = () => {
-  const { isStravaAuthed } = useLoading();
+  const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
+  const { request, promptAsync } = useStravaAuthButton();
+  const db = useSQLiteContext();
 
-  const handleConnection = () => {
-    if (isStravaAuthed) {
+  const handleConnection = async () => {
+    if (isStravaAuthed && athleteId) {
       console.log("Strava: Disconnecting user");
+      if (athleteId) await disconnectStrava(db)(athleteId);
+      setIsStravaAuthed(false);
     } else {
       console.log("Strava: Re-connecting user");
+      await promptAsync();
     }
   };
 
@@ -28,9 +36,8 @@ export const Settings = () => {
       </View>
       <Button
         title={isStravaAuthed ? "Disconnect" : "Connect"}
-        onPress={() => {
-          handleConnection();
-        }}
+        disabled={!request}
+        onPress={handleConnection}
         accessibilityLabel="This will connect/disconnect your Strava account."
       />
     </Container>

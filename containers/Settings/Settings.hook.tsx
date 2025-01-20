@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { useLoading } from "@/hooks";
+import { useApp } from "@/hooks";
 
 export const useSettings = () => {
-  const {} = useLoading();
+  const {} = useApp();
 
   useEffect(() => {
     console.log("Settings mounted");

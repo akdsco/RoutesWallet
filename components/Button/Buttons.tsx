@@ -5,9 +5,15 @@ type ButtonProps = {
   title: string;
   accessibilityLabel: string;
   onPress: () => void;
+  disabled?: boolean;
 };
 
-export const Button = ({ title, accessibilityLabel, onPress }: ButtonProps) => {
+export const Button = ({
+  title,
+  accessibilityLabel,
+  onPress,
+  disabled,
+}: ButtonProps) => {
   const theme = useTheme();
 
   return (
@@ -25,6 +31,7 @@ export const Button = ({ title, accessibilityLabel, onPress }: ButtonProps) => {
       }}
     >
       <ReactNativeButton
+        disabled={disabled}
         onPress={onPress}
         title={title}
         color={theme.text}
