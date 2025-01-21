@@ -1,7 +1,7 @@
 import Container from "@/components/Container";
 import { StravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton";
 import { ThemedText } from "@/components/ThemedText";
-import { Image, View } from "react-native";
+import { View } from "react-native";
 import { Logo } from "@/components/Logo/Logo";
 
 export default function Authorise() {

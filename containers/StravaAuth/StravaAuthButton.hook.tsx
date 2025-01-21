@@ -46,21 +46,21 @@ export const useStravaAuthButton = () => {
     }
 
     if (response?.type === "success") {
-      console.debug("2: Strava auth response: ", response);
+      console.debug("Strava auth response: ", response);
 
       const { code, scope } = response.params;
 
       if (scope !== "read,activity:read_all") {
         // TODO: "scope is not as expected, send user back to auth page", improve scope checking
-        console.log("Scope is not as expected, send user back to auth page");
+        console.error("Scope is not as expected, send user back to auth page");
         return;
       }
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
       await saveStravaRoutesInDb(db)(athleteId);
 
-      console.log("Redirecting to routes screen");
-      router.navigate("/routes");
+      console.log("Redirecting to routes screen (tabs index screen)");
+      router.replace("/(tabs)/");
     }
   };
 

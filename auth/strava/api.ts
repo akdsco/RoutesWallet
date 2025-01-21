@@ -279,7 +279,7 @@ const getDataFromStravaApi =
   async <T>(athleteId: number, url: string): Promise<T> => {
     const accessToken: string = await getStravaAccessToken(db)(athleteId);
 
-    const data = fetchFromStravaApi<T>(url, {
+    const data = await fetchFromStravaApi<T>(url, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -337,6 +337,8 @@ const isTokenExpired = (expiresAt: number) => {
 
 const getNewAccessToken =
   (db: SQLiteDatabase) => async (refreshToken: string, athleteId: number) => {
+    console.debug("Strava: Refreshing token");
+
     const url = new URL(stravaApiDiscovery.tokenEndpoint);
 
     url.searchParams.set("grant_type", "refresh_token");
@@ -444,16 +446,15 @@ const fetchFromStravaApi = async <T>(
   url: string,
   requestInit?: RequestInit,
 ) => {
-  console.debug("Strava: Fetching from Strava API", url);
-  console.debug("Strava: Request init", requestInit);
+  const init = requestInit ? requestInit : { method: "POST" };
+  console.debug("Strava: Fetch");
+  console.debug("Strava: Request URL", url);
+  console.debug("Strava: Request init", init);
 
-  const response = await fetch(
-    url,
-    requestInit ? requestInit : { method: "POST" },
-  );
+  const response = await fetch(url, init);
   const responseJson = (await response.json()) as T;
 
-  console.debug("Strava: Response from Strava API", responseJson);
+  console.debug("Strava: Response", responseJson);
 
   return responseJson;
 };
@@ -481,23 +482,23 @@ export const disconnectStrava =
     const url = new URL(stravaApiDiscovery.revocationEndpoint);
     url.searchParams.set("access_token", accessToken);
 
-    const response = await fetchFromStravaApi(url.toString());
+    const response = await fetchFromStravaApi<{ access_token: string } | null>(
+      url.toString(),
+    );
 
-    console.debug("Strava: Disconnect response", response);
-
-    // TODO: improve, check if response has token, if yes, then proceed with DB removal
-    // Otherwise, cancel, show user notification.
-
-    try {
-      await db.runAsync(
-        `DELETE FROM StravaAuthResponse WHERE athlete_id = ?;`,
-        [athleteId],
-      );
-    } catch (e) {
-      console.log("Strava: Error when disconnecting", e);
+    if (response) {
+      try {
+        await db.runAsync(
+          `DELETE FROM StravaAuthResponse WHERE athlete_id = ?;`,
+          [athleteId],
+        );
+      } catch (e) {
+        console.log("Strava: Error when disconnecting", e);
+      }
+      console.debug("Strava: Disconnected user", athleteId);
+    } else {
+      console.debug("Strava: Disconnect failed", response);
     }
-
-    console.debug("Strava: Disconnected user", athleteId);
   };
 
 export const checkRoutesAvailable =
