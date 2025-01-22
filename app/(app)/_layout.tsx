@@ -11,7 +11,10 @@ export default function Layout() {
   }
 
   if (!isStravaAuthed) {
-    console.debug("Redirecting to /sign-in", `isAppAuthed: ${isStravaAuthed}`);
+    console.debug(
+      "Redirecting to /sign-in",
+      `Is application authenticated? ${isStravaAuthed}`,
+    );
     return <Redirect href="/sign-in" />;
   }
 
