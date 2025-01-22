@@ -4,7 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { AppThemeProvider } from "@/providers/Theme";
 import { AppProvider } from "@/providers/App";
 import { SQLiteProvider } from "expo-sqlite";
-import { migrateDbIfNeeded } from "@/constants/dbInit";
+import { migrateDbIfNeeded } from "@/db/dbInit";
 import { Slot } from "expo-router";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.

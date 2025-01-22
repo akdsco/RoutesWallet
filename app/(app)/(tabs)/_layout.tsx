@@ -4,6 +4,7 @@ import { useTheme } from "@/hooks";
 
 export default function TabLayout() {
   const theme = useTheme();
+  const iconSize = 28;
 
   return (
     <Tabs
@@ -25,7 +26,7 @@ export default function TabLayout() {
         options={{
           title: "Routes",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="map-signs" color={color} />
+            <FontAwesome size={iconSize} name="map-signs" color={color} />
           ),
         }}
       />
@@ -34,7 +35,7 @@ export default function TabLayout() {
         options={{
           title: "Groups",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="tags" color={color} />
+            <FontAwesome size={iconSize} name="tags" color={color} />
           ),
         }}
       />
@@ -43,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
+            <FontAwesome size={iconSize} name="cog" color={color} />
           ),
         }}
       />

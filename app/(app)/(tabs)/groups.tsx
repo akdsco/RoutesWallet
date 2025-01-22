@@ -1,10 +1,5 @@
-import Container from "@/components/Container";
-import { ThemedText } from "@/components/ThemedText";
+import { Groups as GroupScreen } from "@/containers/Groups/Groups";
 
 export default function Groups() {
-  return (
-    <Container>
-      <ThemedText>Groups feature to be implemented</ThemedText>
-    </Container>
-  );
+  return <GroupScreen />;
 }

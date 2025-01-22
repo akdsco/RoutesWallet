@@ -73,7 +73,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         description TEXT,
         distance REAL NOT NULL,
         elevation_gain REAL NOT NULL,
-        id INTEGER PRIMARY KEY NOT NULL,
+        id BIGINT PRIMARY KEY NOT NULL,
         id_str TEXT NOT NULL,
         map_id TEXT NOT NULL,
         map_urls_id TEXT NOT NULL,
@@ -84,14 +84,32 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         sub_type INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
+        timestamp BIGINT NOT NULL,
         type INTEGER NOT NULL,
-        estimated_moving_time INTEGER NOT NULL,
+        estimated_moving_time BIGINT NOT NULL,
         waypoints TEXT,
         FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id),
         FOREIGN KEY (map_id) REFERENCES StravaMap(id),
         FOREIGN KEY (map_urls_id) REFERENCES StravaMapUrls(url)
       );
+      
+      CREATE TABLE IF NOT EXISTS RouteTags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        name TEXT NOT NULL UNIQUE, -- Unique tag name
+        color TEXT NOT NULL DEFAULT '#687076', -- Default color is grey
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      
+      CREATE TABLE IF NOT EXISTS RouteTagAssignments (
+        route_id BIGINT NOT NULL,
+        tag_id INTEGER NOT NULL,
+        assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (route_id, tag_id),
+        FOREIGN KEY (route_id) REFERENCES StravaRoute(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES RouteTags(id) ON DELETE CASCADE
+      );
+      
     `;
 
     await db.execAsync(createTablesSQL);

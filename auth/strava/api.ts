@@ -195,7 +195,7 @@ export const getStravaRoutesFromDb =
       return mapToStravaRoutes(flatRoutes);
     } catch (e) {
       console.error(e);
-      return [];
+      throw e;
     }
   };
 
@@ -399,7 +399,7 @@ const insertStravaRoutes =
           route.description,
           route.distance,
           route.elevation_gain,
-          route.id,
+          route.id.toString(),
           route.id_str,
           route.map.id,
           route.map_urls.url,
@@ -410,9 +410,9 @@ const insertStravaRoutes =
           route.sub_type,
           route.created_at,
           route.updated_at,
-          route.timestamp,
+          route.timestamp.toString(),
           route.type,
-          route.estimated_moving_time,
+          route.estimated_moving_time.toString(),
           JSON.stringify(route.waypoints),
         ]);
 
