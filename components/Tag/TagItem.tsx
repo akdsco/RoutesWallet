@@ -13,14 +13,21 @@ type TagItemProps = {
 
 export const TagItem = ({ tag }: TagItemProps) => {
   const theme = useTheme();
-  const onPress = () => {
+  const showTaggedRoutes = () => {
     console.debug(`Show "${tag.name}" tag only`);
   };
 
+  const openTagItemSettings = () => {
+    console.debug(`Open tag "${tag.name}" settings`);
+  };
+
   return (
-    <Pressable onPress={onPress} style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.tagItemContainer}>
-        <View style={styles.tagAndNameContainer}>
+        <Pressable
+          style={styles.tagAndNameContainer}
+          onPress={showTaggedRoutes}
+        >
           <FontAwesome
             size={40}
             name="tag"
@@ -28,22 +35,22 @@ export const TagItem = ({ tag }: TagItemProps) => {
             style={styles.tag}
           />
           <ThemedText type="subtitle">{tag.name}</ThemedText>
-        </View>
-        <FontAwesome
-          size={30}
-          name="ellipsis-v"
-          color={theme.text}
-          style={styles.optionButton}
-        />
+        </Pressable>
+        <Pressable
+          style={styles.optionButtonContainer}
+          onPress={openTagItemSettings}
+        >
+          <FontAwesome size={30} name="ellipsis-v" color={theme.text} />
+        </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
-    margin: 5,
+    paddingVertical: 10,
+    margin: 3,
     borderRadius: 5,
     borderColor: "#ccc",
     borderWidth: 0.2,
@@ -60,11 +67,23 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
+    padding: 1,
+    borderRadius: 5,
+    // borderColor: "#ccc",
+    // borderWidth: 0.2,
+    width: "85%",
   },
   tag: {
-    paddingRight: 14,
+    paddingRight: 18,
   },
-  optionButton: {
-    marginTop: 4,
+  optionButtonContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 5,
+    borderRadius: 50,
+    width: "13%",
+    // borderColor: "#ccc",
+    // borderWidth: 0.2,
   },
 });
