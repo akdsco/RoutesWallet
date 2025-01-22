@@ -5,7 +5,7 @@ import { AppThemeProvider } from "@/providers/Theme";
 import { AppProvider } from "@/providers/App";
 import { SQLiteProvider } from "expo-sqlite";
 import { migrateDbIfNeeded } from "@/constants/dbInit";
-import { App } from "@/containers/App/App";
+import { Slot } from "expo-router";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -15,7 +15,7 @@ export default function Layout() {
     <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
       <AppProvider>
         <AppThemeProvider>
-          <App />
+          <Slot />
         </AppThemeProvider>
       </AppProvider>
     </SQLiteProvider>

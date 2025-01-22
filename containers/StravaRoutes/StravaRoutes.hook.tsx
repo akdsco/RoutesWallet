@@ -3,11 +3,9 @@ import { useEffect, useState } from "react";
 import { getStravaRoutesFromDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { getUserData, SECURE } from "@/db/secureStore";
-import { useApp } from "@/hooks";
 
 export const useRoutes = () => {
   const db = useSQLiteContext();
-  const { isStravaAuthed } = useApp();
   const [routes, setRoutes] = useState<StravaRoute[]>([]);
 
   useEffect(() => {
@@ -18,10 +16,8 @@ export const useRoutes = () => {
       setRoutes(routes);
     };
 
-    if (isStravaAuthed) {
-      run().then();
-    }
-  }, [isStravaAuthed]);
+    run().then();
+  }, []);
 
   return {
     routes,

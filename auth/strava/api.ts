@@ -267,7 +267,7 @@ export const saveStravaRoutesInDb =
     );
 
     if (stravaRoutes.length > 0) {
-      console.log("Strava: Routes exist, saving in db");
+      console.debug("Strava: Routes exist, saving in db");
       await insertStravaRoutes(db)(athleteId, stravaRoutes);
     }
 
@@ -279,16 +279,12 @@ const getDataFromStravaApi =
   async <T>(athleteId: number, url: string): Promise<T> => {
     const accessToken: string = await getStravaAccessToken(db)(athleteId);
 
-    const data = await fetchFromStravaApi<T>(url, {
+    return await fetchFromStravaApi<T>(url, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
     });
-
-    console.log("Data from Strava", data);
-
-    return data;
   };
 
 const getStravaAccessToken =
@@ -377,19 +373,19 @@ const getNewAccessToken =
 const insertStravaRoutes =
   (db: SQLiteDatabase) => async (athleteId: number, routes: StravaRoute[]) => {
     const insertStravaRoutesSQL = `
-        INSERT INTO StravaRoute (
+        INSERT OR REPLACE INTO StravaRoute (
           athlete_id, description, distance, elevation_gain, id, id_str, map_id, map_urls_id, name, private, resource_state, starred, sub_type, created_at, updated_at, timestamp, type, estimated_moving_time, waypoints
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
     const insertStravaMapSQL = `
-    INSERT INTO StravaMap (
+    INSERT OR REPLACE INTO StravaMap (
       id, summary_polyline, resource_state
     ) VALUES (?, ?, ?);
   `;
 
     const insertIntoStravaMapUrlsSQL = `
-    INSERT INTO StravaMapUrls (
+    INSERT OR REPLACE INTO StravaMapUrls (
       url, retina_url, light_url, dark_url
     ) VALUES (?, ?, ?, ?);
   `;
@@ -503,15 +499,11 @@ export const disconnectStrava =
 
 export const checkRoutesAvailable =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `
-      SELECT *
-      FROM StravaRoute
-      WHERE athlete_id = ?;
-    `;
+    const query = `SELECT * FROM StravaRoute WHERE athlete_id = ?`;
 
-    const flatRoutes = await db.getFirstAsync<StravaRouteFlat>(query, [
+    const flatRoute = await db.getFirstAsync<StravaRouteFlat>(query, [
       athleteId,
     ]);
 
-    return Boolean(flatRoutes);
+    return Boolean(flatRoute);
   };

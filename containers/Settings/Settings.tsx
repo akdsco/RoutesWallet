@@ -4,7 +4,7 @@ import { useApp } from "@/hooks";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import { View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
-import { disconnectStrava, saveStravaRoutesInDb } from "@/auth/strava/api";
+import { disconnectStrava } from "@/auth/strava/api";
 import { useSQLiteContext } from "expo-sqlite";
 import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
 
@@ -21,6 +21,7 @@ export const Settings = () => {
     } else {
       console.log("Strava: Re-connecting user");
       await promptAsync();
+      setIsStravaAuthed(true);
     }
   };
 

@@ -4,7 +4,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { View } from "react-native";
 import { Logo } from "@/components/Logo/Logo";
 
-export default function Authorise() {
+export default function SignIn() {
   return (
     <Container>
       <View

@@ -37,7 +37,7 @@ export const useAppProvider = () => {
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
       const routesAvailable = await checkRoutesAvailable(db)(athleteId);
 
-      if (isStravaAuthed && routesAvailable) {
+      if (isStravaAuthed) {
         setIsStravaAuthed(true);
       }
 
@@ -49,7 +49,7 @@ export const useAppProvider = () => {
     run().then(() => {
       setInternalLoader(false);
     });
-  }, [internalLoader]);
+  }, []);
 
   const setLoader = (value: boolean) => {
     setInternalLoader(value);

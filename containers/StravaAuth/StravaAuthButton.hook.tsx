@@ -5,14 +5,15 @@ import {
 } from "expo-auth-session";
 import { handleStravaAuthorisation, saveStravaRoutesInDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
-import { useRouter } from "expo-router";
 import { stravaApiDiscovery } from "@/auth/strava";
 import Config from "react-native-config";
 import { useEffect } from "react";
+import { useApp } from "@/hooks";
+import { useRouter } from "expo-router";
 
 // TODO: check below scope, is it really not possible to use it?
 // "profile:read_all"
-const authRequestInit = {
+const requestConfig = {
   clientId: Config.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
   redirectUri: makeRedirectUri({
@@ -25,24 +26,38 @@ const authRequestInit = {
 export const useStravaAuthButton = () => {
   const db = useSQLiteContext();
   const router = useRouter();
+  const { setIsStravaAuthed } = useApp();
 
   const [request, response, promptAsync] = useAuthRequest(
-    authRequestInit,
+    requestConfig,
     stravaApiDiscovery,
   );
 
   useEffect(() => {
     if (response) {
-      handleStravaResponse(response).then();
+      console.debug("UseEffect response exists: ", response);
+      // TODO: Use loader when async prompt works below (better UX)?
+      handleStravaResponse(response)
+        .then(() => {
+          console.info("Strava auth response handled");
+          router.replace("/");
+        })
+        .catch((e) =>
+          console.error("Error when handling Strava's auth response", e),
+        );
     }
   }, [response]);
 
   const handleStravaResponse = async (response: AuthSessionResult) => {
     if (response?.type === "error") {
       console.error("Error when authorising Strava: ", response.error);
+      // TODO: Inform user?
+      throw new Error(response.error?.message);
     }
     if (response?.type === "dismiss" || response?.type === "cancel") {
-      console.log(`User ${response?.type}ed the auth flow`);
+      // TODO: Inform user?
+      console.info(`User ${response?.type}ed Strava authentication flow`);
+      return;
     }
 
     if (response?.type === "success") {
@@ -57,10 +72,10 @@ export const useStravaAuthButton = () => {
       }
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
-      await saveStravaRoutesInDb(db)(athleteId);
+      const routes = await saveStravaRoutesInDb(db)(athleteId);
 
-      console.log("Redirecting to routes screen (tabs index screen)");
-      router.replace("/(tabs)/");
+      console.debug(`Saved ${routes.length} routes`);
+      setIsStravaAuthed(true);
     }
   };
 
