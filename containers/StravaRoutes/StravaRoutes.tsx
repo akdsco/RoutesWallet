@@ -7,12 +7,13 @@ import {
 } from "react-native";
 import { RouteItem } from "./RouteItem";
 import { ThemedText } from "@/components/ThemedText";
-import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 import { Button } from "@/components/Button/Buttons";
+import { Loader } from "@/components/Loader";
+import { useApp } from "@/hooks";
 
 export const StravaRoutes = () => {
   const { width } = useWindowDimensions();
-  const { routes } = useRoutes();
+  const { loading, routes } = useApp();
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -24,6 +25,10 @@ export const StravaRoutes = () => {
   const numColumns = getNumColumns(width);
   const maxWidth = Math.min(width, 1200);
   const itemWidth = (maxWidth - 20) / numColumns - 10; // 20 px for container padding, 10 px for item margin
+
+  if (loading) {
+    return <Loader />;
+  }
 
   if (routes.length === 0) {
     return (

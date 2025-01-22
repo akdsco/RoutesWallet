@@ -3,8 +3,16 @@ import { StravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton";
 import { ThemedText } from "@/components/ThemedText";
 import { View } from "react-native";
 import { Logo } from "@/components/Logo/Logo";
+import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
+import { Loader } from "@/components/Loader";
 
 export default function SignIn() {
+  const { request, promptAsync, authenticating } = useStravaAuthButton();
+
+  if (authenticating) {
+    return <Loader />;
+  }
+
   return (
     <Container>
       <View
@@ -28,7 +36,7 @@ export default function SignIn() {
             Sync your Strava account
           </ThemedText>
         </View>
-        <StravaAuthButton />
+        <StravaAuthButton {...{ request, promptAsync }} />
       </View>
     </Container>
   );

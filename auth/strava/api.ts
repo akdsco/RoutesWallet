@@ -497,6 +497,7 @@ export const disconnectStrava =
     }
   };
 
+// TODO: do we need this function?
 export const checkRoutesAvailable =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const query = `SELECT * FROM StravaRoute WHERE athlete_id = ?`;

@@ -4,15 +4,21 @@ import { Pressable } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import * as WebBrowser from "expo-web-browser";
-import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
+import { AuthRequest } from "expo-auth-session";
 
 if (Platform.OS === "web") {
   WebBrowser.maybeCompleteAuthSession();
 }
 
-export const StravaAuthButton = () => {
-  const { request, promptAsync } = useStravaAuthButton();
+type StravaAuthButtonProps = {
+  request: AuthRequest | null;
+  promptAsync: () => void;
+};
 
+export const StravaAuthButton = ({
+  request,
+  promptAsync,
+}: StravaAuthButtonProps) => {
   return (
     <Pressable disabled={!request} onPress={() => promptAsync()}>
       <View

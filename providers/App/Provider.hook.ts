@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { useFonts } from "expo-font";
 import { getUserData, SECURE } from "@/db/secureStore";
-import { checkRoutesAvailable, checkStravaConnection } from "@/auth/strava";
+import {
+  checkStravaConnection,
+  getStravaRoutesFromDb,
+  StravaRoute,
+} from "@/auth/strava";
 
 export const useAppProvider = () => {
-  const [internalLoader, setInternalLoader] = useState(true);
-  const [externalLoader, setExternalLoader] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const db = useSQLiteContext();
   const [fontLoaded, fontError] = useFonts({
@@ -14,7 +17,7 @@ export const useAppProvider = () => {
   });
   const [athleteId, setAthleteId] = useState<number | null>(null);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
-  const [routesAvailable, setRoutesAvailable] = useState<boolean>(false);
+  const [routes, setRoutes] = useState<StravaRoute[]>([]);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -24,10 +27,10 @@ export const useAppProvider = () => {
   }, [fontError]);
 
   useEffect(() => {
-    if (fontLoaded && !internalLoader) {
-      setExternalLoader(false);
+    if (fontLoaded && !loading) {
+      setLoading(false);
     }
-  }, [internalLoader, fontLoaded]);
+  }, [loading, fontLoaded]);
 
   useEffect(() => {
     const run = async () => {
@@ -35,24 +38,24 @@ export const useAppProvider = () => {
       setAthleteId(athleteId);
 
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
-      const routesAvailable = await checkRoutesAvailable(db)(athleteId);
+      const routes = await getStravaRoutesFromDb(db)(athleteId);
 
       if (isStravaAuthed) {
         setIsStravaAuthed(true);
       }
 
-      if (routesAvailable) {
-        setRoutesAvailable(true);
+      if (routes) {
+        setRoutes(routes);
       }
     };
 
     run().then(() => {
-      setInternalLoader(false);
+      setLoading(false);
     });
   }, []);
 
-  const setLoader = (value: boolean) => {
-    setInternalLoader(value);
+  const setInternalLoader = (value: boolean) => {
+    setLoading(value);
   };
 
   const setStravaAuth = (value: boolean) => {
@@ -60,11 +63,11 @@ export const useAppProvider = () => {
   };
 
   return {
+    routes,
     athleteId,
-    routesAvailable,
-    isStravaAuthed: isStravaAuthed && !externalLoader,
-    loading: externalLoader,
-    setInternalLoader: setLoader,
+    loading,
+    isStravaAuthed,
+    setLoader: setInternalLoader,
     setIsStravaAuthed: setStravaAuth,
   };
 };

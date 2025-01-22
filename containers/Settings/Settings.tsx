@@ -28,15 +28,20 @@ export const Settings = () => {
   return (
     <Container>
       <View
-        style={{ display: "flex", flexDirection: "row", alignItems: "center" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: 40,
+        }}
       >
         <LogoStravaSquare width={40} height={40} />
-        <ThemedText style={{ paddingLeft: 10 }}>
+        <ThemedText style={{ paddingTop: 8 }}>
           Strava is {isStravaAuthed ? "connected" : "disconnected"}
         </ThemedText>
       </View>
       <Button
-        title={isStravaAuthed ? "Disconnect" : "Connect"}
+        title={isStravaAuthed ? "Logout" : "Connect"}
         disabled={!request}
         onPress={handleConnection}
         accessibilityLabel="This will connect/disconnect your Strava account."

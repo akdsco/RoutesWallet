@@ -18,7 +18,7 @@ export type Theme = {
   shadowColor: string;
 };
 
-const tintColorLight = "#70d4e1";
+const tintColorLight = "#151617";
 const tintColorDark = "#fff";
 
 export const theme: Themes = {

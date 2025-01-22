@@ -3,7 +3,7 @@ import { AppContextType } from "@/providers/App";
 
 export const AppContext = createContext<AppContextType>({
   athleteId: null,
-  routesAvailable: false,
+  routes: [],
   isStravaAuthed: false,
   loading: true,
   setInternalLoader: (value: boolean) => undefined,

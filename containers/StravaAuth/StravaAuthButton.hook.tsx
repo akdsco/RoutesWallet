@@ -7,7 +7,7 @@ import { handleStravaAuthorisation, saveStravaRoutesInDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { stravaApiDiscovery } from "@/auth/strava";
 import Config from "react-native-config";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "@/hooks";
 import { useRouter } from "expo-router";
 
@@ -24,6 +24,7 @@ const requestConfig = {
 };
 
 export const useStravaAuthButton = () => {
+  const [authenticating, setAuthenticating] = useState(false);
   const db = useSQLiteContext();
   const router = useRouter();
   const { setIsStravaAuthed } = useApp();
@@ -35,16 +36,19 @@ export const useStravaAuthButton = () => {
 
   useEffect(() => {
     if (response) {
+      setAuthenticating(true);
       console.debug("UseEffect response exists: ", response);
       // TODO: Use loader when async prompt works below (better UX)?
       handleStravaResponse(response)
         .then(() => {
           console.info("Strava auth response handled");
+          setAuthenticating(false);
           router.replace("/");
         })
-        .catch((e) =>
-          console.error("Error when handling Strava's auth response", e),
-        );
+        .catch((e) => {
+          setAuthenticating(false);
+          console.error("Error when handling Strava's auth response", e);
+        });
     }
   }, [response]);
 
@@ -81,6 +85,7 @@ export const useStravaAuthButton = () => {
 
   return {
     request,
+    authenticating,
     promptAsync,
   };
 };
