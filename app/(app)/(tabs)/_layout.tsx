@@ -19,6 +19,8 @@ export default function TabLayout() {
           borderRadius: 10,
           bottom: 0,
         },
+        // TODO: add tabs animation, figure out how to make it work for dark backgrounds
+        // animation: "fade",
       }}
     >
       <Tabs.Screen

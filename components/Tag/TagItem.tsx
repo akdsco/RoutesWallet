@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTheme } from "@/hooks";
+import { router } from "expo-router";
 
 type TagItemProps = {
   tag: {
@@ -13,8 +14,13 @@ type TagItemProps = {
 
 export const TagItem = ({ tag }: TagItemProps) => {
   const theme = useTheme();
+
   const showTaggedRoutes = () => {
     console.debug(`Show "${tag.name}" tag only`);
+    router.push({
+      pathname: `(tabs)/groups/${tag.id}`,
+      params: { tagName: tag.name },
+    });
   };
 
   const openTagItemSettings = () => {
@@ -29,7 +35,7 @@ export const TagItem = ({ tag }: TagItemProps) => {
           onPress={showTaggedRoutes}
         >
           <FontAwesome
-            size={40}
+            size={32}
             name="tag"
             color={tag.color}
             style={styles.tag}
@@ -59,6 +65,7 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
+    paddingLeft: 10,
     justifyContent: "space-between",
     width: "95%",
     margin: "auto",
