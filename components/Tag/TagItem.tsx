@@ -13,7 +13,7 @@ type TagItemProps = {
 };
 
 export const TagItem = ({ tag }: TagItemProps) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   const showTaggedRoutes = () => {
     console.debug(`Show "${tag.name}" tag only`);

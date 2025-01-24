@@ -14,7 +14,7 @@ export const Button = ({
   onPress,
   disabled,
 }: ButtonProps) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   return (
     <TouchableHighlight

@@ -4,10 +4,21 @@ import { Pressable, StyleSheet, ScrollView } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useGroups } from "@/containers/Groups/Groups.hook";
 import { TagItem } from "@/components/Tag/TagItem";
+import { useCallback, useRef } from "react";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@/hooks";
+import { Theme } from "@/constants/theme";
+import { Button } from "@/components/Button/Buttons";
+import { isConstraintError, isSQLiteError } from "@/db/error";
+import Toast from "react-native-toast-message";
 
 export const Groups = () => {
   const db = useSQLiteContext();
-  const { tags } = useGroups();
+  const { theme } = useTheme();
+  const { tags, checkTags } = useGroups();
+  const styles = makeStyles(theme);
+
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const assignRouteToTag = async (routeId: bigint, tagId: number) => {
     const sql = `
@@ -33,7 +44,18 @@ export const Groups = () => {
     try {
       await db.execAsync(sql);
     } catch (error) {
-      console.debug("SQL: Error when adding tag", error);
+      if (isSQLiteError(error)) {
+        if (isConstraintError(error)) {
+          // TODO: toast to let user know the tag is already on the list
+          Toast.show({
+            type: "error",
+            text1: "Tag already exists",
+            text2: "Try a different name",
+          });
+          return console.error("Tag already exists?\n", error);
+        }
+      }
+
       throw error;
     }
 
@@ -41,9 +63,15 @@ export const Groups = () => {
   };
 
   const onPress = async () => {
-    // await addRouteTag("Mallorca");
+    await addRouteTag("Spain");
+    await checkTags();
     // await assignRouteToTag(3219775770703638500n, 1);
   };
+
+  // callbacks
+  const handleSheetChanges = useCallback((index: number) => {
+    console.log("handleSheetChanges", index);
+  }, []);
 
   if (tags.length === 0) {
     return (
@@ -60,15 +88,24 @@ export const Groups = () => {
           <TagItem tag={tag} key={tag.id} />
         ))}
       </ScrollView>
-      {/*<Pressable onPress={onPress} style={{ paddingTop: 50 }}>*/}
-      {/*  <ThemedText>Execute Fn</ThemedText>*/}
-      {/*</Pressable>*/}
+      <BottomSheet ref={bottomSheetRef} onChange={handleSheetChanges}>
+        <BottomSheetView style={styles.contentContainer}>
+          <Button title="Add tag" onPress={onPress} accessibilityLabel="add" />
+        </BottomSheetView>
+      </BottomSheet>
     </Container>
   );
 };
 
-const styles = StyleSheet.create({
-  scrollViewContent: {
-    flexGrow: 1,
-  },
-});
+const makeStyles = (theme: Theme) =>
+  StyleSheet.create({
+    scrollViewContent: {
+      flexGrow: 1,
+    },
+    contentContainer: {
+      flex: 1,
+      alignItems: "center",
+      padding: 5,
+      backgroundColor: theme.background,
+    },
+  });

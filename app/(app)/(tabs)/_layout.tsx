@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { useTheme } from "@/hooks";
 
 export default function TabLayout() {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const iconSize = 28;
 
   return (

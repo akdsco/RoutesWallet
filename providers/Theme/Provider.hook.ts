@@ -1,20 +1,26 @@
 import { useColorScheme } from "react-native";
-import { theme as baseTheme } from "@/constants/theme";
+import { theme as themesObject } from "@/constants/theme";
 import { useState, useEffect } from "react";
 
 export const useAppThemeProvider = () => {
   const colorScheme = useColorScheme();
-  const initialScheme =
-    colorScheme === "light" ? baseTheme.light : baseTheme.dark;
+  const defaultColorScheme = "light";
 
-  const [theme, setTheme] = useState(initialScheme);
+  const { light, dark } = themesObject;
+
+  const initTheme = colorScheme === defaultColorScheme ? light : dark;
+
+  const [theme, setTheme] = useState(initTheme);
+  const [colorMode, setColorMode] = useState(defaultColorScheme);
 
   console.log("Rendering theme: ", colorScheme);
 
   useEffect(() => {
     console.log("Changing theme: ", colorScheme);
-    setTheme(colorScheme === "light" ? baseTheme.light : baseTheme.dark);
+
+    setTheme(colorScheme === defaultColorScheme ? light : dark);
+    setColorMode(colorScheme ? colorScheme : defaultColorScheme);
   }, [colorScheme]);
 
-  return theme;
+  return { colorMode, theme };
 };

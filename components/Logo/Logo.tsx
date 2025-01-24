@@ -9,7 +9,7 @@ type LogoProps = SvgProps & {
 };
 
 export const Logo: React.FC<LogoProps> = ({ size = 400, fill = "#70D4E1" }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   return (
     <Svg width={size} height={size} viewBox="0 0 400 400">

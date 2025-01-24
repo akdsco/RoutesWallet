@@ -12,7 +12,7 @@ export function ThemedView({
   darkColor,
   ...otherProps
 }: ThemedViewProps) {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   return (
     <View

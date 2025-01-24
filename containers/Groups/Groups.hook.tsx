@@ -22,16 +22,17 @@ export const useGroups = () => {
     }
   };
 
-  useEffect(() => {
-    const run = async () => {
-      const tags = await getTags();
-      setTags(tags);
-    };
+  const checkTags = async () => {
+    const tags = await getTags();
+    setTags(tags);
+  };
 
-    run().then();
+  useEffect(() => {
+    checkTags().then();
   }, []);
 
   return {
     tags,
+    checkTags,
   };
 };
