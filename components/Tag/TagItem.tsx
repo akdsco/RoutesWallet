@@ -37,7 +37,9 @@ export const TagItem = ({
   };
 
   const handleSelectedMenuOption = async (value: string) => {
-    console.debug(`Selected option: ${value} on tag "${item.name}"`);
+    console.debug(
+      `Menu selected option: ${value} tag "${item.name}", tagId: ${item.id}`,
+    );
 
     switch (value) {
       case "edit":

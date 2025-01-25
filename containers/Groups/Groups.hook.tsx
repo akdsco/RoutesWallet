@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
+import { Alert } from "react-native";
 
 type Tag = {
   id: number;
@@ -24,16 +25,38 @@ export const useGroups = () => {
   };
 
   const removeTag = async (tagId: number) => {
-    const sql = `DELETE FROM RouteTags WHERE id = ?`;
+    const executeRemoval = async () => {
+      const sql = `DELETE FROM RouteTags WHERE id = ?`;
 
-    try {
-      await db.runAsync(sql, [tagId]);
-      console.debug(`SQL: Tag id "${tagId}" removed`);
-      await checkTags();
-    } catch (error) {
-      console.error("Error executing SQL", error);
-      throw new Error("Error removing tag");
-    }
+      try {
+        await db.runAsync(sql, [tagId]);
+        console.debug(`SQL: Tag id "${tagId}" removed`);
+        await checkTags();
+      } catch (error) {
+        console.error("Error executing SQL", error);
+        throw new Error("Error removing tag");
+      }
+    };
+
+    Alert.alert(
+      "Are you sure you want to remove this tag?",
+      "All the route assignments will also be removed",
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Cancel Pressed"),
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          onPress: () => {
+            console.log("OK Pressed");
+            executeRemoval();
+          },
+          style: "destructive",
+        },
+      ],
+    );
   };
 
   const checkTags = async () => {
