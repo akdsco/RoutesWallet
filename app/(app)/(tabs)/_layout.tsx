@@ -33,9 +33,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="groups"
+        name="tags"
         options={{
-          title: "Groups",
+          title: "Tags",
           tabBarIcon: ({ color }) => (
             <FontAwesome size={iconSize} name="tags" color={color} />
           ),

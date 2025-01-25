@@ -1,4 +1,5 @@
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTheme } from "@/hooks";
@@ -13,12 +14,23 @@ import {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
+import Toast from "react-native-toast-message";
+
+const colors = ["red", "blue", "green", "orange", "purple", "yellow"];
+
+export type RemoveTag = (tagId: number) => Promise<void>;
+export type UpdateTag = (
+  tagId: number,
+  name: string,
+  color: string,
+) => Promise<void>;
 
 type TagItemProps = {
   id: number;
   name: string;
   color: string;
-  removeTag: (tagId: number) => Promise<void>;
+  removeTag: RemoveTag;
+  updateTag: UpdateTag;
 };
 
 export const TagItem = ({
@@ -27,26 +39,30 @@ export const TagItem = ({
   isActive,
 }: RenderItemParams<TagItemProps>) => {
   const { theme } = useTheme();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(item.name);
+  const [editedColor, setEditedColor] = useState(item.color);
 
   const listTaggedRoutes = () => {
-    console.debug(`Show "${item.name}" tag only`);
+    if (isEditing) {
+      return;
+    }
+
+    console.debug(`Show \"${item.name}\" tag only`);
     router.push({
-      pathname: `(tabs)/groups/${item.id}`,
+      pathname: `(tabs)/tags/${item.id}`,
       params: { tagName: item.name },
     });
   };
 
   const handleSelectedMenuOption = async (value: string) => {
     console.debug(
-      `Menu selected option: ${value} tag "${item.name}", tagId: ${item.id}`,
+      `Menu selected option: ${value} tag \"${item.name}\", tagId: ${item.id}`,
     );
 
     switch (value) {
       case "edit":
-        router.push({
-          pathname: `(tabs)/editTag`,
-          params: { tagId: item.id },
-        });
+        setIsEditing(true);
         break;
       case "remove":
         await item.removeTag(item.id);
@@ -54,6 +70,22 @@ export const TagItem = ({
       default:
         break;
     }
+  };
+
+  const saveChanges = async () => {
+    const name = editedName.trim();
+    if (name === "") {
+      Toast.show({
+        type: "error",
+        text1: "Tag without a name",
+        text2: "Try to make it slightly more descriptive",
+        topOffset: 55,
+      });
+      return;
+    }
+
+    await item.updateTag(item.id, name, editedColor);
+    setIsEditing(false);
   };
 
   return (
@@ -66,26 +98,64 @@ export const TagItem = ({
       >
         <View style={styles.tagItemContainer}>
           <View style={styles.tagAndNameContainer}>
-            <FontAwesome
-              size={32}
-              name="tag"
-              color={item.color}
-              style={styles.tag}
-            />
-            {/*TODO: Check if below 75% works on more screens? Adjust*/}
-            <ThemedText type="subtitle" style={{ width: "75%" }}>
-              {item.name}
-            </ThemedText>
+            {isEditing ? (
+              <TouchableOpacity
+                onPress={() => {
+                  const nextColorIndex =
+                    (colors.indexOf(editedColor) + 1) % colors.length;
+                  setEditedColor(colors[nextColorIndex]);
+                }}
+              >
+                <FontAwesome
+                  size={32}
+                  name="tag"
+                  color={editedColor}
+                  style={styles.tag}
+                />
+              </TouchableOpacity>
+            ) : (
+              <FontAwesome
+                size={32}
+                name="tag"
+                color={item.color}
+                style={styles.tag}
+              />
+            )}
+
+            {isEditing ? (
+              <TextInput
+                value={editedName}
+                onChangeText={setEditedName}
+                style={[styles.textInput, { color: theme.text }]}
+                placeholder="Type in tag name"
+              />
+            ) : (
+              <ThemedText type="subtitle" style={{ width: "75%" }}>
+                {item.name}
+              </ThemedText>
+            )}
           </View>
-          <Menu onSelect={(value) => handleSelectedMenuOption(value as string)}>
-            <MenuTrigger style={styles.optionButtonContainer}>
-              <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
-            </MenuTrigger>
-            <MenuOptions>
-              <MenuOption value="edit" text="Edit" />
-              <MenuOption value="remove" text="Remove" />
-            </MenuOptions>
-          </Menu>
+
+          {isEditing ? (
+            <TouchableOpacity
+              onPress={saveChanges}
+              style={styles.confirmButton}
+            >
+              <FontAwesome size={25} name="check" color="green" />
+            </TouchableOpacity>
+          ) : (
+            <Menu
+              onSelect={(value) => handleSelectedMenuOption(value as string)}
+            >
+              <MenuTrigger style={styles.optionButtonContainer}>
+                <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
+              </MenuTrigger>
+              <MenuOptions>
+                <MenuOption value="edit" text="Edit" />
+                <MenuOption value="remove" text="Remove" />
+              </MenuOptions>
+            </Menu>
+          )}
         </View>
       </TouchableOpacity>
     </ScaleDecorator>
@@ -116,11 +186,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     borderColor: "#ccc",
-    // borderWidth: 0.2,
-    // width: "85%",
   },
   tag: {
     paddingRight: 18,
+  },
+  textInput: {
+    fontSize: 18,
+    borderBottomWidth: 0.5,
+    borderColor: "#ccc",
+    width: "75%",
   },
   optionButtonContainer: {
     width: 32,
@@ -129,7 +203,9 @@ const styles = StyleSheet.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    // borderColor: "white",
-    // borderWidth: 1,
+  },
+  confirmButton: {
+    padding: 5,
+    borderRadius: 5,
   },
 });

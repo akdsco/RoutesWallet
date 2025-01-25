@@ -2,7 +2,7 @@ import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
 import { StyleSheet, View } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
-import { useGroups } from "@/containers/Groups/Groups.hook";
+import { useGroups } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/constants/theme";
@@ -12,7 +12,7 @@ import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 
-export const Groups = () => {
+export const Tags = () => {
   const db = useSQLiteContext();
   const { theme } = useTheme();
   const { tags, setTags, checkTags } = useGroups();

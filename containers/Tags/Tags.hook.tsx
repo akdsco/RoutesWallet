@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { Alert } from "react-native";
+import { RemoveTag, UpdateTag } from "@/components/Tag/TagItem";
 
-type Tag = {
+type RawTag = {
   id: number;
   name: string;
   color: string;
-  removeTag: (tagId: number) => Promise<void>;
+};
+
+type Tag = RawTag & {
+  removeTag: RemoveTag;
+  updateTag: UpdateTag;
 };
 
 export const useGroups = () => {
@@ -17,7 +22,15 @@ export const useGroups = () => {
     const sql = `SELECT * FROM RouteTags`;
 
     try {
-      return await db.getAllAsync<Tag>(sql);
+      const tagsWithoutFunctions = await db.getAllAsync<RawTag>(sql);
+
+      const tags: Tag[] = tagsWithoutFunctions.map((tag) => ({
+        ...tag,
+        removeTag,
+        updateTag,
+      }));
+
+      return tags;
     } catch (error) {
       console.debug("SQL: Error when fetching tags", error);
       throw error;
@@ -59,9 +72,26 @@ export const useGroups = () => {
     );
   };
 
+  const updateTag: UpdateTag = async (tagId, name, color) => {
+    const sql = `
+      UPDATE RouteTags
+      SET name = ?, color = ?
+      WHERE id = ?;
+    `;
+
+    try {
+      await db.runAsync(sql, [name, color, tagId]);
+      console.debug(`SQL: Tag id "${tagId}" updated`);
+      await checkTags();
+    } catch (error) {
+      console.error("Error executing SQL", error);
+      throw new Error("Error updating tag");
+    }
+  };
+
   const checkTags = async () => {
     const tags = await getTags();
-    setTags(tags.map((tag) => ({ ...tag, removeTag })));
+    setTags(tags);
   };
 
   useEffect(() => {
