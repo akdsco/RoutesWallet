@@ -3,6 +3,12 @@ import { ThemedText } from "@/components/ThemedText";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTheme } from "@/hooks";
 import { router } from "expo-router";
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+} from "react-native-popup-menu";
 
 type TagItemProps = {
   tag: {
@@ -27,6 +33,24 @@ export const TagItem = ({ tag }: TagItemProps) => {
     console.debug(`Open tag "${tag.name}" settings`);
   };
 
+  const handleSelectedMenuOption = (value: string) => {
+    console.debug(`Selected option: ${value} on tag "${tag.name}"`);
+
+    switch (value) {
+      case "edit":
+        router.push({
+          pathname: `(tabs)/editTag`,
+          params: { tagId: tag.id },
+        });
+        break;
+      case "remove":
+        console.debug(`Remove tag "${tag.name}"`);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.tagItemContainer}>
@@ -42,12 +66,15 @@ export const TagItem = ({ tag }: TagItemProps) => {
           />
           <ThemedText type="subtitle">{tag.name}</ThemedText>
         </Pressable>
-        <Pressable
-          style={styles.optionButtonContainer}
-          onPress={openTagItemSettings}
-        >
-          <FontAwesome size={30} name="ellipsis-v" color={theme.text} />
-        </Pressable>
+        <Menu onSelect={(value) => handleSelectedMenuOption(value as string)}>
+          <MenuTrigger style={styles.optionButtonContainer}>
+            <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
+          </MenuTrigger>
+          <MenuOptions>
+            <MenuOption value="edit" text="Edit" />
+            <MenuOption value="remove" text="Remove" />
+          </MenuOptions>
+        </Menu>
       </View>
     </View>
   );
@@ -84,13 +111,13 @@ const styles = StyleSheet.create({
     paddingRight: 18,
   },
   optionButtonContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 5,
+    width: 32,
     borderRadius: 50,
-    width: "13%",
-    // borderColor: "#ccc",
-    // borderWidth: 0.2,
+    height: 32,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    // borderColor: "white",
+    // borderWidth: 1,
   },
 });

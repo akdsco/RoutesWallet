@@ -1,16 +1,17 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { Pressable, StyleSheet, ScrollView } from "react-native";
+import { StyleSheet, ScrollView } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useGroups } from "@/containers/Groups/Groups.hook";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useCallback, useRef } from "react";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/constants/theme";
 import { Button } from "@/components/Button/Buttons";
 import { isConstraintError, isSQLiteError } from "@/db/error";
 import Toast from "react-native-toast-message";
+import { MenuProvider } from "react-native-popup-menu";
 
 export const Groups = () => {
   const db = useSQLiteContext();
@@ -59,12 +60,12 @@ export const Groups = () => {
       throw error;
     }
 
+    await checkTags();
     console.debug(`SQL: Route tag "${tagName}" added`);
   };
 
   const onPress = async () => {
     await addRouteTag("Spain");
-    await checkTags();
     // await assignRouteToTag(3219775770703638500n, 1);
   };
 
@@ -83,16 +84,19 @@ export const Groups = () => {
 
   return (
     <Container>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        {tags.map((tag) => (
-          <TagItem tag={tag} key={tag.id} />
-        ))}
-      </ScrollView>
-      <BottomSheet ref={bottomSheetRef} onChange={handleSheetChanges}>
-        <BottomSheetView style={styles.contentContainer}>
-          <Button title="Add tag" onPress={onPress} accessibilityLabel="add" />
-        </BottomSheetView>
-      </BottomSheet>
+      <MenuProvider>
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          {tags.map((tag) => (
+            <TagItem tag={tag} key={tag.id} />
+          ))}
+        </ScrollView>
+        <Button
+          title="Add tag"
+          onPress={onPress}
+          accessibilityLabel="add"
+          style={styles.addTagButton}
+        />
+      </MenuProvider>
     </Container>
   );
 };
@@ -102,10 +106,9 @@ const makeStyles = (theme: Theme) =>
     scrollViewContent: {
       flexGrow: 1,
     },
-    contentContainer: {
-      flex: 1,
+    addTagButton: {
       alignItems: "center",
-      padding: 5,
+      bottom: 10,
       backgroundColor: theme.background,
     },
   });
