@@ -1,25 +1,22 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { StyleSheet, ScrollView } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useGroups } from "@/containers/Groups/Groups.hook";
 import { TagItem } from "@/components/Tag/TagItem";
-import { useCallback, useRef } from "react";
-import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/constants/theme";
 import { Button } from "@/components/Button/Buttons";
 import { isConstraintError, isSQLiteError } from "@/db/error";
 import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
+import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 
 export const Groups = () => {
   const db = useSQLiteContext();
   const { theme } = useTheme();
-  const { tags, checkTags } = useGroups();
+  const { tags, setTags, checkTags } = useGroups();
   const styles = makeStyles(theme);
-
-  const bottomSheetRef = useRef<BottomSheet>(null);
 
   const assignRouteToTag = async (routeId: bigint, tagId: number) => {
     const sql = `
@@ -69,11 +66,6 @@ export const Groups = () => {
     // await assignRouteToTag(3219775770703638500n, 1);
   };
 
-  // callbacks
-  const handleSheetChanges = useCallback((index: number) => {
-    console.log("handleSheetChanges", index);
-  }, []);
-
   if (tags.length === 0) {
     return (
       <Container>
@@ -85,17 +77,25 @@ export const Groups = () => {
   return (
     <Container>
       <MenuProvider>
-        <ScrollView contentContainerStyle={styles.scrollViewContent}>
-          {tags.map((tag) => (
-            <TagItem tag={tag} key={tag.id} />
-          ))}
-        </ScrollView>
-        <Button
-          title="Add tag"
-          onPress={onPress}
-          accessibilityLabel="add"
-          style={styles.addTagButton}
-        />
+        {/*TODO: save order in db as well to persist*/}
+        <View style={styles.scrollViewContent}>
+          <DraggableFlatList
+            data={tags}
+            onDragEnd={({ data }) => setTags(data)}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={TagItem}
+            style={{
+              // TODO: questionable solution, but it works? test it on different devices, load up more tags
+              height: "89%",
+            }}
+          />
+          <Button
+            title="Add tag"
+            onPress={onPress}
+            accessibilityLabel="add"
+            style={styles.addTagButton}
+          />
+        </View>
       </MenuProvider>
     </Container>
   );
@@ -105,6 +105,7 @@ const makeStyles = (theme: Theme) =>
   StyleSheet.create({
     scrollViewContent: {
       flexGrow: 1,
+      justifyContent: "space-between",
     },
     addTagButton: {
       alignItems: "center",

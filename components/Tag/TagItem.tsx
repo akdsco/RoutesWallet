@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTheme } from "@/hooks";
@@ -9,42 +9,44 @@ import {
   MenuOptions,
   MenuTrigger,
 } from "react-native-popup-menu";
+import {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 
 type TagItemProps = {
-  tag: {
-    id: number;
-    name: string;
-    color: string;
-  };
+  id: number;
+  name: string;
+  color: string;
 };
 
-export const TagItem = ({ tag }: TagItemProps) => {
+export const TagItem = ({
+  item,
+  drag,
+  isActive,
+}: RenderItemParams<TagItemProps>) => {
   const { theme } = useTheme();
 
-  const showTaggedRoutes = () => {
-    console.debug(`Show "${tag.name}" tag only`);
+  const listTaggedRoutes = () => {
+    console.debug(`Show "${item.name}" tag only`);
     router.push({
-      pathname: `(tabs)/groups/${tag.id}`,
-      params: { tagName: tag.name },
+      pathname: `(tabs)/groups/${item.id}`,
+      params: { tagName: item.name },
     });
   };
 
-  const openTagItemSettings = () => {
-    console.debug(`Open tag "${tag.name}" settings`);
-  };
-
   const handleSelectedMenuOption = (value: string) => {
-    console.debug(`Selected option: ${value} on tag "${tag.name}"`);
+    console.debug(`Selected option: ${value} on tag "${item.name}"`);
 
     switch (value) {
       case "edit":
         router.push({
           pathname: `(tabs)/editTag`,
-          params: { tagId: tag.id },
+          params: { tagId: item.id },
         });
         break;
       case "remove":
-        console.debug(`Remove tag "${tag.name}"`);
+        console.debug(`Remove tag "${item.name}"`);
         break;
       default:
         break;
@@ -52,41 +54,45 @@ export const TagItem = ({ tag }: TagItemProps) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.tagItemContainer}>
-        <Pressable
-          style={styles.tagAndNameContainer}
-          onPress={showTaggedRoutes}
-        >
-          <FontAwesome
-            size={32}
-            name="tag"
-            color={tag.color}
-            style={styles.tag}
-          />
-          <ThemedText type="subtitle">{tag.name}</ThemedText>
-        </Pressable>
-        <Menu onSelect={(value) => handleSelectedMenuOption(value as string)}>
-          <MenuTrigger style={styles.optionButtonContainer}>
-            <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
-          </MenuTrigger>
-          <MenuOptions>
-            <MenuOption value="edit" text="Edit" />
-            <MenuOption value="remove" text="Remove" />
-          </MenuOptions>
-        </Menu>
-      </View>
-    </View>
+    <ScaleDecorator>
+      <TouchableOpacity
+        onLongPress={drag}
+        disabled={isActive}
+        style={styles.container}
+        onPress={listTaggedRoutes}
+      >
+        <View style={styles.tagItemContainer}>
+          <View style={styles.tagAndNameContainer}>
+            <FontAwesome
+              size={32}
+              name="tag"
+              color={item.color}
+              style={styles.tag}
+            />
+            <ThemedText type="subtitle">{item.name}</ThemedText>
+          </View>
+          <Menu onSelect={(value) => handleSelectedMenuOption(value as string)}>
+            <MenuTrigger style={styles.optionButtonContainer}>
+              <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
+            </MenuTrigger>
+            <MenuOptions>
+              <MenuOption value="edit" text="Edit" />
+              <MenuOption value="remove" text="Remove" />
+            </MenuOptions>
+          </Menu>
+        </View>
+      </TouchableOpacity>
+    </ScaleDecorator>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 10,
+    paddingVertical: 5,
     margin: 3,
     borderRadius: 5,
     borderColor: "#ccc",
-    borderWidth: 0.2,
+    borderWidth: 0.3,
   },
   tagItemContainer: {
     display: "flex",
@@ -101,11 +107,11 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-    padding: 1,
+    padding: 10,
     borderRadius: 5,
-    // borderColor: "#ccc",
+    borderColor: "#ccc",
     // borderWidth: 0.2,
-    width: "85%",
+    // width: "85%",
   },
   tag: {
     paddingRight: 18,

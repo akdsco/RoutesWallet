@@ -33,6 +33,7 @@ export const useGroups = () => {
 
   return {
     tags,
+    setTags,
     checkTags,
   };
 };
