@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useTheme } from "@/hooks";
@@ -18,6 +18,7 @@ type TagItemProps = {
   id: number;
   name: string;
   color: string;
+  removeTag: (tagId: number) => Promise<void>;
 };
 
 export const TagItem = ({
@@ -35,7 +36,7 @@ export const TagItem = ({
     });
   };
 
-  const handleSelectedMenuOption = (value: string) => {
+  const handleSelectedMenuOption = async (value: string) => {
     console.debug(`Selected option: ${value} on tag "${item.name}"`);
 
     switch (value) {
@@ -46,7 +47,7 @@ export const TagItem = ({
         });
         break;
       case "remove":
-        console.debug(`Remove tag "${item.name}"`);
+        await item.removeTag(item.id);
         break;
       default:
         break;
@@ -69,7 +70,10 @@ export const TagItem = ({
               color={item.color}
               style={styles.tag}
             />
-            <ThemedText type="subtitle">{item.name}</ThemedText>
+            {/*TODO: Check if below 75% works on more screens? Adjust*/}
+            <ThemedText type="subtitle" style={{ width: "75%" }}>
+              {item.name}
+            </ThemedText>
           </View>
           <Menu onSelect={(value) => handleSelectedMenuOption(value as string)}>
             <MenuTrigger style={styles.optionButtonContainer}>

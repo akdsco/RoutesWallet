@@ -46,9 +46,10 @@ export const Groups = () => {
         if (isConstraintError(error)) {
           // TODO: toast to let user know the tag is already on the list
           Toast.show({
-            type: "error",
+            type: "info",
             text1: "Tag already exists",
             text2: "Try a different name",
+            topOffset: 55,
           });
           return console.error("Tag already exists?\n", error);
         }
@@ -62,14 +63,34 @@ export const Groups = () => {
   };
 
   const onPress = async () => {
-    await addRouteTag("Spain");
+    await addRouteTag("Crazy long tag name that should never ever exist??");
     // await assignRouteToTag(3219775770703638500n, 1);
   };
 
   if (tags.length === 0) {
     return (
       <Container>
-        <ThemedText>No tags available.</ThemedText>
+        <View style={styles.scrollViewContent}>
+          <View
+            style={{
+              display: "flex",
+              alignContent: "center",
+              justifyContent: "center",
+              height: "89%",
+            }}
+          >
+            <ThemedText type="defaultSemiBold" style={{ textAlign: "center" }}>
+              Add tags by clicking on the Add tag button located on the bottom
+              of this screen
+            </ThemedText>
+          </View>
+          <Button
+            title="Add tag"
+            onPress={onPress}
+            accessibilityLabel="add"
+            style={styles.addTagButton}
+          />
+        </View>
       </Container>
     );
   }
