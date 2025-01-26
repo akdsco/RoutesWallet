@@ -16,7 +16,20 @@ import {
 } from "react-native-draggable-flatlist";
 import Toast from "react-native-toast-message";
 
-const colors = ["red", "blue", "green", "orange", "purple", "yellow"];
+const colors = [
+  "#FFB3B3", // pastel red
+  "red",
+  "#ADD8E6", // pastel blue
+  "blue",
+  "#B2F2B2", // pastel green
+  "green",
+  "#FFDAB3", // pastel orange
+  "orange",
+  "#DAB3FF", // pastel purple
+  "purple",
+  "#FFFFB3", // pastel yellow
+  "yellow",
+];
 
 export type RemoveTag = (tagId: number) => Promise<void>;
 export type UpdateTag = (
@@ -43,12 +56,13 @@ export const TagItem = ({
   const [editedName, setEditedName] = useState(item.name);
   const [editedColor, setEditedColor] = useState(item.color);
 
-  const listTaggedRoutes = () => {
+  const showTaggedRoutes = () => {
     if (isEditing) {
+      // Currently editing, do not allow navigation (but we do allow navigation to other tags)
       return;
     }
 
-    console.debug(`Show \"${item.name}\" tag only`);
+    console.debug(`Show \"${item.name}\" routes`);
     router.push({
       pathname: `(tabs)/tags/${item.id}`,
       params: { tagName: item.name },
@@ -94,7 +108,7 @@ export const TagItem = ({
         onLongPress={drag}
         disabled={isActive}
         style={styles.container}
-        onPress={listTaggedRoutes}
+        onPress={showTaggedRoutes}
       >
         <View style={styles.tagItemContainer}>
           <View style={styles.tagAndNameContainer}>

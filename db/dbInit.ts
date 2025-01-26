@@ -101,6 +101,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       
+      CREATE TABLE IF NOT EXISTS AthleteTagOrder (
+        athlete_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        order_position INTEGER NOT NULL,
+        PRIMARY KEY (athlete_id, tag_id),
+        FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES RouteTags(id) ON DELETE CASCADE
+      );
+      
       CREATE TABLE IF NOT EXISTS RouteTagAssignments (
         route_id BIGINT NOT NULL,
         tag_id INTEGER NOT NULL,
@@ -109,28 +118,24 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
         FOREIGN KEY (route_id) REFERENCES StravaRoute(id) ON DELETE CASCADE,
         FOREIGN KEY (tag_id) REFERENCES RouteTags(id) ON DELETE CASCADE
       );
-      
     `;
 
     await db.execAsync(createTablesSQL);
 
-    // TODO: do we want to prime the db with some data?
-    // await db.runAsync(
-    //   "INSERT INTO todos (value, intValue) VALUES (?, ?)",
-    //   "hello",
-    //   1,
-    // );
-    // await db.runAsync(
-    //   "INSERT INTO todos (value, intValue) VALUES (?, ?)",
-    //   "world",
-    //   2,
-    // );
+    // Prime DB with some tags
+    await db.execAsync(`
+      INSERT INTO RouteTags (name, color) VALUES 
+      ('Long routes', 'red'),
+      ('Weekend getaways', '#FFB3B3'),
+      ('Short and punchy', '#687076'),
+      ('Best climbs', 'blue');
+    `);
 
     currentDbVersion = 1;
   }
 
   if (currentDbVersion === 1) {
-    // Add more migrations
+    // Add migrations
   }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

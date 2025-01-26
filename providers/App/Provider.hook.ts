@@ -15,7 +15,8 @@ export const useAppProvider = () => {
   const [fontLoaded, fontError] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
-  const [athleteId, setAthleteId] = useState<number | null>(null);
+  // TODO: can we deal with  null athleteId in the root? so we don't pass it null ever?
+  const [athleteId, setAthleteId] = useState<number | null>();
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
   const [routes, setRoutes] = useState<StravaRoute[]>([]);
 

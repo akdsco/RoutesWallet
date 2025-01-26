@@ -2,7 +2,7 @@ import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
 import { StyleSheet, View } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
-import { useGroups } from "@/containers/Tags/Tags.hook";
+import { useTags } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/constants/theme";
@@ -15,7 +15,7 @@ import DraggableFlatList from "react-native-draggable-flatlist/src/components/Dr
 export const Tags = () => {
   const db = useSQLiteContext();
   const { theme } = useTheme();
-  const { tags, setTags, checkTags } = useGroups();
+  const { tags, setTags, checkTags } = useTags();
   const styles = makeStyles(theme);
 
   const assignRouteToTag = async (routeId: bigint, tagId: number) => {
@@ -102,7 +102,7 @@ export const Tags = () => {
         <View style={styles.scrollViewContent}>
           <DraggableFlatList
             data={tags}
-            onDragEnd={({ data }) => setTags(data)}
+            onDragEnd={({ data }) => setTags(data, true)}
             keyExtractor={(item) => item.id.toString()}
             renderItem={TagItem}
             style={{
