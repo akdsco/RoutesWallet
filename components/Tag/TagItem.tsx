@@ -38,7 +38,7 @@ export type UpdateTag = (
   color: string,
 ) => Promise<void>;
 
-type TagItemProps = {
+export type TagItemProps = {
   id: number;
   name: string;
   color: string;

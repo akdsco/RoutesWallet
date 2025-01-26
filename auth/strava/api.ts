@@ -96,6 +96,15 @@ export const handleStravaAuthorisation =
         authData.access_token,
         athlete.id,
       ]);
+
+      // Iterate over existing tags and create default order
+      await db.execAsync(`
+        INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
+        SELECT ${athlete.id} AS athlete_id,
+          id AS tag_id,
+          ROW_NUMBER() OVER (ORDER BY id) AS order_position
+        FROM RouteTags;
+      `);
     } catch (error) {
       console.log("Error saving", error);
     }

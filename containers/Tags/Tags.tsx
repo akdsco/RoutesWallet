@@ -1,20 +1,23 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useTags } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
-import { useTheme } from "@/hooks";
+import { useApp, useTheme } from "@/hooks";
 import { Theme } from "@/constants/theme";
 import { Button } from "@/components/Button/Buttons";
 import { isConstraintError, isSQLiteError } from "@/db/error";
 import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
+import React from "react";
 
 export const Tags = () => {
   const db = useSQLiteContext();
+  const [newTagName, setNewTagName] = React.useState("");
   const { theme } = useTheme();
+  const { athleteId } = useApp();
   const { tags, setTags, checkTags } = useTags();
   const styles = makeStyles(theme);
 
@@ -33,14 +36,49 @@ export const Tags = () => {
     }
   };
 
-  const addRouteTag = async (tagName: string) => {
+  const addRouteTag = async () => {
+    if (newTagName.trim() === "") {
+      Toast.show({
+        type: "info",
+        text1: "Cannot add empty tag",
+        text2: "Please type in a name for your new tag",
+        topOffset: 55,
+      });
+      return;
+    }
+
     const sql = `
       INSERT INTO RouteTags (name)
-      VALUES ('${tagName}');
+      VALUES ('${newTagName}');
     `;
 
     try {
       await db.execAsync(sql);
+
+      // Retrieve the ID of the new tag
+      const getTagIdSql = `
+        SELECT id FROM RouteTags
+        WHERE name = '${newTagName}';
+      `;
+      const result = await db.getAllAsync<{ id: number }>(getTagIdSql);
+      const tagId = result[0]?.id;
+
+      if (!tagId) {
+        throw new Error("Failed to retrieve tag ID after insertion");
+      }
+
+      // Set the new tag as the first in the order
+      const updateOrderSql = `
+      -- Shift existing tags for the athlete down by 1
+      UPDATE AthleteTagOrder
+      SET order_position = order_position + 1
+      WHERE athlete_id = ${athleteId};
+
+      -- Insert the new tag at the first position
+      INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
+      VALUES (${athleteId}, ${tagId}, 1);
+    `;
+      await db.execAsync(updateOrderSql);
     } catch (error) {
       if (isSQLiteError(error)) {
         if (isConstraintError(error)) {
@@ -59,12 +97,8 @@ export const Tags = () => {
     }
 
     await checkTags();
-    console.debug(`SQL: Route tag "${tagName}" added`);
-  };
-
-  const onPress = async () => {
-    await addRouteTag("Crazy long tag name that should never ever exist??");
-    // await assignRouteToTag(3219775770703638500n, 1);
+    console.debug(`SQL: Route tag "${newTagName}" added`);
+    setNewTagName("");
   };
 
   if (tags.length === 0) {
@@ -84,12 +118,19 @@ export const Tags = () => {
               of this screen
             </ThemedText>
           </View>
-          <Button
-            title="Add tag"
-            onPress={onPress}
-            accessibilityLabel="add"
-            style={styles.addTagButton}
-          />
+          <View style={styles.addContainer}>
+            <TextInput
+              value={newTagName}
+              onChangeText={setNewTagName}
+              style={[styles.textInput, { color: theme.text }]}
+              placeholder="Type in tag name"
+            />
+            <Button
+              title="Add"
+              onPress={addRouteTag}
+              accessibilityLabel="Add tag"
+            />
+          </View>
         </View>
       </Container>
     );
@@ -110,12 +151,20 @@ export const Tags = () => {
               height: "89%",
             }}
           />
-          <Button
-            title="Add tag"
-            onPress={onPress}
-            accessibilityLabel="add"
-            style={styles.addTagButton}
-          />
+          {/*TODO: pack up into component */}
+          <View style={styles.addContainer}>
+            <TextInput
+              value={newTagName}
+              onChangeText={setNewTagName}
+              style={[styles.textInput, { color: theme.text }]}
+              placeholder="Type in tag name"
+            />
+            <Button
+              title="Add"
+              onPress={addRouteTag}
+              accessibilityLabel="Add tag"
+            />
+          </View>
         </View>
       </MenuProvider>
     </Container>
@@ -125,12 +174,18 @@ export const Tags = () => {
 const makeStyles = (theme: Theme) =>
   StyleSheet.create({
     scrollViewContent: {
-      flexGrow: 1,
       justifyContent: "space-between",
     },
-    addTagButton: {
-      alignItems: "center",
-      bottom: 10,
-      backgroundColor: theme.background,
+    addContainer: {
+      display: "flex",
+      flexDirection: "row",
+      justifyContent: "center",
+    },
+    textInput: {
+      fontSize: 18,
+      borderBottomWidth: 0.5,
+      borderColor: "#ccc",
+      marginRight: 10,
+      width: "75%",
     },
   });

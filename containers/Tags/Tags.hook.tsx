@@ -27,7 +27,7 @@ export const useTags = () => {
       SELECT rt.id, rt.name, rt.color
       FROM RouteTags rt
       LEFT JOIN AthleteTagOrder ato ON rt.id = ato.tag_id AND ato.athlete_id = ?
-      ORDER BY ato.order_position IS NULL, ato.order_position ASC, rt.id ASC;
+      ORDER BY ato.order_position IS NULL, ato.order_position ASC, rt.id DESC;
     `;
 
     try {

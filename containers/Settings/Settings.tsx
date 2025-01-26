@@ -32,7 +32,7 @@ export const Settings = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          paddingTop: 40,
+          paddingVertical: 30,
         }}
       >
         <LogoStravaSquare width={40} height={40} />

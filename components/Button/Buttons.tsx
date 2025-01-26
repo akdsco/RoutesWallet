@@ -28,15 +28,11 @@ export const Button = ({
     <View style={style}>
       <TouchableHighlight
         style={{
-          height: 40,
-          width: 160,
+          paddingHorizontal: 12,
           borderRadius: 10,
           borderColor: theme.tint,
           borderStyle: "solid",
           borderWidth: 1,
-          marginLeft: 50,
-          marginRight: 50,
-          marginTop: 20,
         }}
       >
         <ReactNativeButton
