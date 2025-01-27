@@ -5,13 +5,14 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useTags } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useApp, useTheme } from "@/hooks";
-import { Theme } from "@/constants/theme";
+import { Theme } from "@/library/theme";
 import { Button } from "@/components/Button/Buttons";
 import { isConstraintError, isSQLiteError } from "@/db/error";
 import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import React from "react";
+import { log } from "@/library/logger";
 
 export const Tags = () => {
   const db = useSQLiteContext();
@@ -31,8 +32,9 @@ export const Tags = () => {
       await db.runAsync(sql, [routeId.toString(), tagId]);
       console.debug(`SQL: Route "${routeId}" assigned to tag id "${tagId}"`);
     } catch (error) {
-      console.log("Error executing SQL", error);
-      throw new Error("Error assigning tag to route");
+      const msg = "Error assigning tag to route";
+      log.error("useTags:assignRouteToTag", msg, { error });
+      throw new Error(msg);
     }
   };
 
@@ -89,7 +91,9 @@ export const Tags = () => {
             text2: "Try a different name",
             topOffset: 55,
           });
-          return console.error("Tag already exists?\n", error);
+          return log.error("addRouteTag", "Tag most likely already exists", {
+            error,
+          });
         }
       }
 

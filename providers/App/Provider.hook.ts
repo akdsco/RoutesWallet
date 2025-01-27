@@ -7,6 +7,7 @@ import {
   getStravaRoutesFromDb,
   StravaRoute,
 } from "@/auth/strava";
+import { log } from "@/library/logger";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -29,7 +30,7 @@ export const useAppProvider = () => {
 
   useEffect(() => {
     if (fontLoaded && !isStravaAuthed) {
-      console.debug("useApp: Font loaded: ", fontLoaded);
+      log.debug("useApp", `fontLoaded: ${fontLoaded}`);
       setLoading(false);
     }
   }, [fontLoaded]);
@@ -42,8 +43,8 @@ export const useAppProvider = () => {
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
       const routes = await getStravaRoutesFromDb(db)(athleteId);
 
-      console.debug("useApp: Loading: ", loading);
-      console.debug("useApp: isStravaAuthed: ", isStravaAuthed);
+      log.debug("useApp", `useEffect loading: ${loading}`);
+      log.debug("useApp", `useEffect isStravaAuthed ${isStravaAuthed}`);
 
       setIsStravaAuthed(isStravaAuthed);
       setRoutes(routes);

@@ -6,6 +6,7 @@ import {
 import { SQLiteDatabase } from "expo-sqlite";
 import { saveUserData, SECURE } from "@/db/secureStore";
 import Config from "react-native-config";
+import { log } from "@/library/logger";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -20,7 +21,14 @@ export const handleStravaAuthorisation =
       ...(await getStravaAuthResponse(code)),
     };
 
-    console.log("Strava: Auth response saving ", authData, athlete);
+    log.debug(
+      "handleStravaAuthorisation",
+      "Saving user and auth response data",
+      {
+        authData,
+        athlete,
+      },
+    );
 
     await saveUserData(SECURE.USER_ID, athlete.id.toString());
 
@@ -200,16 +208,18 @@ export const getStravaRoutesFromDb =
         athleteId,
       ]);
 
-      console.log("Strava: Routes found in db", flatRoutes.length);
+      log.debug("getStravaRoutesFromDb", "Routes found in db", {
+        routeCount: flatRoutes.length,
+      });
 
       if (flatRoutes.length <= 0) {
         return [];
       }
 
       return mapToStravaRoutes(flatRoutes);
-    } catch (e) {
-      console.error(e);
-      throw e;
+    } catch (error) {
+      log.error("getStravaRoutesFromDb", "Route composition error", { error });
+      throw error;
     }
   };
 
@@ -281,7 +291,9 @@ export const saveStravaRoutesInDb =
     );
 
     if (stravaRoutes.length > 0) {
-      console.debug("Strava: Routes exist, saving in db");
+      log.debug("saveStravaRoutesInDb", "Routes exist, saving in db", {
+        athleteId,
+      });
       await insertStravaRoutes(db)(athleteId, stravaRoutes);
     }
 
@@ -313,7 +325,9 @@ const getStravaAccessToken =
       athleteId,
     ]);
 
-    console.debug("accessTokenData", accessTokenData);
+    log.debug("getStravaAccessToken", "Access token result", {
+      accessTokenData,
+    });
 
     if (!accessTokenData) {
       throw new Error("No auth data found for the given athlete ID");
@@ -321,12 +335,15 @@ const getStravaAccessToken =
     const { expires_at, access_token, refresh_token } = accessTokenData;
 
     if (!access_token) {
-      console.log("Should re-auth here?");
-      throw new Error("No access token found for the given athlete ID");
+      const msg = "No token in db, stuck!";
+      log.error("getStravaAccessToken", "No token in db, stuck!", {
+        athleteId,
+      });
+      throw new Error(msg);
     }
 
     if (!isTokenExpired(expires_at)) {
-      console.debug("Token is fresh:", access_token);
+      log.debug("getStravaAccessToken", "Token is fresh:", { access_token });
       return access_token;
     }
 
@@ -337,8 +354,10 @@ const isTokenExpired = (expiresAt: number) => {
   // Get the current time in seconds since the epoch
   const currentTime = Math.floor(Date.now() / 1000);
 
-  console.debug("Current time: ", currentTime);
-  console.debug("Expires at: ", expiresAt);
+  log.debug("isTokenExpired", "Time expiry comparison", {
+    currentTime,
+    expiresAt,
+  });
 
   // Check if the token is expired or about to expire;
   const bufferTime = 300; // Five-minute buffer in seconds
@@ -347,7 +366,10 @@ const isTokenExpired = (expiresAt: number) => {
 
 const getNewAccessToken =
   (db: SQLiteDatabase) => async (refreshToken: string, athleteId: number) => {
-    console.debug("Strava: Refreshing token");
+    log.debug("getNewAccessToken", "Refreshing Strava access token", {
+      refreshToken,
+      athleteId,
+    });
 
     const url = new URL(stravaApiDiscovery.tokenEndpoint);
 
@@ -457,14 +479,12 @@ const fetchFromStravaApi = async <T>(
   requestInit?: RequestInit,
 ) => {
   const init = requestInit ? requestInit : { method: "POST" };
-  console.debug("Strava: Fetch");
-  console.debug("Strava: Request URL", url);
-  console.debug("Strava: Request init", init);
+  log.debug("fetchFromStravaApi", "Fetch request", { url, init });
 
   const response = await fetch(url, init);
   const responseJson = (await response.json()) as T;
 
-  console.debug("Strava: Response", responseJson);
+  log.debug("fetchFromStravaApi", "Fetch response", { responseJson });
 
   return responseJson;
 };
@@ -492,33 +512,24 @@ export const disconnectStrava =
     const url = new URL(stravaApiDiscovery.revocationEndpoint);
     url.searchParams.set("access_token", accessToken);
 
-    const response = await fetchFromStravaApi<{ access_token: string } | null>(
-      url.toString(),
-    );
+    const responseFromStravaApi = await fetchFromStravaApi<{
+      access_token: string;
+    } | null>(url.toString());
 
-    if (response) {
+    const fnName = "disconnectStrava";
+
+    if (responseFromStravaApi) {
       try {
         await db.runAsync(
           `DELETE FROM StravaAuthResponse WHERE athlete_id = ?;`,
           [athleteId],
         );
-      } catch (e) {
-        console.log("Strava: Error when disconnecting", e);
+      } catch (error) {
+        // TURN into SQL log/error
+        log.error(fnName, "Error when disconnecting", { error });
       }
-      console.debug("Strava: Disconnected user", athleteId);
+      log.debug(fnName, "User disconnected", { athleteId });
     } else {
-      console.debug("Strava: Disconnect failed", response);
+      log.debug(fnName, "User disconnect failed", { responseFromStravaApi });
     }
-  };
-
-// TODO: do we need this function?
-export const checkRoutesAvailable =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `SELECT * FROM StravaRoute WHERE athlete_id = ?`;
-
-    const flatRoute = await db.getFirstAsync<StravaRouteFlat>(query, [
-      athleteId,
-    ]);
-
-    return Boolean(flatRoute);
   };

@@ -1,14 +1,17 @@
 import { useEffect } from "react";
 import { useApp } from "@/hooks";
+import { log } from "@/library/logger";
+
+const fnName = "useSettings";
 
 export const useSettings = () => {
   const {} = useApp();
 
   useEffect(() => {
-    console.log("Settings mounted");
+    log.info(fnName, "Settings mounted");
 
     return () => {
-      console.log("Settings unmounted");
+      log.info(fnName, "Settings unmounted");
     };
   }, []);
 

@@ -3,6 +3,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import { Alert } from "react-native";
 import { RemoveTag, UpdateTag } from "@/components/Tag/TagItem";
 import { useApp } from "@/hooks";
+import { log } from "@/library/logger";
 
 type RawTag = {
   id: number;
@@ -96,13 +97,17 @@ export const useTags = () => {
       [
         {
           text: "Cancel",
-          onPress: () => console.log("Cancel Pressed"),
+          onPress: () =>
+            log.info(
+              "useTags:removeTag",
+              "User pressed cancel when prompted to confirm tag remove",
+            ),
           style: "cancel",
         },
         {
           text: "Yes",
           onPress: () => {
-            console.log("OK Pressed");
+            log.info("useTags:removeTag", "User confirmed tag remove action");
             executeRemoval();
           },
           style: "destructive",
@@ -123,7 +128,7 @@ export const useTags = () => {
       console.debug(`SQL: Tag id "${tagId}" updated`);
       await checkTags();
     } catch (error) {
-      console.error("Error executing SQL", error);
+      console.error("SQL: Error executing", error);
       throw new Error("Error updating tag");
     }
   };
@@ -135,7 +140,7 @@ export const useTags = () => {
 
   const onSetTags = async (tags: Tag[], saveOrderInDb = false) => {
     if (saveOrderInDb) {
-      console.debug("DB: Saving tags order");
+      console.debug("SQL: Saving tags order");
 
       const insertSql = `
         INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
@@ -153,7 +158,7 @@ export const useTags = () => {
 
         console.debug("DB: Tag order saved");
       } catch (error) {
-        console.error("Error saving tag order", error);
+        console.error("SQL: Error saving tag order", error);
         throw error;
       }
     }

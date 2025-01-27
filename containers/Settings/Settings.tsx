@@ -7,6 +7,7 @@ import { Button } from "@/components/Button/Buttons";
 import { disconnectStrava } from "@/auth/strava/api";
 import { useSQLiteContext } from "expo-sqlite";
 import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
+import { log } from "@/library/logger";
 
 export const Settings = () => {
   const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
@@ -15,10 +16,11 @@ export const Settings = () => {
 
   const handleConnection = async () => {
     if (isStravaAuthed && athleteId) {
-      console.log("Strava: Disconnecting user");
+      log.info("useSettings", "Removing strava authentication");
       if (athleteId) await disconnectStrava(db)(athleteId);
       setIsStravaAuthed(false);
     } else {
+      // TODO: do we need this? Considering we take user back to login page straight away.
       console.log("Strava: Re-connecting user");
       await promptAsync();
       setIsStravaAuthed(true);

@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { ColorMode, Theme, theme } from "@/constants/theme";
+import { ColorMode, Theme, theme } from "@/library/theme";
 
 export const ThemeContext = createContext<{
   colorMode: ColorMode;

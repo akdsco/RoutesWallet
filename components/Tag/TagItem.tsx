@@ -15,6 +15,7 @@ import {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import Toast from "react-native-toast-message";
+import { log } from "@/library/logger";
 
 const colors = [
   "#FFB3B3", // pastel red
@@ -62,7 +63,7 @@ export const TagItem = ({
       return;
     }
 
-    console.debug(`Show \"${item.name}\" routes`);
+    log.debug("useTagItem", `Show \"${item.name}\" routes`);
     router.push({
       pathname: `(tabs)/tags/${item.id}`,
       params: { tagName: item.name },
@@ -70,7 +71,8 @@ export const TagItem = ({
   };
 
   const handleSelectedMenuOption = async (value: string) => {
-    console.debug(
+    log.debug(
+      "useTagItem",
       `Menu selected option: ${value} tag \"${item.name}\", tagId: ${item.id}`,
     );
 

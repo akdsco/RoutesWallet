@@ -1,6 +1,7 @@
 import { useColorScheme } from "react-native";
-import { ColorMode, theme as themesObject } from "@/constants/theme";
+import { ColorMode, theme as themesObject } from "@/library/theme";
 import { useEffect, useState } from "react";
+import { log } from "@/library/logger";
 
 export const useAppThemeProvider = () => {
   const colorScheme = useColorScheme();
@@ -13,10 +14,10 @@ export const useAppThemeProvider = () => {
   const [theme, setTheme] = useState(initTheme);
   const [colorMode, setColorMode] = useState<ColorMode>(defaultColorScheme);
 
-  console.debug("Rendering theme: ", colorScheme);
+  log.debug("useAppTheme", "Rendering theme", { colorScheme });
 
   useEffect(() => {
-    console.log("Changing theme: ", colorScheme);
+    log.debug("useAppTheme", "Changing theme", { colorScheme });
 
     setTheme(colorScheme === defaultColorScheme ? light : dark);
     setColorMode(colorScheme ? colorScheme : defaultColorScheme);
