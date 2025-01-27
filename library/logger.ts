@@ -1,10 +1,18 @@
 type LogLevel = "info" | "warn" | "error" | "debug";
-type DBAction = "INSERT" | "UPDATE" | "DELETE";
+type DBAction = "INSERT" | "UPDATE" | "DELETE" | "SELECT";
 
 type LogParams = {
   level: LogLevel;
   fnName: string;
   action: string;
+  context?: object;
+};
+
+type LogDbParams = {
+  level: LogLevel;
+  tableName: string;
+  action: DBAction;
+  query: string;
   context?: object;
 };
 
@@ -26,17 +34,44 @@ const logger = ({ level, fnName, action, context }: LogParams) => {
   logBasedOnType(level, logMessage, ctx);
 };
 
-export const logDb = (
-  type: LogLevel,
-  tableName: string,
-  action: DBAction,
-  query: string,
-  context?: object,
-) => {
-  const logMessage = `[${tableName}]:${action}:${query}`;
+export const logDb = {
+  debug: (
+    tableName: string,
+    action: DBAction,
+    query: string,
+    context?: object,
+  ) => loggerDb({ level: "debug", tableName, action, query, context }),
+  info: (
+    tableName: string,
+    action: DBAction,
+    query: string,
+    context?: object,
+  ) => loggerDb({ level: "info", tableName, action, query, context }),
+  warn: (
+    tableName: string,
+    action: DBAction,
+    query: string,
+    context?: object,
+  ) => loggerDb({ level: "warn", tableName, action, query, context }),
+  error: (
+    tableName: string,
+    action: DBAction,
+    query: string,
+    context?: object,
+  ) => loggerDb({ level: "error", tableName, action, query, context }),
+};
+
+export const loggerDb = ({
+  level,
+  tableName,
+  action,
+  query,
+  context,
+}: LogDbParams) => {
+  const logMessage = `DB:[${tableName}]:${action}:${query}`;
   const ctx = getContext(context);
 
-  return logBasedOnType(type, logMessage, ctx);
+  return logBasedOnType(level, logMessage, ctx);
 };
 
 const logBasedOnType = (type: LogLevel, logMessage: string, ctx: string) => {

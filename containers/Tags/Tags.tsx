@@ -7,12 +7,12 @@ import { TagItem } from "@/components/Tag/TagItem";
 import { useApp, useTheme } from "@/hooks";
 import { Theme } from "@/library/theme";
 import { Button } from "@/components/Button/Buttons";
-import { isConstraintError, isSQLiteError } from "@/db/error";
 import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import React from "react";
 import { log } from "@/library/logger";
+import { handleRouteTagInsert } from "@/db/methods";
 
 export const Tags = () => {
   const db = useSQLiteContext();
@@ -39,7 +39,18 @@ export const Tags = () => {
   };
 
   const addRouteTag = async () => {
+    if (!athleteId) {
+      Toast.show({
+        type: "info",
+        text1: "User not identified",
+        text2: "Please try to logout and log back in",
+        topOffset: 55,
+      });
+      return;
+    }
+
     if (newTagName.trim() === "") {
+      log.info("useTags: addRouteTag", "User trying to add an empty tag");
       Toast.show({
         type: "info",
         text1: "Cannot add empty tag",
@@ -49,59 +60,13 @@ export const Tags = () => {
       return;
     }
 
-    const sql = `
-      INSERT INTO RouteTags (name)
-      VALUES ('${newTagName}');
-    `;
-
-    try {
-      await db.execAsync(sql);
-
-      // Retrieve the ID of the new tag
-      const getTagIdSql = `
-        SELECT id FROM RouteTags
-        WHERE name = '${newTagName}';
-      `;
-      const result = await db.getAllAsync<{ id: number }>(getTagIdSql);
-      const tagId = result[0]?.id;
-
-      if (!tagId) {
-        throw new Error("Failed to retrieve tag ID after insertion");
-      }
-
-      // Set the new tag as the first in the order
-      const updateOrderSql = `
-      -- Shift existing tags for the athlete down by 1
-      UPDATE AthleteTagOrder
-      SET order_position = order_position + 1
-      WHERE athlete_id = ${athleteId};
-
-      -- Insert the new tag at the first position
-      INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
-      VALUES (${athleteId}, ${tagId}, 1);
-    `;
-      await db.execAsync(updateOrderSql);
-    } catch (error) {
-      if (isSQLiteError(error)) {
-        if (isConstraintError(error)) {
-          // TODO: toast to let user know the tag is already on the list
-          Toast.show({
-            type: "info",
-            text1: "Tag already exists",
-            text2: "Try a different name",
-            topOffset: 55,
-          });
-          return log.error("addRouteTag", "Tag most likely already exists", {
-            error,
-          });
-        }
-      }
-
-      throw error;
-    }
+    await handleRouteTagInsert(db)(athleteId, newTagName);
 
     await checkTags();
-    console.debug(`SQL: Route tag "${newTagName}" added`);
+    log.debug(
+      "useTags: addRouteTag",
+      `Route tag "${newTagName}" added successfully`,
+    );
     setNewTagName("");
   };
 
