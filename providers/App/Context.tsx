@@ -4,8 +4,8 @@ import { AppContextType } from "@/providers/App";
 export const AppContext = createContext<AppContextType>({
   athleteId: null,
   routes: [],
-  isStravaAuthed: false,
   loading: true,
-  setInternalLoader: (value: boolean) => undefined,
+  setLoading: (value: boolean) => undefined,
+  isStravaAuthed: false,
   setIsStravaAuthed: (value: boolean) => undefined,
 });

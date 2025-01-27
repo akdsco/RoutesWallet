@@ -1,16 +1,10 @@
 import { Redirect, Stack } from "expo-router";
 import { useApp } from "@/hooks";
-import { ThemedText } from "@/components/ThemedText";
 
 export default function Layout() {
-  const { isStravaAuthed, loading } = useApp();
+  const { loading, isStravaAuthed } = useApp();
 
-  if (loading) {
-    // TODO: improve
-    return <ThemedText>Loading</ThemedText>;
-  }
-
-  if (!isStravaAuthed) {
+  if (!loading && !isStravaAuthed) {
     console.debug(
       "Redirecting to /sign-in",
       `Is application authenticated? ${isStravaAuthed}`,

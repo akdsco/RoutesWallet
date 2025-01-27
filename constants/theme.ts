@@ -8,6 +8,8 @@ type Themes = {
   dark: Theme;
 };
 
+export type ColorMode = "light" | "dark";
+
 export type Theme = {
   text: string;
   background: string;

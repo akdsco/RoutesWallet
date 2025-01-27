@@ -16,7 +16,7 @@ export const useAppProvider = () => {
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
   // TODO: can we deal with  null athleteId in the root? so we don't pass it null ever?
-  const [athleteId, setAthleteId] = useState<number | null>();
+  const [athleteId, setAthleteId] = useState<number | null>(null);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
   const [routes, setRoutes] = useState<StravaRoute[]>([]);
 
@@ -28,10 +28,11 @@ export const useAppProvider = () => {
   }, [fontError]);
 
   useEffect(() => {
-    if (fontLoaded && !loading) {
+    if (fontLoaded && !isStravaAuthed) {
+      console.debug("useApp: Font loaded: ", fontLoaded);
       setLoading(false);
     }
-  }, [loading, fontLoaded]);
+  }, [fontLoaded]);
 
   useEffect(() => {
     const run = async () => {
@@ -41,21 +42,17 @@ export const useAppProvider = () => {
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
       const routes = await getStravaRoutesFromDb(db)(athleteId);
 
-      if (isStravaAuthed) {
-        setIsStravaAuthed(true);
-      }
+      console.debug("useApp: Loading: ", loading);
+      console.debug("useApp: isStravaAuthed: ", isStravaAuthed);
 
-      if (routes) {
-        setRoutes(routes);
-      }
+      setIsStravaAuthed(isStravaAuthed);
+      setRoutes(routes);
     };
 
-    run().then(() => {
-      setLoading(false);
-    });
-  }, []);
+    run().then();
+  }, [loading, fontLoaded, isStravaAuthed]);
 
-  const setInternalLoader = (value: boolean) => {
+  const setLoader = (value: boolean) => {
     setLoading(value);
   };
 
@@ -68,7 +65,7 @@ export const useAppProvider = () => {
     athleteId,
     loading,
     isStravaAuthed,
-    setLoader: setInternalLoader,
+    setLoading: setLoader,
     setIsStravaAuthed: setStravaAuth,
   };
 };

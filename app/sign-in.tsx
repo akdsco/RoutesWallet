@@ -5,11 +5,13 @@ import { View } from "react-native";
 import { Logo } from "@/components/Logo/Logo";
 import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
 import { Loader } from "@/components/Loader";
+import { useApp } from "@/hooks";
 
 export default function SignIn() {
-  const { request, promptAsync, authenticating } = useStravaAuthButton();
+  const { loading } = useApp();
+  const { request, promptAsync } = useStravaAuthButton();
 
-  if (authenticating) {
+  if (loading) {
     return <Loader />;
   }
 

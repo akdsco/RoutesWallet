@@ -106,13 +106,18 @@ export const handleStravaAuthorisation =
         FROM RouteTags;
       `);
     } catch (error) {
-      console.log("Error saving", error);
+      console.log(
+        "SQL: Error when saving athlete, auth or tag order data in db",
+        error,
+      );
     }
 
     return athlete.id;
   };
 
-const getStravaAuthResponse = async (code: string) => {
+const getStravaAuthResponse = async (
+  code: string,
+): Promise<StravaAuthResponse> => {
   const url = new URL(stravaApiDiscovery.tokenEndpoint);
 
   url.searchParams.set("code", code);
