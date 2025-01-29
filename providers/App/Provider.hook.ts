@@ -72,13 +72,18 @@ export const useAppProvider = () => {
     setIsStravaAuthed(value);
   };
 
+  const setAuthenticating = (value: boolean) => {
+    setIsAuthenticating(value);
+  };
+
   return {
     routes,
     athleteId,
     loading,
-    isStravaAuthed,
     setLoading: setLoader,
-    setIsAuthenticating,
+    isStravaAuthed,
     setIsStravaAuthed: setStravaAuth,
+    isAuthenticating,
+    setIsAuthenticating: setAuthenticating,
   };
 };

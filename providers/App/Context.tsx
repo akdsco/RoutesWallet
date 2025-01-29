@@ -6,8 +6,8 @@ export const AppContext = createContext<AppContextType>({
   routes: [],
   loading: true,
   setLoading: (value: boolean) => undefined,
-  isStravaAuthed: false,
   isAuthenticating: false,
   setIsAuthenticating: (value: boolean) => undefined,
+  isStravaAuthed: false,
   setIsStravaAuthed: (value: boolean) => undefined,
 });
