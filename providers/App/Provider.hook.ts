@@ -64,26 +64,14 @@ export const useAppProvider = () => {
     });
   }, [loading, fontLoaded, isAuthenticating, isStravaAuthed]);
 
-  const setLoader = (value: boolean) => {
-    setLoading(value);
-  };
-
-  const setStravaAuth = (value: boolean) => {
-    setIsStravaAuthed(value);
-  };
-
-  const setAuthenticating = (value: boolean) => {
-    setIsAuthenticating(value);
-  };
-
   return {
     routes,
     athleteId,
     loading,
-    setLoading: setLoader,
+    setLoading: (value: boolean) => setLoading(value),
     isStravaAuthed,
-    setIsStravaAuthed: setStravaAuth,
+    setIsStravaAuthed: (val: boolean) => setIsStravaAuthed(val),
     isAuthenticating,
-    setIsAuthenticating: setAuthenticating,
+    setIsAuthenticating: (value: boolean) => setIsAuthenticating(value),
   };
 };
