@@ -30,16 +30,21 @@ const requestConfig = {
 export const useStravaAuthButton = () => {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { setIsStravaAuthed, setLoading } = useApp();
+  const { setLoading, setIsAuthenticating, setIsStravaAuthed } = useApp();
 
   const [request, response, promptAsync] = useAuthRequest(
     requestConfig,
     stravaApiDiscovery,
   );
 
+  const setSyncedAuthAndLoading = (value: boolean) => {
+    setIsAuthenticating(value);
+    setLoading(value);
+  };
+
   useEffect(() => {
     if (response) {
-      setLoading(true);
+      setSyncedAuthAndLoading(true);
       log.debug(
         "useStravaAuthButton",
         "useEffect strava authorisation response",
@@ -49,11 +54,11 @@ export const useStravaAuthButton = () => {
       handleStravaResponse(response)
         .then(() => {
           console.info("Strava auth response handled");
-          setTimeout(() => setLoading(false), 300);
+          setTimeout(() => setSyncedAuthAndLoading(false), 300);
           router.replace("/");
         })
         .catch((error) => {
-          setLoading(false);
+          setSyncedAuthAndLoading(false);
           log.error(
             "useStravaAuthButton",
             "Error when handling Strava's authorisation response",

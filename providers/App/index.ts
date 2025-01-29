@@ -8,6 +8,8 @@ export type AppContextType = {
   routes: StravaRoute[];
   loading: boolean;
   setLoading: (value: boolean) => void;
+  isAuthenticating: boolean;
+  setIsAuthenticating: (value: boolean) => void;
   isStravaAuthed: boolean;
   setIsStravaAuthed: (value: boolean) => void;
 };

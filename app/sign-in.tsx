@@ -8,10 +8,10 @@ import { Loader } from "@/components/Loader";
 import { useApp } from "@/hooks";
 
 export default function SignIn() {
-  const { loading } = useApp();
+  const { loading, isAuthenticating } = useApp();
   const { request, promptAsync } = useStravaAuthButton();
 
-  if (loading) {
+  if (loading || isAuthenticating) {
     return <Loader />;
   }
 

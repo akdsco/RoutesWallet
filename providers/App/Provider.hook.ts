@@ -8,6 +8,7 @@ import {
   StravaRoute,
 } from "@/auth/strava";
 import { log } from "@/library/logger";
+import { router } from "expo-router";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,7 @@ export const useAppProvider = () => {
   });
   // TODO: can we deal with  null athleteId in the root? so we don't pass it null ever?
   const [athleteId, setAthleteId] = useState<number | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
   const [routes, setRoutes] = useState<StravaRoute[]>([]);
 
@@ -29,13 +31,6 @@ export const useAppProvider = () => {
   }, [fontError]);
 
   useEffect(() => {
-    if (fontLoaded && !isStravaAuthed) {
-      log.debug("useApp", `fontLoaded: ${fontLoaded}`);
-      setLoading(false);
-    }
-  }, [fontLoaded]);
-
-  useEffect(() => {
     const run = async () => {
       const athleteId = await getUserData<number>(SECURE.USER_ID);
       setAthleteId(athleteId);
@@ -43,15 +38,31 @@ export const useAppProvider = () => {
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
       const routes = await getStravaRoutesFromDb(db)(athleteId);
 
-      log.debug("useApp", `useEffect loading: ${loading}`);
-      log.debug("useApp", `useEffect isStravaAuthed ${isStravaAuthed}`);
+      log.debug("useApp", `useEffect`, {
+        fontLoaded,
+        loading,
+        isAuthenticating,
+        isStravaAuthed,
+      });
 
       setIsStravaAuthed(isStravaAuthed);
       setRoutes(routes);
+
+      if (!loading && fontLoaded && !isAuthenticating && isStravaAuthed) {
+        log.debug("useApp", "Redirecting to (tabs) as user is authenticated", {
+          loading,
+          isStravaAuthed,
+        });
+        router.navigate("/(tabs)");
+      }
     };
 
-    run().then();
-  }, [loading, fontLoaded, isStravaAuthed]);
+    run().then(() => {
+      if (!isAuthenticating) {
+        setLoading(false);
+      }
+    });
+  }, [loading, fontLoaded, isAuthenticating, isStravaAuthed]);
 
   const setLoader = (value: boolean) => {
     setLoading(value);
@@ -67,6 +78,7 @@ export const useAppProvider = () => {
     loading,
     isStravaAuthed,
     setLoading: setLoader,
+    setIsAuthenticating,
     setIsStravaAuthed: setStravaAuth,
   };
 };
