@@ -6,6 +6,7 @@ import { getUserData, SECURE } from "@/db/secureStore";
 
 export const useRoutes = () => {
   const db = useSQLiteContext();
+  const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [routes, setRoutes] = useState<StravaRoute[]>([]);
 
   useEffect(() => {
@@ -16,10 +17,11 @@ export const useRoutes = () => {
       setRoutes(routes);
     };
 
-    run().then();
+    run().then(() => setLoadingRoutes(false));
   }, []);
 
   return {
+    loadingRoutes,
     routes,
   };
 };

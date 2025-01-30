@@ -49,10 +49,14 @@ export const useAppProvider = () => {
       setRoutes(routes);
 
       if (!loading && fontLoaded && !isAuthenticating && isStravaAuthed) {
-        log.debug("useApp", "Redirecting to (tabs) as user is authenticated", {
-          loading,
-          isStravaAuthed,
-        });
+        log.debug(
+          "useApp",
+          "Redirecting to authed root as user is authenticated",
+          {
+            loading,
+            isStravaAuthed,
+          },
+        );
         router.navigate("/(tabs)");
       }
     };

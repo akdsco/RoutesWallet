@@ -146,9 +146,9 @@ const getStravaAuthResponse = async (
 };
 
 export const getStravaRoutesFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
+  (db: SQLiteDatabase) => async (athleteId: number, routeIds?: number[]) => {
     try {
-      const query = `
+      let query = `
       SELECT 
         sr.id AS id,
         sr.name AS name,
@@ -201,18 +201,27 @@ export const getStravaRoutesFromDb =
       JOIN 
           StravaMap sm ON sr.map_id = sm.id
       JOIN 
-          StravaMapUrls smu ON sr.map_urls_id = smu.url;
-    `;
+          StravaMapUrls smu ON sr.map_urls_id = smu.url
+      WHERE 
+          sr.athlete_id = ?
+      `;
 
-      const flatRoutes = await db.getAllAsync<StravaRouteFlat>(query, [
-        athleteId,
-      ]);
+      const params: any[] = [athleteId];
+
+      // Apply filtering if routeIds is provided
+      if (routeIds && routeIds.length > 0) {
+        const placeholders = routeIds.map(() => "?").join(", ");
+        query += ` AND sr.id IN (${placeholders})`;
+        params.push(...routeIds);
+      }
+
+      const flatRoutes = await db.getAllAsync<StravaRouteFlat>(query, params);
 
       log.debug("getStravaRoutesFromDb", "Routes found in db", {
         routeCount: flatRoutes.length,
       });
 
-      if (flatRoutes.length <= 0) {
+      if (flatRoutes.length === 0) {
         return [];
       }
 
