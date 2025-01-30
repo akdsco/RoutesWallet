@@ -7,6 +7,7 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { saveUserData, SECURE } from "@/db/secureStore";
 import Config from "react-native-config";
 import { log } from "@/library/logger";
+import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -146,7 +147,7 @@ const getStravaAuthResponse = async (
 };
 
 export const getStravaRoutesFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number, routeIds?: number[]) => {
+  (db: SQLiteDatabase) => async (athleteId: number, filters?: RouteFilters) => {
     try {
       let query = `
       SELECT 
@@ -208,11 +209,15 @@ export const getStravaRoutesFromDb =
 
       const params: any[] = [athleteId];
 
-      // Apply filtering if routeIds is provided
-      if (routeIds && routeIds.length > 0) {
-        const placeholders = routeIds.map(() => "?").join(", ");
-        query += ` AND sr.id IN (${placeholders})`;
-        params.push(...routeIds);
+      if (filters) {
+        const { routeIds } = filters;
+
+        // Filter by route IDs
+        if (routeIds && routeIds.length > 0) {
+          const placeholders = routeIds.map(() => "?").join(", ");
+          query += ` AND sr.id IN (${placeholders})`;
+          params.push(...routeIds);
+        }
       }
 
       const flatRoutes = await db.getAllAsync<StravaRouteFlat>(query, params);

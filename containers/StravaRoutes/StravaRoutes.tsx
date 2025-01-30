@@ -12,10 +12,20 @@ import { Loader } from "@/components/Loader";
 import { useApp } from "@/hooks";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 
-export const StravaRoutes = () => {
+type StravaRoutesProps = {
+  filter?: RouteFilters;
+};
+
+export type RouteFilters =
+  | {
+      routeIds?: bigint[];
+    }
+  | undefined;
+
+export const StravaRoutes = ({ filter }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
   const { loading } = useApp();
-  const { loadingRoutes, routes } = useRoutes();
+  const { loadingRoutes, routes } = useRoutes(filter);
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets

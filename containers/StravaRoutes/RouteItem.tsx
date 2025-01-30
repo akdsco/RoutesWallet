@@ -1,15 +1,16 @@
 import {
-  TouchableOpacity,
+  Image,
   StyleSheet,
   Text,
-  View,
-  Image,
+  TouchableOpacity,
   useColorScheme,
+  View,
 } from "react-native";
 import { StravaRoute } from "@/auth/strava";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
+import { useRouter } from "expo-router";
 
 export const RouteItem = ({
   item,
@@ -18,6 +19,7 @@ export const RouteItem = ({
   item: StravaRoute;
   itemWidth: number;
 }) => {
+  const router = useRouter();
   const { theme } = useTheme();
 
   const distanceInKms = (distanceInMeters: number) => {
@@ -40,6 +42,12 @@ export const RouteItem = ({
           shadowColor: theme.shadowColor,
         },
       ]}
+      onPress={() =>
+        router.navigate({
+          pathname: `/(tabs)/${item.id}`,
+          params: { routeName: item.name },
+        })
+      }
     >
       <Image source={{ uri: item.map_urls[mapColor] }} style={styles.image} />
       <View style={styles.infoContainer}>
