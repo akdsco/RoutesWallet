@@ -1,4 +1,16 @@
 import { type SQLiteDatabase } from "expo-sqlite";
+import {
+  athleteTagOrder,
+  createRouteTagAssignmentsTable,
+  createRouteTagsTable,
+  createStravaAthleteTable,
+  createStravaAuthResponseTable,
+  createStravaMapTable,
+  createStravaMapUrlsTable,
+  createStravaRouteTable,
+  primeRouteTags,
+} from "@/db/tables";
+import { log } from "@/library/logger";
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   const DATABASE_VERSION = 1;
@@ -18,118 +30,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   }
 
   if (currentDbVersion === 0) {
-    const createTablesSQL = `
-      PRAGMA journal_mode = 'wal';
-    
-      CREATE TABLE IF NOT EXISTS StravaAthlete (
-        id INTEGER PRIMARY KEY NOT NULL,
-        username TEXT,
-        resource_state INTEGER NOT NULL,
-        firstname TEXT NOT NULL,
-        lastname TEXT NOT NULL,
-        bio TEXT,
-        city TEXT NOT NULL,
-        state TEXT,
-        country TEXT,
-        sex TEXT NOT NULL,
-        premium BOOLEAN NOT NULL,
-        summit BOOLEAN NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        badge_type_id INTEGER NOT NULL,
-        profile_medium TEXT NOT NULL,
-        profile TEXT NOT NULL,
-        friend TEXT,
-        follower TEXT,
-        weight REAL
-      );
-    
-      CREATE TABLE IF NOT EXISTS StravaAuthResponse (
-        scope TEXT,
-        token_type TEXT NOT NULL,
-        expires_at INTEGER NOT NULL,
-        expires_in INTEGER NOT NULL,
-        refresh_token TEXT NOT NULL,
-        access_token TEXT NOT NULL,
-        athlete_id INTEGER NOT NULL UNIQUE,
-        FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id)
-      );
-    
-      CREATE TABLE IF NOT EXISTS StravaMap (
-        id TEXT PRIMARY KEY NOT NULL,
-        summary_polyline TEXT NOT NULL,
-        resource_state INTEGER NOT NULL
-      );
-    
-      CREATE TABLE IF NOT EXISTS StravaMapUrls (
-        url TEXT NOT NULL,
-        retina_url TEXT NOT NULL,
-        light_url TEXT NOT NULL,
-        dark_url TEXT NOT NULL
-      );
-    
-      CREATE TABLE IF NOT EXISTS StravaRoute (
-        athlete_id INTEGER NOT NULL,
-        description TEXT,
-        distance REAL NOT NULL,
-        elevation_gain REAL NOT NULL,
-        id BIGINT PRIMARY KEY NOT NULL,
-        id_str TEXT NOT NULL,
-        map_id TEXT NOT NULL,
-        map_urls_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        private BOOLEAN NOT NULL,
-        resource_state INTEGER NOT NULL,
-        starred BOOLEAN NOT NULL,
-        sub_type INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        timestamp BIGINT NOT NULL,
-        type INTEGER NOT NULL,
-        estimated_moving_time BIGINT NOT NULL,
-        waypoints TEXT,
-        FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id),
-        FOREIGN KEY (map_id) REFERENCES StravaMap(id),
-        FOREIGN KEY (map_urls_id) REFERENCES StravaMapUrls(url)
-      );
-      
-      CREATE TABLE IF NOT EXISTS RouteTags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        name TEXT NOT NULL UNIQUE, -- Unique tag name
-        color TEXT NOT NULL DEFAULT '#687076', -- Default color is grey
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      
-      CREATE TABLE IF NOT EXISTS AthleteTagOrder (
-        athlete_id INTEGER NOT NULL,
-        tag_id INTEGER NOT NULL,
-        order_position INTEGER NOT NULL,
-        PRIMARY KEY (athlete_id, tag_id),
-        FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id) ON DELETE CASCADE,
-        FOREIGN KEY (tag_id) REFERENCES RouteTags(id) ON DELETE CASCADE
-      );
-      
-      CREATE TABLE IF NOT EXISTS RouteTagAssignments (
-        route_id BIGINT NOT NULL,
-        tag_id INTEGER NOT NULL,
-        assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
-        PRIMARY KEY (route_id, tag_id),
-        FOREIGN KEY (route_id) REFERENCES StravaRoute(id) ON DELETE CASCADE,
-        FOREIGN KEY (tag_id) REFERENCES RouteTags(id) ON DELETE CASCADE
-      );
-    `;
-
-    await db.execAsync(createTablesSQL);
-
-    // Prime DB with some tags
-    await db.execAsync(`
-      INSERT INTO RouteTags (name, color) VALUES 
-      ('Long routes', 'red'),
-      ('Weekend getaways', '#FFB3B3'),
-      ('Short and punchy', '#687076'),
-      ('Best climbs', 'blue');
-    `);
+    await initialiseDatabaseTables(db);
 
     currentDbVersion = 1;
   }
@@ -140,3 +41,46 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }
+
+const initialiseDatabaseTables = async (db: SQLiteDatabase) => {
+  try {
+    const setJournalMode = `PRAGMA journal_mode = 'wal';`;
+    await db.execAsync(setJournalMode);
+
+    const stravaAthleteTablePromise = db.execAsync(createStravaAthleteTable);
+    const stravaAuthResponseTablePromise = db.execAsync(
+      createStravaAuthResponseTable,
+    );
+    const stravaMapTablePromise = db.execAsync(createStravaMapTable);
+    const stravaMapUrlsTablePromise = db.execAsync(createStravaMapUrlsTable);
+    const stravaRouteTablePromise = db.execAsync(createStravaRouteTable);
+    const stravaRouteTagsTablePromise = db.execAsync(createRouteTagsTable);
+    const athleteTagOrderTablePromise = db.execAsync(athleteTagOrder);
+    const routeTagsAssignmentsTablePromise = db.execAsync(
+      createRouteTagAssignmentsTable,
+    );
+
+    // Set all tables
+    await Promise.all([
+      stravaAthleteTablePromise,
+      stravaAuthResponseTablePromise,
+      stravaMapTablePromise,
+      stravaMapUrlsTablePromise,
+      stravaRouteTablePromise,
+      stravaRouteTagsTablePromise,
+      athleteTagOrderTablePromise,
+      routeTagsAssignmentsTablePromise,
+    ]);
+
+    const routeTagsTableDataPromise = db.execAsync(primeRouteTags);
+
+    // Prime tables with initial data
+    await Promise.all([routeTagsTableDataPromise]);
+  } catch (error) {
+    log.error("initialiseDatabaseTables", "Error when creating tables", {
+      error,
+    });
+  }
+
+  log.info("initialiseDatabaseTables", "Database tables created");
+};
