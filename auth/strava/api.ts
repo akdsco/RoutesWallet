@@ -1,5 +1,6 @@
 import {
   StravaAuthResponse,
+  StravaAuthResponseWithoutAthlete,
   StravaRoute,
   StravaRouteFlat,
 } from "@/auth/strava/types";
@@ -8,6 +9,7 @@ import { saveUserData, SECURE } from "@/db/secureStore";
 import Config from "react-native-config";
 import { log } from "@/library/logger";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
+import { insertStravaAuthResponse } from "@/db/methods";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -148,8 +150,7 @@ const getStravaAuthResponse = async (
 
 export const getStravaRoutesFromDb =
   (db: SQLiteDatabase) => async (athleteId: number, filters?: RouteFilters) => {
-    try {
-      let query = `
+    let query = `
       SELECT 
         sr.id AS id,
         sr.name AS name,
@@ -207,19 +208,21 @@ export const getStravaRoutesFromDb =
           sr.athlete_id = ?
       `;
 
-      const params: any[] = [athleteId];
+    const params: any[] = [athleteId];
 
-      if (filters) {
-        const { routeIds } = filters;
+    if (filters) {
+      const { routeIds } = filters;
 
-        // Filter by route IDs
-        if (routeIds && routeIds.length > 0) {
-          const placeholders = routeIds.map(() => "?").join(", ");
-          query += ` AND sr.id IN (${placeholders})`;
-          params.push(...routeIds);
-        }
+      // Filter by route IDs
+      if (routeIds && routeIds.length > 0) {
+        const placeholders = routeIds.map(() => "?").join(", ");
+        query += ` AND sr.id IN (${placeholders})`;
+
+        params.push(...routeIds.map((id) => id.toString()));
       }
+    }
 
+    try {
       const flatRoutes = await db.getAllAsync<StravaRouteFlat>(query, params);
 
       log.debug("getStravaRoutesFromDb", "Routes found in db", {
@@ -232,7 +235,12 @@ export const getStravaRoutesFromDb =
 
       return mapToStravaRoutes(flatRoutes);
     } catch (error) {
-      log.error("getStravaRoutesFromDb", "Route composition error", { error });
+      log.error("getStravaRoutesFromDb", "Route composition error", {
+        error,
+        query,
+        params,
+        athleteId,
+      });
       throw error;
     }
   };
@@ -389,33 +397,15 @@ const getNewAccessToken =
 
     url.searchParams.set("grant_type", "refresh_token");
     url.searchParams.set("client_id", Config.STRAVA_CLIENT_ID);
-    url.searchParams.set("client_secret", Config.STRAVA_CLIENT_ID);
+    url.searchParams.set("client_secret", Config.STRAVA_CLIENT_SECRET);
     url.searchParams.set("refresh_token", refreshToken);
 
-    const stravaAuthResponse = await fetchFromStravaApi<StravaAuthResponse>(
-      url.toString(),
-    );
+    const stravaAuthResponse =
+      await fetchFromStravaApi<StravaAuthResponseWithoutAthlete>(
+        url.toString(),
+      );
 
-    const insertStravaAuthDataSQL = `
-      INSERT INTO StravaAuthResponse (
-        token_type, expires_at, expires_in, refresh_token, access_token, athlete_id
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(athlete_id) DO UPDATE SET
-        token_type=excluded.token_type,
-        expires_at=excluded.expires_at,
-        expires_in=excluded.expires_in,
-        refresh_token=excluded.refresh_token,
-        access_token=excluded.access_token;
-    `;
-
-    await db.runAsync(insertStravaAuthDataSQL, [
-      stravaAuthResponse.token_type,
-      stravaAuthResponse.expires_at,
-      stravaAuthResponse.expires_in,
-      stravaAuthResponse.refresh_token,
-      stravaAuthResponse.access_token,
-      athleteId,
-    ]);
+    await insertStravaAuthResponse(db)(athleteId, stravaAuthResponse);
 
     return stravaAuthResponse.access_token;
   };

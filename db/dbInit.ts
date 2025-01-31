@@ -45,7 +45,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       );
     
       CREATE TABLE IF NOT EXISTS StravaAuthResponse (
-        scope TEXT NOT NULL,
+        scope TEXT,
         token_type TEXT NOT NULL,
         expires_at INTEGER NOT NULL,
         expires_in INTEGER NOT NULL,

@@ -30,6 +30,11 @@ export type StravaAuthResponse = {
   athlete: StravaAthlete;
 };
 
+export type StravaAuthResponseWithoutAthlete = Omit<
+  StravaAuthResponse,
+  "athlete"
+>;
+
 type StravaMap = {
   id: string;
   summary_polyline: string;
