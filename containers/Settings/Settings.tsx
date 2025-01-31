@@ -1,31 +1,12 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { useApp } from "@/hooks";
 import { LogoStravaSquare } from "@/components/Logo/Strava";
 import { View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
-import { disconnectStrava } from "@/auth/strava/api";
-import { useSQLiteContext } from "expo-sqlite";
-import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
-import { log } from "@/library/logger";
+import { useSettings } from "@/containers/Settings/Settings.hook";
 
 export const Settings = () => {
-  const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
-  const { request, promptAsync } = useStravaAuthButton();
-  const db = useSQLiteContext();
-
-  const handleConnection = async () => {
-    if (isStravaAuthed && athleteId) {
-      log.info("useSettings", "Removing strava authentication");
-      if (athleteId) await disconnectStrava(db)(athleteId);
-      setIsStravaAuthed(false);
-    } else {
-      // TODO: do we need this? Considering we take user back to login page straight away.
-      console.log("Strava: Re-connecting user");
-      await promptAsync();
-      setIsStravaAuthed(true);
-    }
-  };
+  const { request, isStravaAuthed, handleDisconnection } = useSettings();
 
   return (
     <Container>
@@ -43,10 +24,10 @@ export const Settings = () => {
         </ThemedText>
       </View>
       <Button
-        title={isStravaAuthed ? "Logout" : "Connect"}
+        title="Logout"
         disabled={!request}
-        onPress={handleConnection}
-        accessibilityLabel="This will connect/disconnect your Strava account."
+        onPress={handleDisconnection}
+        accessibilityLabel="This will log you out"
       />
     </Container>
   );

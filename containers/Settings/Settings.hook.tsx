@@ -1,22 +1,31 @@
-import { useEffect } from "react";
 import { useApp } from "@/hooks";
 import { log } from "@/library/logger";
+import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
+import { useSQLiteContext } from "expo-sqlite";
+import { disconnectStrava } from "@/auth/strava/api";
 
 const fnName = "useSettings";
 
 export const useSettings = () => {
-  const {} = useApp();
+  const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
+  const { request } = useStravaAuthButton();
+  const db = useSQLiteContext();
 
-  useEffect(() => {
-    log.info(fnName, "Settings mounted");
+  const handleDisconnection = async () => {
+    if (!isStravaAuthed || !athleteId) {
+      log.info(fnName, "User is not connected to Strava");
+      setIsStravaAuthed(false);
+      return;
+    }
 
-    return () => {
-      log.info(fnName, "Settings unmounted");
-    };
-  }, []);
+    log.info(fnName, "Removing strava authentication");
+    await disconnectStrava(db)(athleteId);
+    setIsStravaAuthed(false);
+  };
 
   return {
-    // TODO: implement the actual checks
-    isStravaAuthed: true,
+    request,
+    isStravaAuthed,
+    handleDisconnection,
   };
 };
