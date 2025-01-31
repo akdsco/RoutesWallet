@@ -1,6 +1,6 @@
 import React from "react";
 import { StravaRoutes } from "@/containers/StravaRoutes";
 
-export default function Index() {
-  return <StravaRoutes />;
+export default function RoutesLayout() {
+  return <StravaRoutes route="" />;
 }

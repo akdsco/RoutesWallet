@@ -13,6 +13,7 @@ type ButtonProps = {
   onPress: () => void;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 };
 
 export const Button = ({
@@ -21,11 +22,12 @@ export const Button = ({
   onPress,
   disabled,
   style,
+  className,
 }: ButtonProps) => {
   const { theme } = useTheme();
 
   return (
-    <View style={style}>
+    <View className={className} style={style}>
       <TouchableHighlight
         style={{
           paddingHorizontal: 12,

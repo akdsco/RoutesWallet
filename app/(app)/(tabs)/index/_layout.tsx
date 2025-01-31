@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { useTheme } from "@/hooks";
 
-export default function StravaRoute() {
+export default function HomeLayout() {
   const { theme } = useTheme();
 
   return (

@@ -17,7 +17,7 @@ const Container = ({ children }: { children: ReactNode }) => {
           marginTop: Platform.OS === "android" ? 30 : undefined,
         }}
       >
-        <View style={{ maxWidth: 1200, padding: 10 }}>{children}</View>
+        <View style={{ margin: 5 }}>{children}</View>
       </SafeAreaView>
     </GestureHandlerRootView>
   );

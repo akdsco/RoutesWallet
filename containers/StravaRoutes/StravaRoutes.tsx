@@ -13,16 +13,17 @@ import { useApp } from "@/hooks";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 
 type StravaRoutesProps = {
+  route: string;
   filter?: RouteFilters;
 };
 
 export type RouteFilters =
   | {
-      routeIds?: bigint[];
+      routeIds?: BigInt[];
     }
   | undefined;
 
-export const StravaRoutes = ({ filter }: StravaRoutesProps) => {
+export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
   const { loading } = useApp();
   const { loadingRoutes, routes } = useRoutes(filter);
@@ -68,6 +69,7 @@ export const StravaRoutes = ({ filter }: StravaRoutesProps) => {
             {routes.map((item) => (
               <RouteItem
                 key={item.id.toString()}
+                route={route}
                 item={item}
                 itemWidth={itemWidth}
               />

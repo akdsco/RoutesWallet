@@ -22,7 +22,7 @@ export const Tags = () => {
   const { tags, setTags, checkTags } = useTags();
   const styles = makeStyles(theme);
 
-  const assignRouteToTag = async (routeId: bigint, tagId: number) => {
+  const assignRouteToTag = async (routeId: BigInt, tagId: number) => {
     const sql = `
           INSERT INTO RouteTagAssignments (route_id, tag_id)
           VALUES (?, ?);

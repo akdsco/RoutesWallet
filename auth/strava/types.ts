@@ -48,7 +48,7 @@ export type StravaRoute = {
   description: string | null;
   distance: number;
   elevation_gain: number;
-  id: number;
+  id: BigInt;
   id_str: string;
   map: StravaMap;
   map_urls: StravaMapUrls;
@@ -59,9 +59,9 @@ export type StravaRoute = {
   sub_type: number;
   created_at: string; // ISO 8601 date string
   updated_at: string; // ISO 8601 date string
-  timestamp: number;
+  timestamp: BigInt;
   type: number;
-  estimated_moving_time: number;
+  estimated_moving_time: BigInt;
   waypoints: any[];
 };
 
@@ -89,7 +89,7 @@ export type StravaRouteFlat = {
   description: string | null;
   distance: number;
   elevation_gain: number;
-  id: number;
+  id: BigInt;
   id_str: string;
   map_id: string;
   map_summary_polyline: string;
@@ -105,8 +105,8 @@ export type StravaRouteFlat = {
   sub_type: number;
   created_at: string;
   updated_at: string;
-  timestamp: number;
+  timestamp: BigInt;
   type: number;
-  estimated_moving_time: number;
+  estimated_moving_time: BigInt;
   waypoints: any[];
 };

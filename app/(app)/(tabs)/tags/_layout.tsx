@@ -8,13 +8,23 @@ export default function Layout() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
-        name="[tagged-routes]"
+        name="[tag]"
         options={({ route }) => ({
           // TODO
           // @ts-ignore
           title: route.params?.tagName || "Selected Tag",
           headerStyle: { backgroundColor: theme.background },
-          headerBackTitle: "Groups",
+          headerBackTitle: "Tags",
+          headerTintColor: theme.tint,
+        })}
+      />
+      <Stack.Screen
+        name="tagged-routes"
+        options={({ route }) => ({
+          // @ts-ignore
+          title: route.params?.routeName || "Selected Tag",
+          headerStyle: { backgroundColor: theme.background },
+          headerBackTitle: "Back",
           headerTintColor: theme.tint,
         })}
       />

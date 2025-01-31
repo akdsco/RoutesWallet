@@ -22,7 +22,9 @@ export const useTaggedRoutes = () => {
 
         const routeIds = results.map(({ route_id }) => route_id);
 
-        log.info("useTaggedRoutes", "Fetched route IDs by tag", { routeIds });
+        log.info("useTaggedRoutes", `Fetched route IDs for tag ${tagId}`, {
+          routeIds,
+        });
 
         return routeIds;
       } catch (error) {
@@ -42,7 +44,7 @@ export const useTaggedRoutes = () => {
       }
 
       // @ts-ignore
-      const routeIds = await getRouteIdsByTagId(db)(params.tagId);
+      const routeIds = await getRouteIdsByTagId(db)(params.tag);
       setRouteIds(routeIds);
     };
 

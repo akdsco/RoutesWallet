@@ -11,12 +11,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
+import { log } from "@/library/logger";
 
 export const RouteItem = ({
   item,
+  route,
   itemWidth,
 }: {
   item: StravaRoute;
+  route: string;
   itemWidth: number;
 }) => {
   const router = useRouter();
@@ -29,6 +32,7 @@ export const RouteItem = ({
 
   //TODO: later - improve this? (Better typing)
   const mapColor = `${useColorScheme()}_url` as "dark_url" | "light_url";
+  const imageUri = item.map_urls[mapColor];
 
   const metadataStyle = [styles.metadata, { color: theme.icon }];
 
@@ -42,14 +46,24 @@ export const RouteItem = ({
           shadowColor: theme.shadowColor,
         },
       ]}
-      onPress={() =>
+      onPress={() => {
+        const routeName = item.name;
+        const pathname = `/(tabs)/${route}${item.id}`;
+
+        log.debug("RouteItem", "Navigating to route", {
+          routeName,
+          pathname,
+          routeFromProps: route,
+        });
+
         router.navigate({
-          pathname: `/(tabs)/${item.id}`,
-          params: { routeName: item.name },
-        })
-      }
+          params: { routeName },
+          // @ts-ignore
+          pathname,
+        });
+      }}
     >
-      <Image source={{ uri: item.map_urls[mapColor] }} style={styles.image} />
+      <Image source={{ uri: imageUri }} style={styles.image} />
       <View style={styles.infoContainer}>
         <ThemedText style={styles.title} numberOfLines={1} ellipsizeMode="tail">
           {item.name}
