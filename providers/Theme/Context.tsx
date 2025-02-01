@@ -1,10 +1,7 @@
 import { createContext } from "react";
-import { ColorMode, Theme, theme } from "@/library/theme";
+import { theme, ThemeContextType } from "@/library/theme";
 
-export const ThemeContext = createContext<{
-  colorMode: ColorMode;
-  theme: Theme;
-}>({
+export const ThemeContext = createContext<ThemeContextType>({
   colorMode: "light",
   theme: theme.light,
 });

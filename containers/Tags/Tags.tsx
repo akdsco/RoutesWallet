@@ -5,7 +5,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useTags } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useApp, useTheme } from "@/hooks";
-import { Theme } from "@/library/theme";
+import { ThemeContextType } from "@/library/theme";
 import { Button } from "@/components/Button/Buttons";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
@@ -17,10 +17,12 @@ import { Toast } from "@/library/Toast";
 export const Tags = () => {
   const db = useSQLiteContext();
   const [newTagName, setNewTagName] = React.useState("");
-  const { theme } = useTheme();
+  const themeContext = useTheme();
   const { athleteId } = useApp();
   const { tags, setTags, checkTags } = useTags();
-  const styles = makeStyles(theme);
+  const styles = makeStyles(themeContext);
+
+  const { theme } = themeContext;
 
   const assignRouteToTag = async (routeId: BigInt, tagId: number) => {
     const sql = `
@@ -106,7 +108,6 @@ export const Tags = () => {
   return (
     <Container>
       <MenuProvider>
-        {/*TODO: save order in db as well to persist*/}
         <View style={styles.scrollViewContent}>
           <DraggableFlatList
             data={tags}
@@ -138,7 +139,7 @@ export const Tags = () => {
   );
 };
 
-const makeStyles = (theme: Theme) =>
+const makeStyles = ({ colorMode }: ThemeContextType) =>
   StyleSheet.create({
     scrollViewContent: {
       justifyContent: "space-between",
@@ -150,7 +151,7 @@ const makeStyles = (theme: Theme) =>
     },
     textInput: {
       fontSize: 18,
-      borderBottomWidth: 0.5,
+      borderBottomWidth: colorMode === "light" ? 1.5 : 0.5,
       borderColor: "#ccc",
       marginRight: 10,
       width: "75%",

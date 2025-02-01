@@ -16,6 +16,7 @@ import {
 } from "react-native-draggable-flatlist";
 import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
+import { ThemeContextType } from "@/library/theme";
 
 const colors = [
   "#FFB3B3", // pastel red
@@ -52,10 +53,13 @@ export const TagItem = ({
   drag,
   isActive,
 }: RenderItemParams<TagItemProps>) => {
-  const { theme } = useTheme();
+  const themeContext = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
   const [editedColor, setEditedColor] = useState(item.color);
+
+  const styles = makeStyles(themeContext);
+  const { theme } = themeContext;
 
   const showTaggedRoutes = () => {
     if (isEditing) {
@@ -178,50 +182,51 @@ export const TagItem = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 5,
-    margin: 3,
-    borderRadius: 5,
-    borderColor: "#ccc",
-    borderWidth: 0.3,
-  },
-  tagItemContainer: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 10,
-    justifyContent: "space-between",
-    width: "95%",
-    margin: "auto",
-  },
-  tagAndNameContainer: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 5,
-    borderColor: "#ccc",
-  },
-  tag: {
-    paddingRight: 18,
-  },
-  textInput: {
-    fontSize: 18,
-    borderBottomWidth: 0.5,
-    borderColor: "#ccc",
-    width: "75%",
-  },
-  optionButtonContainer: {
-    width: 32,
-    borderRadius: 50,
-    height: 32,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  confirmButton: {
-    padding: 5,
-    borderRadius: 5,
-  },
-});
+const makeStyles = ({ colorMode }: ThemeContextType) =>
+  StyleSheet.create({
+    container: {
+      paddingVertical: 5,
+      margin: 3,
+      borderRadius: 5,
+      borderColor: "#ccc",
+      borderWidth: colorMode === "light" ? 1 : 0.3,
+    },
+    tagItemContainer: {
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      paddingLeft: 10,
+      justifyContent: "space-between",
+      width: "95%",
+      margin: "auto",
+    },
+    tagAndNameContainer: {
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      borderRadius: 5,
+      borderColor: "#ccc",
+    },
+    tag: {
+      paddingRight: 18,
+    },
+    textInput: {
+      fontSize: 18,
+      borderBottomWidth: 0.5,
+      borderColor: "#ccc",
+      width: "75%",
+    },
+    optionButtonContainer: {
+      width: 32,
+      borderRadius: 50,
+      height: 32,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    confirmButton: {
+      padding: 5,
+      borderRadius: 5,
+    },
+  });

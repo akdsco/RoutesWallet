@@ -8,6 +8,11 @@ type Themes = {
   dark: Theme;
 };
 
+export type ThemeContextType = {
+  colorMode: ColorMode;
+  theme: Theme;
+};
+
 export type ColorMode = "light" | "dark";
 
 export type Theme = {
