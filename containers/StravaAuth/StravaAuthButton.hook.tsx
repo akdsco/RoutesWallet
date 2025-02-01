@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import { useApp } from "@/hooks";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
+import Toast from "react-native-toast-message";
 
 // TODO: check below scope, is it really not possible to use it?
 // "profile:read_all"
@@ -21,13 +22,12 @@ const requestConfig = {
   clientId: Config.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
   redirectUri: makeRedirectUri({
-    // the "redirect" must match your "Authorization Callback Domain" in the Strava dev console.
-    native: "routeswallet://localhost",
-    // scheme: "routeswallet",
+    native: Config.STRAVA_REDIRECT_URI,
   }),
 };
 
 export const useStravaAuthButton = () => {
+  const fnName = "useStravaAuthButton";
   const db = useSQLiteContext();
   const router = useRouter();
   const { setLoading, setIsAuthenticating, setIsStravaAuthed } = useApp();
@@ -37,30 +37,28 @@ export const useStravaAuthButton = () => {
     stravaApiDiscovery,
   );
 
-  const setSyncedAuthAndLoading = (value: boolean) => {
+  const setInProgress = (value: boolean) => {
     setIsAuthenticating(value);
     setLoading(value);
   };
 
   useEffect(() => {
     if (response) {
-      setSyncedAuthAndLoading(true);
-      log.debug(
-        "useStravaAuthButton",
-        "useEffect strava authorisation response",
-        { response },
-      );
-      // TODO: Use loader when async prompt works below (better UX)?
+      setInProgress(true);
+      log.debug(fnName, "useEffect strava authorisation response", {
+        response,
+      });
       handleStravaResponse(response)
-        .then(() => {
-          console.info("Strava auth response handled");
-          setTimeout(() => setSyncedAuthAndLoading(false), 300);
+        .then((response) => {
+          log.info(fnName, "Strava auth response handled", { response });
+          setTimeout(() => setInProgress(false), 300);
+
           router.replace("/");
         })
         .catch((error) => {
-          setSyncedAuthAndLoading(false);
+          setInProgress(false);
           log.error(
-            "useStravaAuthButton",
+            fnName,
             "Error when handling Strava's authorisation response",
             { error },
           );
@@ -69,26 +67,23 @@ export const useStravaAuthButton = () => {
   }, [response]);
 
   const handleStravaResponse = async (response: AuthSessionResult) => {
+    const fnName = "handleStravaResponse";
+
     if (response?.type === "error") {
-      log.error(
-        "handleStravaResponse",
-        "Strava authorisation response returns error",
-        { response },
-      );
+      log.error(fnName, "Strava authorisation response returns error", {
+        response,
+      });
       // TODO: Inform user?
       throw new Error(response.error?.message);
     }
     if (response?.type === "dismiss" || response?.type === "cancel") {
       // TODO: Inform user?
-      log.info(
-        "handleStravaResponse",
-        `User ${response?.type}ed Strava authentication flow`,
-      );
+      log.info(fnName, `User ${response?.type}ed Strava authentication flow`);
       return;
     }
 
     if (response?.type === "success") {
-      log.debug("handleStravaResponse", "Strava auth response successful", {
+      log.debug(fnName, "Strava auth response successful", {
         response,
       });
 
@@ -96,21 +91,29 @@ export const useStravaAuthButton = () => {
 
       if (scope !== "read,activity:read_all") {
         // TODO: "scope is not as expected, send user back to auth page", improve scope checking
+        Toast.show({
+          type: "error",
+          text1: "Selected permissions are not valid",
+          text2: "Please allow access to read all activities",
+          topOffset: 55,
+        });
         log.error(
-          "handleStravaResponse",
+          fnName,
           "Scope is not as expected, send user back to auth page",
           { scope },
         );
-        return;
+        throw new Error("Scope is not as expected");
       }
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
       const routes = await saveStravaRoutesInDb(db)(athleteId);
 
-      log.debug("handleStravaResponse", `Saved ${routes.length} routes`, {
+      log.debug(fnName, `Saved ${routes.length} routes`, {
         athleteId,
       });
       setIsStravaAuthed(true);
+
+      return response;
     }
   };
 
