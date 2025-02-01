@@ -1,20 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { Alert } from "react-native";
-import { RemoveTag, UpdateTag } from "@/components/Tag/TagItem";
 import { useApp } from "@/hooks";
 import { log } from "@/library/logger";
-
-type RawTag = {
-  id: number;
-  name: string;
-  color: string;
-};
-
-type Tag = RawTag & {
-  removeTag: RemoveTag;
-  updateTag: UpdateTag;
-};
+import { RawTag, Tag, UpdateTag } from "@/library/types";
+import { saveTagOrderInDb } from "@/db/methods/tags";
 
 export const useTags = () => {
   const db = useSQLiteContext();
@@ -139,31 +129,14 @@ export const useTags = () => {
   };
 
   const onSetTags = async (tags: Tag[], saveOrderInDb = false) => {
-    if (saveOrderInDb) {
-      console.debug("SQL: Saving tags order");
-
-      const insertSql = `
-        INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
-        VALUES (?, ?, ?)
-        ON CONFLICT (athlete_id, tag_id) DO UPDATE SET order_position = excluded.order_position;
-      `;
-
-      try {
-        await db.withExclusiveTransactionAsync(async (tx) => {
-          for (let i = 0; i < tags.length; i++) {
-            const tag = tags[i];
-            await tx.runAsync(insertSql, [athleteId, tag.id, i]);
-          }
-        });
-
-        console.debug("DB: Tag order saved");
-      } catch (error) {
-        console.error("SQL: Error saving tag order", error);
-        throw error;
-      }
-    }
-
     setTags(tags);
+
+    if (saveOrderInDb) {
+      if (!athleteId) {
+        throw new Error("Athlete ID is missing");
+      }
+      await saveTagOrderInDb(db)(athleteId, tags);
+    }
   };
 
   useEffect(() => {

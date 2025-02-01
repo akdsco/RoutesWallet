@@ -3,6 +3,7 @@ import { log, logDb } from "@/library/logger";
 import { SQLiteDatabase } from "expo-sqlite";
 import { tables } from "@/db/tables";
 import { Toast } from "@/library/Toast";
+import { Tag } from "@/library/types";
 
 export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
   const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
@@ -78,5 +79,32 @@ const updateTagOrderToTop =
           error,
         },
       );
+    }
+  };
+
+export const saveTagOrderInDb =
+  (db: SQLiteDatabase) => async (athleteId: number, tags: Tag[]) => {
+    const { athleteTagOrder } = tables;
+
+    const query = `
+        INSERT INTO ${athleteTagOrder} (athlete_id, tag_id, order_position)
+        VALUES (?, ?, ?)
+        ON CONFLICT (athlete_id, tag_id) DO UPDATE SET order_position = excluded.order_position;
+      `;
+
+    logDb.debug(athleteTagOrder, "INSERT", query, { athleteId, tags });
+
+    try {
+      await db.withExclusiveTransactionAsync(async (tx) => {
+        for (let i = 0; i < tags.length; i++) {
+          const tag = tags[i];
+          await tx.runAsync(query, [athleteId, tag.id, i]);
+        }
+      });
+
+      log.debug("saveTagOrderInDb", "Tag order saved");
+    } catch (error) {
+      log.error("saveTagOrderInDb", "Error saving tag order", { error });
+      throw error;
     }
   };

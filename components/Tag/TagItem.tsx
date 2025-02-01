@@ -17,6 +17,7 @@ import {
 import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
 import { ThemeContextType } from "@/library/theme";
+import { RemoveTag, UpdateTag } from "@/library/types";
 
 const colors = [
   "#FFB3B3", // pastel red
@@ -32,13 +33,6 @@ const colors = [
   "#FFFFB3", // pastel yellow
   "yellow",
 ];
-
-export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (
-  tagId: number,
-  name: string,
-  color: string,
-) => Promise<void>;
 
 export type TagItemProps = {
   id: number;
