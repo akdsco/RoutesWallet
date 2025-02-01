@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "RoutesWallet",
+    "name": "Routes Wallet",
     "slug": "routeswallet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon_square_dark_bg.png",
     "scheme": "routeswallet",
     "userInterfaceStyle": "automatic",
     "splash": {
