@@ -4,11 +4,11 @@
     "slug": "routeswallet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon_square_dark_bg.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "routeswallet",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/splash-alt.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "cover",
       "backgroundColor": "#11111f"
     },
