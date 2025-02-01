@@ -18,6 +18,12 @@ export type Theme = {
   tabIconDefault: string;
   tabIconSelected: string;
   shadowColor: string;
+  toast: {
+    info: string;
+    success: string;
+    warning: string;
+    error: string;
+  };
 };
 
 const tintColorLight = "#151617";
@@ -32,6 +38,12 @@ export const theme: Themes = {
     icon: "#687076",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
+    toast: {
+      info: "#3b82f6",
+      success: "#10b981",
+      warning: "#dd6b20",
+      error: "#ef4444",
+    },
   },
   dark: {
     text: "#fff",
@@ -41,5 +53,11 @@ export const theme: Themes = {
     icon: "#9BA1A6",
     tabIconDefault: "#9BA1A6",
     tabIconSelected: tintColorDark,
+    toast: {
+      info: "#bfdbfe",
+      success: "#a7f3d0",
+      warning: "#fbd38d",
+      error: "#fecaca",
+    },
   },
 };

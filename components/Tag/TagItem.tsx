@@ -14,8 +14,8 @@ import {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
-import Toast from "react-native-toast-message";
 import { log } from "@/library/logger";
+import { Toast } from "@/library/Toast";
 
 const colors = [
   "#FFB3B3", // pastel red
@@ -65,6 +65,7 @@ export const TagItem = ({
 
     log.debug("useTagItem", `Show \"${item.name}\" routes`);
     router.push({
+      // @ts-ignore
       pathname: `(tabs)/tags/${item.id}`,
       params: { tagName: item.name },
     });
@@ -91,12 +92,11 @@ export const TagItem = ({
   const saveChanges = async () => {
     const name = editedName.trim();
     if (name === "") {
-      Toast.show({
-        type: "error",
-        text1: "Tag without a name",
-        text2: "Try to make it slightly more descriptive",
-        topOffset: 55,
-      });
+      Toast(
+        "error",
+        "Tag without a name",
+        "Try to make it slightly more descriptive",
+      );
       return;
     }
 

@@ -1,8 +1,8 @@
 import { isConstraintError, isSQLiteError } from "@/db/error";
-import Toast from "react-native-toast-message";
 import { log, logDb } from "@/library/logger";
 import { SQLiteDatabase } from "expo-sqlite";
 import { tables } from "@/db/tables";
+import { Toast } from "@/library/Toast";
 
 export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
   const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
@@ -13,12 +13,7 @@ export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
   } catch (error) {
     if (isSQLiteError(error)) {
       if (isConstraintError(error)) {
-        Toast.show({
-          type: "info",
-          text1: "Tag already exists",
-          text2: "Try a different name",
-          topOffset: 55,
-        });
+        Toast("error", "Tag already exists", "Try a different name");
         return log.error("addRouteTag", "Tag most likely already exists", {
           error,
         });

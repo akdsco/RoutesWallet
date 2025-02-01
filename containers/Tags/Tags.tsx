@@ -7,12 +7,12 @@ import { TagItem } from "@/components/Tag/TagItem";
 import { useApp, useTheme } from "@/hooks";
 import { Theme } from "@/library/theme";
 import { Button } from "@/components/Button/Buttons";
-import Toast from "react-native-toast-message";
 import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import React from "react";
 import { log } from "@/library/logger";
 import { handleRouteTagInsert } from "@/db/methods";
+import { Toast } from "@/library/Toast";
 
 export const Tags = () => {
   const db = useSQLiteContext();
@@ -40,23 +40,21 @@ export const Tags = () => {
 
   const addRouteTag = async () => {
     if (!athleteId) {
-      Toast.show({
-        type: "info",
-        text1: "User not identified",
-        text2: "Please try to logout and log back in",
-        topOffset: 55,
-      });
+      Toast(
+        "info",
+        "User not identified",
+        "Please try to logout and log back in",
+      );
       return;
     }
 
     if (newTagName.trim() === "") {
       log.info("useTags: addRouteTag", "User trying to add an empty tag");
-      Toast.show({
-        type: "info",
-        text1: "Cannot add empty tag",
-        text2: "Please type in a name for your new tag",
-        topOffset: 55,
-      });
+      Toast(
+        "info",
+        "Cannot add empty tag",
+        "Please type in a name for your new tag",
+      );
       return;
     }
 

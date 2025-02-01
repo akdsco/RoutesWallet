@@ -7,6 +7,7 @@ import { SQLiteProvider } from "expo-sqlite";
 import { migrateDbIfNeeded } from "@/db/dbInit";
 import { Slot } from "expo-router";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/library/Toast";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -17,7 +18,7 @@ export default function Layout() {
       <AppProvider>
         <AppThemeProvider>
           <Slot />
-          <Toast />
+          <Toast config={toastConfig} />
         </AppThemeProvider>
       </AppProvider>
     </SQLiteProvider>

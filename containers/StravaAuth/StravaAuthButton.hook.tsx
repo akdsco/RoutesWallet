@@ -14,10 +14,8 @@ import { useEffect } from "react";
 import { useApp } from "@/hooks";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
-import Toast from "react-native-toast-message";
+import { Toast } from "@/library/Toast";
 
-// TODO: check below scope, is it really not possible to use it?
-// "profile:read_all"
 const requestConfig = {
   clientId: Config.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
@@ -91,17 +89,14 @@ export const useStravaAuthButton = () => {
 
       if (scope !== "read,activity:read_all") {
         // TODO: "scope is not as expected, send user back to auth page", improve scope checking
-        Toast.show({
-          type: "error",
-          text1: "Selected permissions are not valid",
-          text2: "Please allow access to read all activities",
-          topOffset: 55,
-        });
-        log.error(
-          fnName,
-          "Scope is not as expected, send user back to auth page",
-          { scope },
+        Toast(
+          "error",
+          "Selected permissions are not valid",
+          "Please allow access to read all activities",
         );
+        log.error(fnName, "Scope is not as expected, user should auth again", {
+          scope,
+        });
         throw new Error("Scope is not as expected");
       }
 
