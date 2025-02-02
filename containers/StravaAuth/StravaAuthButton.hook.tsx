@@ -9,18 +9,18 @@ import {
   stravaApiDiscovery,
 } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
-import Config from "react-native-config";
 import { useEffect } from "react";
 import { useApp } from "@/hooks";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
+import { AppConfig } from "@/library/config";
 
 const requestConfig = {
-  clientId: Config.STRAVA_CLIENT_ID,
+  clientId: AppConfig.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
   redirectUri: makeRedirectUri({
-    native: Config.STRAVA_REDIRECT_URI,
+    native: AppConfig.STRAVA_REDIRECT_URI,
   }),
 };
 
