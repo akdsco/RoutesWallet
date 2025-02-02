@@ -9,6 +9,7 @@ import {
 } from "@/auth/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,7 @@ export const useAppProvider = () => {
     run().then(() => {
       if (!isAuthenticating) {
         setLoading(false);
+        SplashScreen.hide();
       }
     });
   }, [loading, fontLoaded, isAuthenticating, isStravaAuthed]);

@@ -10,7 +10,7 @@ import Toast from "react-native-toast-message";
 import { toastConfig } from "@/library/Toast";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().then();
 
 export default function Layout() {
   return (
