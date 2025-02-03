@@ -4,11 +4,14 @@ import { log } from "@/library/logger";
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
 import { getStravaRoutesFromDb, StravaRoute } from "@/auth/strava";
 import { useApp } from "@/hooks";
+import { RawTag } from "@/library/types";
 
 export const useRouteItemDetails = () => {
   const db = useSQLiteContext();
   const [loading, setLoading] = useState(true);
   const [route, setRoute] = useState<StravaRoute>();
+  const [availableTags, setAvailableTags] = useState<RawTag[]>([]);
+  const [assignedTags, setAssignedTags] = useState<RawTag[]>([]);
   const { params } = useRoute();
   const { athleteId } = useApp();
 
@@ -23,6 +26,52 @@ export const useRouteItemDetails = () => {
     });
 
     return getStravaRoutesFromDb(db)(athleteId, { routeIds });
+  };
+
+  const getAssignedTags = async (routeId: BigInt) => {
+    const query = `SELECT * FROM RouteTagAssignments WHERE route_id = ?;`;
+
+    try {
+      const tags = await db.getAllAsync<RawTag>(query, [routeId.toString()]);
+      log.debug("useRouteItemDetails", "Fetched tags for route", {
+        tags,
+        routeId,
+      });
+      return tags;
+    } catch (error) {
+      log.error("useRouteItemDetails", "Error when fetching tags for route", {
+        error,
+        routeId,
+      });
+      throw error;
+    }
+  };
+
+  const getListOfAvailableTags = async (assignedTags: RawTag[]) => {
+    if (assignedTags.length === 0) {
+      // If no tags are assigned, return all available tags
+      return await db.getAllAsync<RawTag>(`SELECT * FROM RouteTags;`);
+    }
+
+    // Extract assigned tag IDs
+    const assignedTagIds = assignedTags.map((tag) => tag.id);
+
+    // Create a parameterized query to exclude assigned tags
+    const placeholders = assignedTagIds.map(() => "?").join(", ");
+    const query = `SELECT * FROM RouteTags WHERE id NOT IN (${placeholders});`;
+
+    try {
+      const availableTags = await db.getAllAsync<RawTag>(query, assignedTagIds);
+      log.debug("useRouteItemDetails", "Fetched available tags", {
+        availableTags,
+      });
+      return availableTags;
+    } catch (error) {
+      log.error("useRouteItemDetails", "Error when fetching available tags", {
+        error,
+      });
+      throw error;
+    }
   };
 
   const addTag = async (routeId: BigInt) => {
@@ -52,7 +101,7 @@ export const useRouteItemDetails = () => {
   };
 
   useEffect(() => {
-    const fetchRoute = async () => {
+    const run = async () => {
       if (!params) {
         return;
       }
@@ -61,22 +110,34 @@ export const useRouteItemDetails = () => {
       // @ts-ignore
       const routeId: bigint = params.route as bigint;
 
-      const routes = await getRouteById(db)(routeId);
+      const routesPromise = getRouteById(db)(routeId);
+      const assignedTagsPromise = getAssignedTags(routeId);
+
+      const [routes, assignedTags] = await Promise.all([
+        routesPromise,
+        assignedTagsPromise,
+      ]);
+
+      const availableTags = await getListOfAvailableTags(assignedTags);
+
+      const route = routes[0];
+      setRoute(route);
+      setAvailableTags(availableTags);
+
       log.debug("useRouteItemDetails", "Fetched route", {
         routes: JSON.stringify(routes).slice(0, 250) + "...",
         params,
       });
-      const route = routes[0];
 
-      setRoute(route);
+      setAssignedTags(assignedTags);
     };
 
-    fetchRoute()
+    run()
       .then(() => setLoading(false))
       .catch((error) => {
         log.error(
           "useRouteItemDetails : useEffect",
-          "Error when executing fetchRoute fn",
+          "Error when executing useEffect run fn",
           { error, params, athleteId, route },
         );
         throw error;
@@ -85,6 +146,8 @@ export const useRouteItemDetails = () => {
 
   return {
     route,
+    assignedTags,
+    availableTags,
     addTag,
     loading,
   };

@@ -2,7 +2,6 @@ import Container from "@/components/Container";
 import { StyleSheet, View } from "react-native";
 import { useTags } from "@/containers/Tags/Tags.hook";
 import { TagItem } from "@/components/Tag/TagItem";
-import { MenuProvider } from "react-native-popup-menu";
 import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import React from "react";
 import { AddTag } from "@/containers/Tags/AddTag";
@@ -17,21 +16,19 @@ export const Tags = () => {
 
   return (
     <Container>
-      <MenuProvider>
-        <View style={styles.scrollViewContent}>
-          <DraggableFlatList
-            data={tags}
-            onDragEnd={({ data }) => setTags(data, true)}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={TagItem}
-            style={{
-              // TODO: questionable solution, but it works? test it on different devices, load up more tags
-              height: "89%",
-            }}
-          />
-          <AddTag checkTags={checkTags} />
-        </View>
-      </MenuProvider>
+      <View style={styles.scrollViewContent}>
+        <DraggableFlatList
+          data={tags}
+          onDragEnd={({ data }) => setTags(data, true)}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={TagItem}
+          style={{
+            // TODO: questionable solution, but it works? test it on different devices, load up more tags
+            height: "89%",
+          }}
+        />
+        <AddTag checkTags={checkTags} />
+      </View>
     </Container>
   );
 };

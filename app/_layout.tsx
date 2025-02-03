@@ -8,6 +8,7 @@ import { migrateDbIfNeeded } from "@/db/dbInit";
 import { Slot } from "expo-router";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/library/Toast";
+import { MenuProvider } from "react-native-popup-menu";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().then();
@@ -17,8 +18,10 @@ export default function Layout() {
     <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
       <AppProvider>
         <AppThemeProvider>
-          <Slot />
-          <Toast config={toastConfig} />
+          <MenuProvider>
+            <Slot />
+            <Toast config={toastConfig} />
+          </MenuProvider>
         </AppThemeProvider>
       </AppProvider>
     </SQLiteProvider>
