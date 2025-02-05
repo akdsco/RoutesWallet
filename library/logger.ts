@@ -61,7 +61,7 @@ export const logDb = {
   ) => loggerDb({ level: "error", tableName, action, query, context }),
 };
 
-export const loggerDb = ({
+const loggerDb = ({
   level,
   tableName,
   action,

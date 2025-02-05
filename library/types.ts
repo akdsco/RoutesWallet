@@ -6,14 +6,16 @@ export type RawTag = {
   color: string;
 };
 
-export type Tag = RawTag & {
+export type TagWithFunctions = RawTag & {
   removeTag: RemoveTag;
   updateTag: UpdateTag;
 };
 
 export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (
-  tagId: number,
-  name: string,
-  color: string,
-) => Promise<void>;
+export type UpdateTag = (tag: RawTag) => Promise<void>;
+
+export type AthleteTagOrder = {
+  athlete_id: number;
+  tag_id: number;
+  order_position: number;
+};

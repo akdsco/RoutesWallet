@@ -67,7 +67,7 @@ export const useTagItem = (item: TagItemProps) => {
       return;
     }
 
-    await item.updateTag(item.id, name, editedColor);
+    await item.updateTag({ id: item.id, name, color: editedColor });
     setIsEditing(false);
   };
 
