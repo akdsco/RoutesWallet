@@ -9,9 +9,12 @@ export const insertStravaAuthResponse =
     const query = `
       INSERT INTO ${tables.stravaAuthResponse} (
         scope, token_type, expires_at, expires_in, refresh_token, access_token, athlete_id
-      ) VALUES (?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(athlete_id) DO UPDATE SET
-        scope=COALESCE(excluded.scope, StravaAuthResponse.scope),
+        scope = CASE 
+                    WHEN excluded.scope IS NOT NULL THEN excluded.scope 
+                    ELSE StravaAuthResponse.scope 
+                END,
         token_type=excluded.token_type,
         expires_at=excluded.expires_at,
         expires_in=excluded.expires_in,
@@ -19,7 +22,7 @@ export const insertStravaAuthResponse =
         access_token=excluded.access_token;
     `;
 
-    logDb.debug(tables.stravaAuthResponse, "INSERT", query, {
+    logDb.debug(tables.stravaAuthResponse, query, {
       athleteId,
       auth,
     });
@@ -39,7 +42,6 @@ export const insertStravaAuthResponse =
     } catch (error) {
       logDb.error(
         tables.stravaAuthResponse,
-        "INSERT",
         "Error when INSERTING strava auth response",
         {
           error,

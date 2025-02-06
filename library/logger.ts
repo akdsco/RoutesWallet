@@ -1,5 +1,4 @@
 type LogLevel = "info" | "warn" | "error" | "debug";
-type DBAction = "INSERT" | "UPDATE" | "DELETE" | "SELECT";
 
 type LogParams = {
   level: LogLevel;
@@ -11,7 +10,6 @@ type LogParams = {
 type LogDbParams = {
   level: LogLevel;
   tableName: string;
-  action: DBAction;
   query: string;
   context?: object;
 };
@@ -35,40 +33,18 @@ const logger = ({ level, fnName, action, context }: LogParams) => {
 };
 
 export const logDb = {
-  debug: (
-    tableName: string,
-    action: DBAction,
-    query: string,
-    context?: object,
-  ) => loggerDb({ level: "debug", tableName, action, query, context }),
-  info: (
-    tableName: string,
-    action: DBAction,
-    query: string,
-    context?: object,
-  ) => loggerDb({ level: "info", tableName, action, query, context }),
-  warn: (
-    tableName: string,
-    action: DBAction,
-    query: string,
-    context?: object,
-  ) => loggerDb({ level: "warn", tableName, action, query, context }),
-  error: (
-    tableName: string,
-    action: DBAction,
-    query: string,
-    context?: object,
-  ) => loggerDb({ level: "error", tableName, action, query, context }),
+  debug: (tableName: string, query: string, context?: object) =>
+    loggerDb({ level: "debug", tableName, query, context }),
+  info: (tableName: string, query: string, context?: object) =>
+    loggerDb({ level: "info", tableName, query, context }),
+  warn: (tableName: string, query: string, context?: object) =>
+    loggerDb({ level: "warn", tableName, query, context }),
+  error: (tableName: string, query: string, context?: object) =>
+    loggerDb({ level: "error", tableName, query, context }),
 };
 
-const loggerDb = ({
-  level,
-  tableName,
-  action,
-  query,
-  context,
-}: LogDbParams) => {
-  const logMessage = `DB:[${tableName}]:${action}:${query}`;
+const loggerDb = ({ level, tableName, query, context }: LogDbParams) => {
+  const logMessage = `DB:TABLE:${tableName}:${query.replace(/\s+/g, " ").trim()}`;
   const ctx = getContext(context);
 
   return logBasedOnType(level, logMessage, ctx);

@@ -14,11 +14,14 @@ export const insertDefaultTagOrder =
       ROW_NUMBER() OVER (ORDER BY id) AS order_position
     FROM RouteTags;
   `;
-    logDb.debug(tables.athleteTagOrder, "INSERT", query, { athleteId });
+    logDb.debug(tables.athleteTagOrder, query, { athleteId });
     try {
       await db.execAsync(query);
     } catch (error) {
-      logDb.error(tables.athleteTagOrder, "INSERT", query, { athleteId });
+      logDb.error(tables.athleteTagOrder, query, {
+        athleteId,
+        error,
+      });
     }
   };
 
@@ -26,7 +29,7 @@ export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
   const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
 
   try {
-    logDb.debug(tables.routeTags, "INSERT", query, { tagName });
+    logDb.debug(tables.routeTags, query, { tagName });
     await db.execAsync(query);
   } catch (error) {
     if (isSQLiteError(error)) {
@@ -52,7 +55,7 @@ const getTagIdByName = (db: SQLiteDatabase) => async (tagName: string) => {
   try {
     const sql = `SELECT id FROM ${tables.routeTags} WHERE name = '${tagName}'`;
 
-    logDb.debug(tables.routeTags, "SELECT", sql, { tagName });
+    logDb.debug(tables.routeTags, sql, { tagName });
     const result = await db.getAllAsync<{ id: number }>(sql);
     const tagId = result[0]?.id;
 
@@ -82,7 +85,7 @@ const updateTagOrderToTop =
       INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
       VALUES (${athleteId}, ${tagId}, 1);
     `;
-      logDb.debug(tables.athleteTagOrder, "INSERT", updateOrderSql, {
+      logDb.debug(tables.athleteTagOrder, updateOrderSql, {
         athleteId,
         tagId,
       });
@@ -110,7 +113,7 @@ export const saveTagOrderInDb =
         ON CONFLICT (athlete_id, tag_id) DO UPDATE SET order_position = excluded.order_position;
       `;
 
-    logDb.debug(athleteTagOrder, "INSERT", query, { athleteId, tags });
+    logDb.debug(athleteTagOrder, query, { athleteId, tags });
 
     try {
       await db.withExclusiveTransactionAsync(async (tx) => {
@@ -135,7 +138,7 @@ export const removeTagFromDb =
       await db.withExclusiveTransactionAsync(async (tx) => {
         // Remove the tag from RouteTags
         const deleteTagSql = `DELETE FROM ${tables.routeTags} WHERE id = ?`;
-        logDb.debug(tables.routeTags, "DELETE", deleteTagSql, {
+        logDb.debug(tables.routeTags, deleteTagSql, {
           tagId,
           athleteId,
         });
@@ -143,7 +146,7 @@ export const removeTagFromDb =
 
         // Check if the order exists
         const checkOrderSqlQuery = `SELECT * FROM ${tables.athleteTagOrder} WHERE tag_id = ? AND athlete_id = ?`;
-        logDb.debug(tables.athleteTagOrder, "SELECT", checkOrderSqlQuery, {
+        logDb.debug(tables.athleteTagOrder, checkOrderSqlQuery, {
           tagId,
           athleteId,
         });
@@ -158,7 +161,7 @@ export const removeTagFromDb =
         if (orderExistsInDb) {
           // Remove order from the AthleteTagOrder table
           const deleteOrderSql = `DELETE FROM ${tables.athleteTagOrder} WHERE tag_id = ? AND athlete_id = ?`;
-          logDb.debug(tables.athleteTagOrder, "DELETE", deleteOrderSql, {
+          logDb.debug(tables.athleteTagOrder, deleteOrderSql, {
             tagId,
             athleteId,
           });
@@ -172,7 +175,7 @@ export const removeTagFromDb =
               SELECT order_position FROM ${tables.athleteTagOrder} WHERE tag_id = ? AND athlete_id = ?
             );
           `;
-          logDb.debug(tables.athleteTagOrder, "UPDATE", updateOrderSql, {
+          logDb.debug(tables.athleteTagOrder, updateOrderSql, {
             tagId,
             athleteId,
           });
@@ -200,7 +203,7 @@ export const updateTagInDb = (db: SQLiteDatabase) => async (tag: RawTag) => {
   const query = `UPDATE ${tables.routeTags} SET name = ?, color = ? WHERE id = ?;`;
 
   try {
-    logDb.debug(tables.routeTags, "UPDATE", query, { newTag: tag });
+    logDb.debug(tables.routeTags, query, { newTag: tag });
     await db.runAsync(query, [tag.name, tag.color, tag.id]);
     log.debug(fnName, `Tag id "${tag.id}" updated`);
   } catch (error) {
@@ -220,7 +223,7 @@ export const getOrderedRawTagsFromDb =
       ORDER BY ato.order_position IS NULL, ato.order_position ASC, rt.id DESC;
     `;
 
-    logDb.debug(tables.routeTags, "SELECT", query, { athleteId });
+    logDb.debug(tables.routeTags, query, { athleteId });
 
     try {
       return await db.getAllAsync<RawTag>(query, [athleteId]);

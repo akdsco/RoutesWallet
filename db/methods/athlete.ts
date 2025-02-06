@@ -32,7 +32,7 @@ export const insertStravaAthleteToDb =
         follower=excluded.follower,
         weight=excluded.weight;
     `;
-    logDb.debug(tables.stravaAthlete, "INSERT", query, { athlete, fnName });
+    logDb.debug(tables.stravaAthlete, query, { athlete, fnName });
 
     try {
       await db.runAsync(query, [
@@ -58,7 +58,7 @@ export const insertStravaAthleteToDb =
         athlete.weight ?? null,
       ]);
     } catch (error) {
-      logDb.error(tables.stravaAthlete, "INSERT", query, {
+      logDb.error(tables.stravaAthlete, query, {
         error,
         athlete,
         fnName,
