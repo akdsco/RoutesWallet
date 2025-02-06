@@ -32,7 +32,7 @@ export const insertStravaAthleteToDb =
         follower=excluded.follower,
         weight=excluded.weight;
     `;
-    logDb.info(tables.stravaAthlete, "INSERT", query, { athlete, fnName });
+    logDb.debug(tables.stravaAthlete, "INSERT", query, { athlete, fnName });
 
     try {
       await db.runAsync(query, [

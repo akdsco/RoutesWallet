@@ -1,6 +1,6 @@
 import {
   StravaAuthResponse,
-  StravaAuthResponseWithoutAthlete,
+  StravaAuthResponseRaw,
   StravaRoute,
   StravaRouteFlat,
 } from "@/auth/strava/types";
@@ -38,6 +38,7 @@ export const handleStravaAuthorisation =
 
     try {
       await insertStravaAthleteToDb(db)(athlete);
+      await insertStravaAuthResponse(db)(athlete.id, authData);
 
       const insertStravaAuthDataSQL = `
       INSERT INTO StravaAuthResponse (
@@ -354,10 +355,9 @@ const getNewAccessToken =
     url.searchParams.set("client_secret", AppConfig.STRAVA_CLIENT_SECRET);
     url.searchParams.set("refresh_token", refreshToken);
 
-    const stravaAuthResponse =
-      await fetchFromStravaApi<StravaAuthResponseWithoutAthlete>(
-        url.toString(),
-      );
+    const stravaAuthResponse = await fetchFromStravaApi<StravaAuthResponseRaw>(
+      url.toString(),
+    );
 
     await insertStravaAuthResponse(db)(athleteId, stravaAuthResponse);
 

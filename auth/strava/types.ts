@@ -30,10 +30,9 @@ export type StravaAuthResponse = {
   athlete: StravaAthlete;
 };
 
-export type StravaAuthResponseWithoutAthlete = Omit<
-  StravaAuthResponse,
-  "athlete"
->;
+export type StravaAuthResponseRaw = Omit<StravaAuthResponse, "athlete"> & {
+  scope?: string;
+};
 
 type StravaMap = {
   id: string;

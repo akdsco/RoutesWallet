@@ -1,24 +1,17 @@
-import { StravaAuthResponseWithoutAthlete } from "@/auth/strava/types";
+import { StravaAuthResponseRaw } from "@/auth/strava/types";
 import { SQLiteDatabase } from "expo-sqlite";
-import { log } from "@/library/logger";
+import { logDb } from "@/library/logger";
+import { tables } from "@/db/tables";
 
 export const insertStravaAuthResponse =
   (db: SQLiteDatabase) =>
-  async (
-    athleteId: number,
-    {
-      access_token,
-      refresh_token,
-      token_type,
-      expires_in,
-      expires_at,
-    }: StravaAuthResponseWithoutAthlete,
-  ) => {
+  async (athleteId: number, auth: StravaAuthResponseRaw) => {
     const query = `
-      INSERT INTO StravaAuthResponse (
-        token_type, expires_at, expires_in, refresh_token, access_token, athlete_id
+      INSERT INTO ${tables.stravaAuthResponse} (
+        scope, token_type, expires_at, expires_in, refresh_token, access_token, athlete_id
       ) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(athlete_id) DO UPDATE SET
+        scope=COALESCE(excluded.scope, StravaAuthResponse.scope),
         token_type=excluded.token_type,
         expires_at=excluded.expires_at,
         expires_in=excluded.expires_in,
@@ -26,23 +19,31 @@ export const insertStravaAuthResponse =
         access_token=excluded.access_token;
     `;
 
+    logDb.debug(tables.stravaAuthResponse, "INSERT", query, {
+      athleteId,
+      auth,
+    });
+
     const insertData = [
-      token_type,
-      expires_at,
-      expires_in,
-      refresh_token,
-      access_token,
+      auth.scope ? auth.scope : null,
+      auth.token_type,
+      auth.expires_at,
+      auth.expires_in,
+      auth.refresh_token,
+      auth.access_token,
       athleteId,
     ];
 
     try {
       await db.runAsync(query, insertData);
     } catch (error) {
-      log.error(
-        "insertStravaAuthResponse",
-        "Error when saving strava auth insertData",
+      logDb.error(
+        tables.stravaAuthResponse,
+        "INSERT",
+        "Error when INSERTING strava auth response",
         {
           error,
+          athleteId,
           query,
           insertData,
         },
