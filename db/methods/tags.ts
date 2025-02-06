@@ -5,6 +5,23 @@ import { tables } from "@/db/tables";
 import { Toast } from "@/library/Toast";
 import { AthleteTagOrder, RawTag, TagWithFunctions } from "@/library/types";
 
+export const insertDefaultTagOrder =
+  (db: SQLiteDatabase) => async (athleteId: number) => {
+    const query = `
+    INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
+    SELECT ${athleteId} AS athlete_id,
+      id AS tag_id,
+      ROW_NUMBER() OVER (ORDER BY id) AS order_position
+    FROM RouteTags;
+  `;
+    logDb.debug(tables.athleteTagOrder, "INSERT", query, { athleteId });
+    try {
+      await db.execAsync(query);
+    } catch (error) {
+      logDb.error(tables.athleteTagOrder, "INSERT", query, { athleteId });
+    }
+  };
+
 export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
   const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
 

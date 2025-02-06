@@ -11,6 +11,7 @@ import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { insertStravaAuthResponse } from "@/db/methods";
 import { AppConfig } from "@/library/config";
 import { insertStravaAthleteToDb } from "@/db/methods/athlete";
+import { insertDefaultTagOrder } from "@/db/methods/tags";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -27,7 +28,7 @@ export const handleStravaAuthorisation =
 
     log.debug(
       "handleStravaAuthorisation",
-      "Saving user and auth response data",
+      "Saving user, auth response and default tag order data",
       {
         authData,
         athlete,
@@ -36,24 +37,13 @@ export const handleStravaAuthorisation =
 
     await saveInLocalSecureStorage(SECURE.USER_ID, athlete.id.toString());
 
-    try {
-      await insertStravaAthleteToDb(db)(athlete);
-      await insertStravaAuthResponse(db)(athlete.id, authData);
+    const athletePromise = insertStravaAthleteToDb(db)(athlete);
+    const authPromise = insertStravaAuthResponse(db)(athlete.id, authData);
+    //  We're inserting tag order at this point (once the user is logged in)
+    //  because we need the athlete_id to insert the default order
+    const orderPromise = insertDefaultTagOrder(db)(athlete.id);
 
-      // Iterate over existing tags and create default order
-      await db.execAsync(`
-        INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
-        SELECT ${athlete.id} AS athlete_id,
-          id AS tag_id,
-          ROW_NUMBER() OVER (ORDER BY id) AS order_position
-        FROM RouteTags;
-      `);
-    } catch (error) {
-      console.log(
-        "SQL: Error when saving athlete, auth or tag order data in db",
-        error,
-      );
-    }
+    await Promise.all([athletePromise, authPromise, orderPromise]);
 
     return athlete.id;
   };
