@@ -40,29 +40,6 @@ export const handleStravaAuthorisation =
       await insertStravaAthleteToDb(db)(athlete);
       await insertStravaAuthResponse(db)(athlete.id, authData);
 
-      const insertStravaAuthDataSQL = `
-      INSERT INTO StravaAuthResponse (
-        scope, token_type, expires_at, expires_in, refresh_token, access_token, athlete_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(athlete_id) DO UPDATE SET
-        scope=excluded.scope,
-        token_type=excluded.token_type,
-        expires_at=excluded.expires_at,
-        expires_in=excluded.expires_in,
-        refresh_token=excluded.refresh_token,
-        access_token=excluded.access_token;
-    `;
-
-      await db.runAsync(insertStravaAuthDataSQL, [
-        authData.scope,
-        authData.token_type,
-        authData.expires_at,
-        authData.expires_in,
-        authData.refresh_token,
-        authData.access_token,
-        athlete.id,
-      ]);
-
       // Iterate over existing tags and create default order
       await db.execAsync(`
         INSERT INTO AthleteTagOrder (athlete_id, tag_id, order_position)
