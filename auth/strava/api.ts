@@ -5,11 +5,12 @@ import {
   StravaRouteFlat,
 } from "@/auth/strava/types";
 import { SQLiteDatabase } from "expo-sqlite";
-import { saveUserData, SECURE } from "@/db/secureStore";
+import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { insertStravaAuthResponse } from "@/db/methods";
 import { AppConfig } from "@/library/config";
+import { insertStravaAthleteToDb } from "@/db/methods/athlete";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -33,57 +34,10 @@ export const handleStravaAuthorisation =
       },
     );
 
-    await saveUserData(SECURE.USER_ID, athlete.id.toString());
+    await saveInLocalSecureStorage(SECURE.USER_ID, athlete.id.toString());
 
     try {
-      const insertStravaAthleteSQL = `
-      INSERT INTO StravaAthlete (
-        id, username, resource_state, firstname, lastname, bio, city, state, country, sex, premium, summit, created_at, updated_at, badge_type_id, profile_medium, profile, friend, follower, weight
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        username=excluded.username,
-        resource_state=excluded.resource_state,
-        firstname=excluded.firstname,
-        lastname=excluded.lastname,
-        bio=excluded.bio,
-        city=excluded.city,
-        state=excluded.state,
-        country=excluded.country,
-        sex=excluded.sex,
-        premium=excluded.premium,
-        summit=excluded.summit,
-        created_at=excluded.created_at,
-        updated_at=excluded.updated_at,
-        badge_type_id=excluded.badge_type_id,
-        profile_medium=excluded.profile_medium,
-        profile=excluded.profile,
-        friend=excluded.friend,
-        follower=excluded.follower,
-        weight=excluded.weight;
-    `;
-
-      await db.runAsync(insertStravaAthleteSQL, [
-        athlete.id,
-        athlete.username,
-        athlete.resource_state,
-        athlete.firstname,
-        athlete.lastname,
-        athlete.bio,
-        athlete.city,
-        athlete.state,
-        athlete.country,
-        athlete.sex,
-        athlete.premium,
-        athlete.summit,
-        athlete.created_at,
-        athlete.updated_at,
-        athlete.badge_type_id,
-        athlete.profile_medium,
-        athlete.profile,
-        athlete.friend,
-        athlete.follower,
-        athlete.weight ?? null,
-      ]);
+      await insertStravaAthleteToDb(db)(athlete);
 
       const insertStravaAuthDataSQL = `
       INSERT INTO StravaAuthResponse (

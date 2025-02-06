@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { useFonts } from "expo-font";
-import { getUserData, SECURE } from "@/db/secureStore";
+import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";
 import {
   checkStravaConnection,
   getStravaRoutesFromDb,
@@ -33,7 +33,7 @@ export const useAppProvider = () => {
 
   useEffect(() => {
     const run = async () => {
-      const athleteId = await getUserData<number>(SECURE.USER_ID);
+      const athleteId = await getFromLocalSecureStorage<number>(SECURE.USER_ID);
       setAthleteId(athleteId);
 
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
