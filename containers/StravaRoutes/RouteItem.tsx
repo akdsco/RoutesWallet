@@ -6,19 +6,19 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { StravaRouteDetailed } from "@/auth/strava";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
+import { StravaRouteBase } from "@/auth/strava/types";
 
 export const RouteItem = ({
   item,
   route,
   itemWidth,
 }: {
-  item: StravaRouteDetailed;
+  item: StravaRouteBase;
   route: string;
   itemWidth: number;
 }) => {
