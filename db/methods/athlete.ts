@@ -3,7 +3,7 @@ import { StravaAthlete } from "@/auth/strava/types";
 import { logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 
-export const insertStravaAthleteToDb =
+export const insertStravaAthleteInDb =
   (db: SQLiteDatabase) => async (athlete: StravaAthlete) => {
     const fnName = "insertStravaAthleteInDb";
 

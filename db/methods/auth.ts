@@ -1,9 +1,9 @@
-import { StravaAuthResponseRaw } from "@/auth/strava/types";
+import { StravaAuthResponse, StravaAuthResponseRaw } from "@/auth/strava/types";
 import { SQLiteDatabase } from "expo-sqlite";
-import { logDb } from "@/library/logger";
+import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 
-export const insertStravaAuthResponse =
+export const insertStravaAuthResponseInDb =
   (db: SQLiteDatabase) =>
   async (athleteId: number, auth: StravaAuthResponseRaw) => {
     const query = `
@@ -51,5 +51,41 @@ export const insertStravaAuthResponse =
         },
       );
       throw error;
+    }
+  };
+
+export const getStravaAuthResponseFromDb =
+  (db: SQLiteDatabase) => async (athleteId: number) => {
+    const query = `SELECT * FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
+
+    try {
+      const accessTokenData = await db.getFirstAsync<StravaAuthResponse>(
+        query,
+        [athleteId],
+      );
+
+      if (!accessTokenData || !accessTokenData.access_token) {
+        throw new Error("Auth data missing for the given athlete ID");
+      }
+
+      return accessTokenData;
+    } catch (error) {
+      logDb.error(tables.stravaAuthResponse, query, { athleteId });
+      throw error;
+    }
+  };
+
+export const deleteStravaAuthResponseFromDb =
+  (db: SQLiteDatabase) => async (athleteId: number) => {
+    const query = `DELETE FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
+
+    try {
+      log.info(tables.stravaAuthResponse, query, { athleteId });
+      await db.runAsync(query, [athleteId]);
+    } catch (error) {
+      logDb.error(tables.stravaAuthResponse, query, {
+        athleteId,
+        error,
+      });
     }
   };

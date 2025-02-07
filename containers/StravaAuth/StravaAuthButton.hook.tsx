@@ -4,8 +4,8 @@ import {
   useAuthRequest,
 } from "expo-auth-session";
 import {
+  getStravaRoutes,
   handleStravaAuthorisation,
-  saveStravaRoutesInDb,
   stravaApiDiscovery,
 } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
@@ -101,7 +101,7 @@ export const useStravaAuthButton = () => {
       }
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
-      const routes = await saveStravaRoutesInDb(db)(athleteId);
+      const routes = await getStravaRoutes(db)(athleteId);
 
       log.debug(fnName, `Saved ${routes.length} routes`, {
         athleteId,

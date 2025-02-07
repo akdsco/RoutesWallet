@@ -30,6 +30,10 @@ export type StravaAuthResponse = {
   athlete: StravaAthlete;
 };
 
+export type StravaDisconnectResponse = {
+  access_token: string;
+} | null;
+
 export type StravaAuthResponseRaw = Omit<StravaAuthResponse, "athlete"> & {
   scope?: string;
 };

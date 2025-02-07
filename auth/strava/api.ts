@@ -1,6 +1,7 @@
 import {
   StravaAuthResponse,
   StravaAuthResponseRaw,
+  StravaDisconnectResponse,
   StravaRoute,
   StravaRouteFlat,
 } from "@/auth/strava/types";
@@ -8,10 +9,15 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
-import { insertStravaAuthResponse } from "@/db/methods";
+import {
+  deleteStravaAuthResponseFromDb,
+  getStravaAuthResponseFromDb,
+  insertDefaultTagOrderInDb,
+  insertStravaAthleteInDb,
+  insertStravaAuthResponseInDb,
+  insertStravaRoutesInDb,
+} from "@/db/methods";
 import { AppConfig } from "@/library/config";
-import { insertStravaAthleteToDb } from "@/db/methods/athlete";
-import { insertDefaultTagOrder } from "@/db/methods/tags";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -37,11 +43,11 @@ export const handleStravaAuthorisation =
 
     await saveInLocalSecureStorage(SECURE.USER_ID, athlete.id.toString());
 
-    const athletePromise = insertStravaAthleteToDb(db)(athlete);
-    const authPromise = insertStravaAuthResponse(db)(athlete.id, authData);
+    const athletePromise = insertStravaAthleteInDb(db)(athlete);
+    const authPromise = insertStravaAuthResponseInDb(db)(athlete.id, authData);
     //  We're inserting tag order at this point (once the user is logged in)
-    //  because we need the athlete_id to insert the default order
-    const orderPromise = insertDefaultTagOrder(db)(athlete.id);
+    //  because we need the athlete_id to insert the default tag order
+    const orderPromise = insertDefaultTagOrderInDb(db)(athlete.id);
 
     await Promise.all([athletePromise, authPromise, orderPromise]);
 
@@ -71,7 +77,8 @@ const getStravaAuthResponse = async (
 };
 
 export const getStravaRoutesFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number, filters?: RouteFilters) => {
+  (db: SQLiteDatabase) =>
+  async (athleteId: number, filters?: RouteFilters): Promise<StravaRoute[]> => {
     let query = `
       SELECT 
         sr.id AS id,
@@ -223,7 +230,7 @@ const mapToStravaRoutes = (flatRoutes: StravaRouteFlat[]): StravaRoute[] => {
   });
 };
 
-export const saveStravaRoutesInDb =
+export const getStravaRoutes =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const url = new URL(
       `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
@@ -238,7 +245,7 @@ export const saveStravaRoutesInDb =
       log.debug("saveStravaRoutesInDb", "Routes exist, saving in db", {
         athleteId,
       });
-      await insertStravaRoutes(db)(athleteId, stravaRoutes);
+      await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
     }
 
     return stravaRoutes;
@@ -259,32 +266,8 @@ const getDataFromStravaApi =
 
 const getStravaAccessToken =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `
-      SELECT *
-      FROM StravaAuthResponse
-      WHERE athlete_id = ?;
-    `;
-
-    const accessTokenData = await db.getFirstAsync<StravaAuthResponse>(query, [
-      athleteId,
-    ]);
-
-    log.debug("getStravaAccessToken", "Access token result", {
-      accessTokenData,
-    });
-
-    if (!accessTokenData) {
-      throw new Error("No auth data found for the given athlete ID");
-    }
-    const { expires_at, access_token, refresh_token } = accessTokenData;
-
-    if (!access_token) {
-      const msg = "No token in db, stuck!";
-      log.error("getStravaAccessToken", "No token in db, stuck!", {
-        athleteId,
-      });
-      throw new Error(msg);
-    }
+    const { expires_at, access_token, refresh_token } =
+      await getStravaAuthResponseFromDb(db)(athleteId);
 
     if (!isTokenExpired(expires_at)) {
       log.debug("getStravaAccessToken", "Token is fresh:", { access_token });
@@ -326,77 +309,9 @@ const getNewAccessToken =
       url.toString(),
     );
 
-    await insertStravaAuthResponse(db)(athleteId, stravaAuthResponse);
+    await insertStravaAuthResponseInDb(db)(athleteId, stravaAuthResponse);
 
     return stravaAuthResponse.access_token;
-  };
-
-const insertStravaRoutes =
-  (db: SQLiteDatabase) => async (athleteId: number, routes: StravaRoute[]) => {
-    const insertStravaRoutesSQL = `
-        INSERT OR REPLACE INTO StravaRoute (
-          athlete_id, description, distance, elevation_gain, id, id_str, map_id, map_urls_id, name, private, resource_state, starred, sub_type, created_at, updated_at, timestamp, type, estimated_moving_time, waypoints
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-      `;
-
-    const insertStravaMapSQL = `
-    INSERT OR REPLACE INTO StravaMap (
-      id, summary_polyline, resource_state
-    ) VALUES (?, ?, ?);
-  `;
-
-    const insertIntoStravaMapUrlsSQL = `
-    INSERT OR REPLACE INTO StravaMapUrls (
-      url, retina_url, light_url, dark_url
-    ) VALUES (?, ?, ?, ?);
-  `;
-
-    await db.execAsync("BEGIN TRANSACTION");
-
-    try {
-      for (const route of routes) {
-        const routePromise = db.runAsync(insertStravaRoutesSQL, [
-          athleteId,
-          route.description,
-          route.distance,
-          route.elevation_gain,
-          route.id.toString(),
-          route.id_str,
-          route.map.id,
-          route.map_urls.url,
-          route.name,
-          route.private,
-          route.resource_state,
-          route.starred,
-          route.sub_type,
-          route.created_at,
-          route.updated_at,
-          route.timestamp.toString(),
-          route.type,
-          route.estimated_moving_time.toString(),
-          JSON.stringify(route.waypoints),
-        ]);
-
-        const mapPromise = db.runAsync(insertStravaMapSQL, [
-          route.map.id,
-          route.map.summary_polyline,
-          route.map.resource_state,
-        ]);
-
-        const mapUrlsPromise = db.runAsync(insertIntoStravaMapUrlsSQL, [
-          route.map_urls.url,
-          route.map_urls.retina_url,
-          route.map_urls.light_url,
-          route.map_urls.dark_url,
-        ]);
-
-        await Promise.all([routePromise, mapPromise, mapUrlsPromise]);
-      }
-      await db.execAsync("COMMIT");
-    } catch (error) {
-      await db.execAsync("ROLLBACK");
-      throw error;
-    }
   };
 
 const fetchFromStravaApi = async <T>(
@@ -404,30 +319,26 @@ const fetchFromStravaApi = async <T>(
   requestInit?: RequestInit,
 ) => {
   const init = requestInit ? requestInit : { method: "POST" };
-  log.debug("fetchFromStravaApi", "Fetch request", { url, init });
+  const fnName = "fetchFromStravaApi";
+
+  log.debug(fnName, "Fetch request", { url, init });
 
   const response = await fetch(url, init);
   const responseJson = (await response.json()) as T;
 
-  log.debug("fetchFromStravaApi", "Fetch response", { responseJson });
+  log.debug(fnName, "Fetch response", { responseJson });
 
   return responseJson;
 };
 
 export const checkStravaConnection =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `
-      SELECT *
-      FROM StravaAuthResponse
-      WHERE athlete_id = ?;
-    `;
-
-    const authData = await db.getFirstAsync<StravaAuthResponse | null>(query, [
-      athleteId,
-    ]);
+    const authResponse = await getStravaAuthResponseFromDb(db)(athleteId);
 
     // If no record is found, the user is not connected
-    return Boolean(authData);
+    // TODO: could improve by checking token expiry, if expired, fetching some data from Strava to verify?
+    //  this could lead to fast check during 6 hour expiry and slightly slower check after 6 hours, but only once
+    return Boolean(authResponse);
   };
 
 export const disconnectStrava =
@@ -437,24 +348,18 @@ export const disconnectStrava =
     const url = new URL(stravaApiDiscovery.revocationEndpoint);
     url.searchParams.set("access_token", accessToken);
 
-    const responseFromStravaApi = await fetchFromStravaApi<{
-      access_token: string;
-    } | null>(url.toString());
+    const disconnectResponse =
+      await fetchFromStravaApi<StravaDisconnectResponse>(url.toString());
 
     const fnName = "disconnectStrava";
 
-    if (responseFromStravaApi) {
-      try {
-        await db.runAsync(
-          `DELETE FROM StravaAuthResponse WHERE athlete_id = ?;`,
-          [athleteId],
-        );
-      } catch (error) {
-        // TURN into SQL log/error
-        log.error(fnName, "Error when disconnecting", { error });
-      }
+    if (disconnectResponse) {
+      await deleteStravaAuthResponseFromDb(db)(athleteId);
       log.debug(fnName, "User disconnected", { athleteId });
     } else {
-      log.debug(fnName, "User disconnect failed", { responseFromStravaApi });
+      log.debug(fnName, "User disconnect failed", {
+        disconnectResponse,
+        athleteId,
+      });
     }
   };

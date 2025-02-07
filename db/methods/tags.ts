@@ -5,7 +5,7 @@ import { tables } from "@/db/tables";
 import { Toast } from "@/library/Toast";
 import { AthleteTagOrder, RawTag, TagWithFunctions } from "@/library/types";
 
-export const insertDefaultTagOrder =
+export const insertDefaultTagOrderInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const query = `
     INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)

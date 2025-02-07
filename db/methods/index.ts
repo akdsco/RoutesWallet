@@ -2,7 +2,14 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { insertTag, updateAthleteTagOrderToTop } from "@/db/methods/tags";
 
 // Barrelled exports for encapsulation purposes
-export { insertStravaAuthResponse } from "./auth";
+export {
+  insertStravaAuthResponseInDb,
+  deleteStravaAuthResponseFromDb,
+  getStravaAuthResponseFromDb,
+} from "./auth";
+export { insertStravaAthleteInDb } from "./athlete";
+export { insertDefaultTagOrderInDb } from "./tags";
+export { insertStravaRoutesInDb } from "./routes";
 
 export const handleRouteTagInsert =
   (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {
