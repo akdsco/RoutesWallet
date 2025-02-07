@@ -6,7 +6,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { StravaRoute } from "@/auth/strava";
+import { StravaRouteDetailed } from "@/auth/strava";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
@@ -18,7 +18,7 @@ export const RouteItem = ({
   route,
   itemWidth,
 }: {
-  item: StravaRoute;
+  item: StravaRouteDetailed;
   route: string;
   itemWidth: number;
 }) => {

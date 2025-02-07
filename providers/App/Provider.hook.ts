@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { useFonts } from "expo-font";
 import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";
-import {
-  checkStravaConnection,
-  getStravaRoutesFromDb,
-  StravaRoute,
-} from "@/auth/strava";
+import { checkStravaConnection, StravaRouteDetailed } from "@/auth/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { getStravaRoutesDetailedFromDb } from "@/db/methods";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -22,7 +19,7 @@ export const useAppProvider = () => {
   const [athleteId, setAthleteId] = useState<number | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
-  const [routes, setRoutes] = useState<StravaRoute[]>([]);
+  const [routes, setRoutes] = useState<StravaRouteDetailed[]>([]);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -37,7 +34,7 @@ export const useAppProvider = () => {
       setAthleteId(athleteId);
 
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
-      const routes = await getStravaRoutesFromDb(db)(athleteId);
+      const routes = await getStravaRoutesDetailedFromDb(db)(athleteId);
 
       log.debug("useApp", `useEffect`, {
         fontLoaded,

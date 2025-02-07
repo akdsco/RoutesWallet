@@ -51,7 +51,7 @@ type StravaMapUrls = {
   dark_url: string;
 };
 
-export type StravaRoute = {
+export type StravaRouteDetailed = {
   athlete: StravaAthlete;
   description: string | null;
   distance: number;
@@ -73,7 +73,44 @@ export type StravaRoute = {
   waypoints: any[];
 };
 
-export type StravaRouteFlat = {
+export type StravaRouteBase = {
+  athlete: Pick<StravaAthlete, "id" | "username">;
+  id: BigInt;
+  id_str: string;
+  name: string;
+  starred: boolean;
+  created_at: string;
+  description: string | null;
+  distance: number;
+  elevation_gain: number;
+  resource_state: number;
+  timestamp: BigInt;
+  type: number;
+  map_urls: StravaMapUrls;
+};
+
+export type StravaRouteBaseFlat = {
+  athlete_id: number;
+  athlete_username: string | null;
+  description: string | null;
+  distance: number;
+  elevation_gain: number;
+  id: BigInt;
+  id_str: string;
+  map_urls_url: string;
+  map_urls_retina_url: string;
+  map_urls_light_url: string;
+  map_urls_dark_url: string;
+  name: string;
+  private: boolean;
+  resource_state: number;
+  starred: boolean;
+  created_at: string;
+  timestamp: BigInt;
+  type: number;
+};
+
+export type StravaRouteDetailedFlat = {
   athlete_id: number;
   athlete_username: string | null;
   athlete_resource_state: number;

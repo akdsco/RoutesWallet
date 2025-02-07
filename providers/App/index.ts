@@ -1,11 +1,12 @@
-import { StravaRoute } from "@/auth/strava";
+import { StravaRouteDetailed } from "@/auth/strava";
 
 export { AppProvider } from "./Provider";
 export { AppContext } from "./Context";
 
 export type AppContextType = {
   athleteId: number | null;
-  routes: StravaRoute[];
+  // TODO: sure this should be held so high up?
+  routes: StravaRouteDetailed[];
   loading: boolean;
   setLoading: (value: boolean) => void;
   isAuthenticating: boolean;

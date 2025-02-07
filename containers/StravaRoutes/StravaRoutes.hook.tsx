@@ -1,19 +1,19 @@
-import { StravaRoute } from "@/auth/strava/types";
+import { StravaRouteDetailed } from "@/auth/strava/types";
 import { useEffect, useState } from "react";
-import { getStravaRoutesFromDb } from "@/auth/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
+import { getStravaRoutesDetailedFromDb } from "@/db/methods";
 
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();
   const [loadingRoutes, setLoadingRoutes] = useState(true);
-  const [routes, setRoutes] = useState<StravaRoute[]>([]);
+  const [routes, setRoutes] = useState<StravaRouteDetailed[]>([]);
 
   useEffect(() => {
     const run = async () => {
       const athleteId = await getFromLocalSecureStorage<number>(SECURE.USER_ID);
-      const routes = await getStravaRoutesFromDb(db)(athleteId, filter);
+      const routes = await getStravaRoutesDetailedFromDb(db)(athleteId, filter);
 
       setRoutes(routes);
     };

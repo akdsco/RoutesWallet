@@ -9,7 +9,10 @@ export {
 } from "./auth";
 export { insertStravaAthleteInDb } from "./athlete";
 export { insertDefaultTagOrderInDb } from "./tags";
-export { insertStravaRoutesInDb } from "./routes";
+export {
+  insertStravaRoutesInDb,
+  getStravaRoutesDetailedFromDb,
+} from "./routes";
 
 export const handleRouteTagInsert =
   (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {

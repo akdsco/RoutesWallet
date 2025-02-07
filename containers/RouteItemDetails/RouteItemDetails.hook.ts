@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { useRoute } from "@react-navigation/core";
 import { log } from "@/library/logger";
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
-import { getStravaRoutesFromDb, StravaRoute } from "@/auth/strava";
+import { StravaRouteDetailed } from "@/auth/strava";
 import { useApp } from "@/hooks";
 import { RawTag } from "@/library/types";
+import { getStravaRoutesDetailedFromDb } from "@/db/methods";
 
 export const useRouteItemDetails = () => {
   const db = useSQLiteContext();
   const [loading, setLoading] = useState(true);
-  const [route, setRoute] = useState<StravaRoute>();
+  const [route, setRoute] = useState<StravaRouteDetailed>();
   const [availableTags, setAvailableTags] = useState<RawTag[]>([]);
   const [assignedTags, setAssignedTags] = useState<RawTag[]>([]);
   const { params } = useRoute();
@@ -25,7 +26,7 @@ export const useRouteItemDetails = () => {
       routeIds,
     });
 
-    return getStravaRoutesFromDb(db)(athleteId, { routeIds });
+    return getStravaRoutesDetailedFromDb(db)(athleteId, { routeIds });
   };
 
   const getAssignedTags = async (routeId: BigInt) => {
