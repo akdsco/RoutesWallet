@@ -74,8 +74,9 @@ const getStravaAuthResponse = async (
   return response;
 };
 
-export const getStravaRoutes =
+export const initStravaRoutes =
   (db: SQLiteDatabase) => async (athleteId: number) => {
+    const fnName = "initStravaRoutes";
     const url = new URL(
       `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
     );
@@ -86,13 +87,20 @@ export const getStravaRoutes =
     );
 
     if (stravaRoutes.length > 0) {
-      log.debug("saveStravaRoutesInDb", "Routes exist, saving in db", {
+      log.debug(
+        fnName,
+        `Strava routes exist, saving ${stravaRoutes.length} routes in Db`,
+        {
+          athleteId,
+        },
+      );
+      await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
+    } else {
+      log.debug(fnName, "No routes found in Strava account", {
+        stravaRoutes,
         athleteId,
       });
-      await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
     }
-
-    return stravaRoutes;
   };
 
 const getDataFromStravaApi =
