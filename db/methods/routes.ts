@@ -75,6 +75,7 @@ export const getStravaRoutesDetailedFromDb =
     athleteId: number,
     filters?: RouteFilters,
   ): Promise<StravaRouteDetailed[]> => {
+    const fnName = "getStravaRoutesDetailedFromDb";
     let query = `
       SELECT 
         sr.id AS id,
@@ -153,7 +154,7 @@ export const getStravaRoutesDetailedFromDb =
         params,
       );
 
-      log.debug("getStravaRoutesFromDb", "Routes found in db", {
+      log.debug(fnName, "Routes found in db", {
         routeCount: flatDetailedRoutes.length,
       });
 
@@ -163,7 +164,7 @@ export const getStravaRoutesDetailedFromDb =
 
       return flatDetailedRoutes.map(toDetailedStravaRoutes);
     } catch (error) {
-      log.error("getStravaRoutesFromDb", "Route composition error", {
+      log.error(fnName, "Route composition error", {
         error,
         query,
         params,

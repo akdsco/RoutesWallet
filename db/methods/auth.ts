@@ -59,18 +59,11 @@ export const getStravaAuthResponseFromDb =
     const query = `SELECT * FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
 
     try {
-      const accessTokenData = await db.getFirstAsync<StravaAuthResponse>(
-        query,
-        [athleteId],
-      );
-
-      if (!accessTokenData || !accessTokenData.access_token) {
-        throw new Error("Auth data missing for the given athlete ID");
-      }
-
-      return accessTokenData;
+      return await db.getFirstAsync<StravaAuthResponse>(query, [athleteId]);
     } catch (error) {
-      logDb.error(tables.stravaAuthResponse, query, { athleteId });
+      logDb.error(tables.stravaAuthResponse, query, {
+        athleteId,
+      });
       throw error;
     }
   };
