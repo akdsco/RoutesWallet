@@ -5,7 +5,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { RouteItem } from "./RouteItem";
+import { RouteListItem } from "./RouteListItem";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
@@ -67,7 +67,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
           {/* // TODO: Potentially move to FlatList for mobile devices only */}
           <View style={styles.gridContainer}>
             {routes.map((item) => (
-              <RouteItem
+              <RouteListItem
                 key={item.id.toString()}
                 route={route}
                 item={item}

@@ -13,7 +13,7 @@ import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
 import { StravaRouteBase } from "@/auth/strava/types";
 
-export const RouteItem = ({
+export const RouteListItem = ({
   item,
   route,
   itemWidth,
