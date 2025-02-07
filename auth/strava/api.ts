@@ -9,7 +9,7 @@ import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";
 import {
   deleteStravaAuthResponseFromDb,
-  getStravaAuthResponseFromDb,
+  getStravaAuthFromDb,
   insertDefaultTagOrderInDb,
   insertStravaAthleteInDb,
   insertStravaAuthResponseInDb,
@@ -118,11 +118,19 @@ const getDataFromStravaApi =
 
 const getStravaAccessToken =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const { expires_at, access_token, refresh_token } =
-      await getStravaAuthResponseFromDb(db)(athleteId);
+    const fnName = "getStravaAccessToken";
+    const authData = await getStravaAuthFromDb(db)(athleteId);
+
+    if (!authData) {
+      const msg = "No Strava auth data found in the database";
+      log.error(fnName, msg, { athleteId, authData });
+      throw new Error(msg);
+    }
+
+    const { expires_at, access_token, refresh_token } = authData;
 
     if (!isTokenExpired(expires_at)) {
-      log.debug("getStravaAccessToken", "Token is fresh:", { access_token });
+      log.debug(fnName, "Token is fresh:", { access_token });
       return access_token;
     }
 
@@ -185,12 +193,12 @@ const fetchFromStravaApi = async <T>(
 
 export const checkStravaConnection =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const authResponse = await getStravaAuthResponseFromDb(db)(athleteId);
+    const auth = await getStravaAuthFromDb(db)(athleteId);
 
     // If no record is found, the user is not connected
     // TODO: could improve by checking token expiry, if expired, fetching some data from Strava to verify?
     //  this could lead to fast check during 6 hour expiry and slightly slower check after 6 hours, but only once
-    return Boolean(authResponse);
+    return Boolean(auth);
   };
 
 export const disconnectStrava =

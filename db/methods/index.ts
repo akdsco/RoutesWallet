@@ -5,7 +5,7 @@ import { insertTag, updateAthleteTagOrderToTop } from "@/db/methods/tags";
 export {
   insertStravaAuthResponseInDb,
   deleteStravaAuthResponseFromDb,
-  getStravaAuthResponseFromDb,
+  getStravaAuthFromDb,
 } from "./auth";
 export { insertStravaAthleteInDb } from "./athlete";
 export { insertDefaultTagOrderInDb } from "./tags";

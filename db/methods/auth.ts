@@ -54,7 +54,7 @@ export const insertStravaAuthResponseInDb =
     }
   };
 
-export const getStravaAuthResponseFromDb =
+export const getStravaAuthFromDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const query = `SELECT * FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
 
