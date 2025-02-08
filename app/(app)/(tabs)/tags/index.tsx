@@ -1,5 +1,5 @@
-import { Tags as TagsScreen } from "@/containers/Tags/Tags";
+import { Tags } from "@/containers/Tags/Tags";
 
-export default function Tags() {
-  return <TagsScreen />;
+export default function TagLayout() {
+  return <Tags />;
 }
