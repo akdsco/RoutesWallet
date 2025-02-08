@@ -75,7 +75,6 @@ export const useStravaAuthButton = () => {
       throw new Error(response.error?.message);
     }
     if (response?.type === "dismiss" || response?.type === "cancel") {
-      // TODO: Inform user?
       log.info(fnName, `User ${response?.type}ed Strava authentication flow`);
       return;
     }

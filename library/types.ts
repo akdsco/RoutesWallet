@@ -19,3 +19,5 @@ export type AthleteTagOrder = {
   tag_id: number;
   order_position: number;
 };
+
+export type DbOperationResult = Promise<void | { error: string }>;

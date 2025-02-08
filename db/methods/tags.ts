@@ -2,8 +2,12 @@ import { isConstraintError, isSQLiteError } from "@/db/error";
 import { log, logDb } from "@/library/logger";
 import { SQLiteDatabase } from "expo-sqlite";
 import { tables } from "@/db/tables";
-import { Toast } from "@/library/Toast";
-import { AthleteTagOrder, RawTag, TagWithFunctions } from "@/library/types";
+import {
+  AthleteTagOrder,
+  DbOperationResult,
+  RawTag,
+  TagWithFunctions,
+} from "@/library/types";
 
 export const insertDefaultTagOrderInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
@@ -25,25 +29,27 @@ export const insertDefaultTagOrderInDb =
     }
   };
 
-export const insertTag = (db: SQLiteDatabase) => async (tagName: string) => {
-  const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
+export const insertTag =
+  (db: SQLiteDatabase) =>
+  async (tagName: string): DbOperationResult => {
+    const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
 
-  try {
-    logDb.debug(tables.routeTags, query, { tagName });
-    await db.execAsync(query);
-  } catch (error) {
-    if (isSQLiteError(error)) {
-      if (isConstraintError(error)) {
-        Toast("error", "Tag already exists", "Try a different name");
-        return log.error("addRouteTag", "Tag most likely already exists", {
-          error,
-        });
+    try {
+      logDb.debug(tables.routeTags, query, { tagName });
+      await db.execAsync(query);
+    } catch (error) {
+      if (isSQLiteError(error)) {
+        if (isConstraintError(error)) {
+          log.error("addRouteTag", "Tag most likely already exists", {
+            error,
+          });
+          return { error: "Tag already exists" };
+        }
       }
+      log.error("insertRouteTag", "Error inserting tag", { error });
+      throw error;
     }
-    log.error("insertRouteTag", "Error inserting tag", { error });
-    throw error;
-  }
-};
+  };
 
 export const updateAthleteTagOrderToTop =
   (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {

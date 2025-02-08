@@ -43,7 +43,15 @@ export const AddTag = ({ checkTags }: AddTagProps) => {
       return;
     }
 
-    await handleRouteTagInsert(db)(athleteId, newTagName);
+    const tagInsetResult = await handleRouteTagInsert(db)(
+      athleteId,
+      newTagName,
+    );
+
+    if (tagInsetResult) {
+      Toast("error", "Error adding tag", tagInsetResult.error);
+      return;
+    }
 
     await checkTags();
     log.debug(
