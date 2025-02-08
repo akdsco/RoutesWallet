@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { useFonts } from "expo-font";
 import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";
-import { checkStravaConnection } from "@/auth/strava";
+import { checkStravaConnection } from "@/integrations/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";

@@ -1,5 +1,5 @@
 import { SQLiteDatabase } from "expo-sqlite";
-import { StravaAthlete } from "@/auth/strava/types";
+import { StravaAthlete } from "@/integrations/strava";
 import { logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 

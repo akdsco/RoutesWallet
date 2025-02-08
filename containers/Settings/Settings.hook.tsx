@@ -2,7 +2,7 @@ import { useApp } from "@/hooks";
 import { log } from "@/library/logger";
 import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
 import { useSQLiteContext } from "expo-sqlite";
-import { disconnectStrava } from "@/auth/strava/api";
+import { disconnectStrava } from "@/integrations/strava";
 
 const fnName = "useSettings";
 

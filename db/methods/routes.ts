@@ -1,11 +1,11 @@
 import { SQLiteDatabase } from "expo-sqlite";
-import { StravaRouteDetailed } from "@/auth/strava";
-import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import {
   StravaRouteBase,
   StravaRouteBaseFlat,
+  StravaRouteDetailed,
   StravaRouteDetailedFlat,
-} from "@/auth/strava/types";
+} from "@/integrations/strava";
+import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 

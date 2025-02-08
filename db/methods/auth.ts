@@ -1,4 +1,7 @@
-import { StravaAuthResponse, StravaAuthResponseRaw } from "@/auth/strava/types";
+import {
+  StravaAuthResponse,
+  StravaAuthResponseRaw,
+} from "@/integrations/strava";
 import { SQLiteDatabase } from "expo-sqlite";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";

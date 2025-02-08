@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useRoute } from "@react-navigation/core";
 import { log } from "@/library/logger";
 import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
-import { StravaRouteDetailed } from "@/auth/strava";
+import { StravaRouteDetailed } from "@/integrations/strava";
 import { useApp } from "@/hooks";
 import { RawTag } from "@/library/types";
 import { getStravaRoutesDetailedFromDb } from "@/db/methods";

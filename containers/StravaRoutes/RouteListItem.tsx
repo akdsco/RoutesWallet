@@ -11,7 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
-import { StravaRouteBase } from "@/auth/strava/types";
+import { StravaRouteBase } from "@/integrations/strava";
 
 export const RouteListItem = ({
   item,

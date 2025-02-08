@@ -1,4 +1,4 @@
-import { StravaRouteBase } from "@/auth/strava/types";
+import { StravaRouteBase } from "@/integrations/strava";
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";

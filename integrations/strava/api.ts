@@ -3,7 +3,7 @@ import {
   StravaAuthResponseRaw,
   StravaDisconnectResponse,
   StravaRouteDetailed,
-} from "@/auth/strava/types";
+} from "@/integrations/strava";
 import { SQLiteDatabase } from "expo-sqlite";
 import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";

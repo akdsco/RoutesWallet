@@ -7,7 +7,7 @@ import {
   handleStravaAuthorisation,
   initStravaRoutes,
   stravaApiDiscovery,
-} from "@/auth/strava";
+} from "@/integrations/strava";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect } from "react";
 import { useApp } from "@/hooks";
