@@ -14,13 +14,15 @@ import {
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import React from "react";
 import { log } from "@/library/logger";
+import { StravaThemeUrl } from "@/integrations/strava";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, addTag } = useRouteItemDetails();
 
   // Keeping mapColor logic here helps in re-rendering the component when colorMode changes
+  // TODO: Can't we pack below up into a hook? feels messy ?
   const { colorMode } = useTheme();
-  const mapColor = `${colorMode}_url` as "dark_url" | "light_url";
+  const mapColor = `${colorMode}_url` as StravaThemeUrl;
   const ScreenWidth = Dimensions.get("window").width;
 
   if (loading) {

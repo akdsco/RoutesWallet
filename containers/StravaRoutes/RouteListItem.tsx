@@ -11,7 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
-import { StravaRouteBase } from "@/integrations/strava";
+import { StravaRouteBase, StravaThemeUrl } from "@/integrations/strava";
 
 export const RouteListItem = ({
   item,
@@ -31,7 +31,7 @@ export const RouteListItem = ({
   };
 
   //TODO: later - improve this? (Better typing)
-  const mapColor = `${useColorScheme()}_url` as "dark_url" | "light_url";
+  const mapColor = `${useColorScheme()}_url` as StravaThemeUrl;
   const imageUri = item.map_urls[mapColor];
 
   const metadataStyle = [styles.metadata, { color: theme.icon }];

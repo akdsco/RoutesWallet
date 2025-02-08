@@ -155,3 +155,5 @@ export type StravaRouteDetailedFlat = {
   estimated_moving_time: BigInt;
   waypoints: any[];
 };
+
+export type StravaThemeUrl = "dark_url" | "light_url";
