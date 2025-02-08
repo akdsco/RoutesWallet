@@ -137,7 +137,7 @@ export const saveTagOrderInDb =
   };
 
 export const removeTagFromDb =
-  (db: SQLiteDatabase) => async (tagId: number, athleteId: number) => {
+  (db: SQLiteDatabase) => async (athleteId: number, tagId: number) => {
     const fnName = "removeTagFromDb";
 
     try {
@@ -219,9 +219,7 @@ export const updateTagInDb = (db: SQLiteDatabase) => async (tag: RawTag) => {
 };
 
 export const getOrderedRawTagsFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number | null) => {
-    if (!athleteId) return [];
-
+  (db: SQLiteDatabase) => async (athleteId: number) => {
     const query = `
       SELECT rt.id, rt.name, rt.color
       FROM ${tables.routeTags} rt

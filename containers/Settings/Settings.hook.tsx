@@ -12,7 +12,7 @@ export const useSettings = () => {
   const db = useSQLiteContext();
 
   const handleDisconnection = async () => {
-    if (!isStravaAuthed || !athleteId) {
+    if (!isStravaAuthed || athleteId === 0) {
       log.info(fnName, "User is not connected to Strava");
       setIsStravaAuthed(false);
       return;

@@ -2,7 +2,7 @@ export { AppProvider } from "./Provider";
 export { AppContext } from "./Context";
 
 export type AppContextType = {
-  athleteId: number | null;
+  athleteId: number;
   loading: boolean;
   setLoading: (value: boolean) => void;
   isAuthenticating: boolean;

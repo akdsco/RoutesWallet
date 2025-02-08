@@ -2,7 +2,7 @@ import { createContext } from "react";
 import { AppContextType } from "@/providers/App";
 
 export const AppContext = createContext<AppContextType>({
-  athleteId: null,
+  athleteId: 0,
   loading: true,
   setLoading: (value: boolean) => undefined,
   isAuthenticating: false,

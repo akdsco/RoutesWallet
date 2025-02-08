@@ -34,7 +34,7 @@ export const useTags = () => {
           text: "Yes",
           onPress: async () => {
             log.info("useTags:removeTag", "User confirmed tag remove action");
-            await removeTagFromDb(db)(tagId, athleteId!);
+            await removeTagFromDb(db)(athleteId, tagId);
             await checkTags();
           },
           style: "destructive",
@@ -64,9 +64,6 @@ export const useTags = () => {
     setTags(tags);
 
     if (saveOrderInDb) {
-      if (!athleteId) {
-        throw new Error("Athlete ID is missing");
-      }
       await saveTagOrderInDb(db)(athleteId, tags);
     }
   };

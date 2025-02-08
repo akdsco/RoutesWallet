@@ -134,7 +134,7 @@ const getStravaAccessToken =
       return access_token;
     }
 
-    return await getNewAccessToken(db)(refresh_token, athleteId);
+    return await getNewAccessToken(db)(athleteId, refresh_token);
   };
 
 const isTokenExpired = (expiresAt: number) => {
@@ -152,7 +152,7 @@ const isTokenExpired = (expiresAt: number) => {
 };
 
 const getNewAccessToken =
-  (db: SQLiteDatabase) => async (refreshToken: string, athleteId: number) => {
+  (db: SQLiteDatabase) => async (athleteId: number, refreshToken: string) => {
     log.debug("getNewAccessToken", "Refreshing Strava access token", {
       refreshToken,
       athleteId,

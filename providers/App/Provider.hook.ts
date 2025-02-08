@@ -6,6 +6,7 @@ import { checkStravaConnection } from "@/integrations/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { Toast } from "@/library/Toast";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -15,7 +16,7 @@ export const useAppProvider = () => {
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
   // TODO: can we deal with  null athleteId in the root? so we don't pass it null ever?
-  const [athleteId, setAthleteId] = useState<number | null>(null);
+  const [athleteId, setAthleteId] = useState<number>(0);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
 
@@ -42,7 +43,13 @@ export const useAppProvider = () => {
 
       setIsStravaAuthed(isStravaAuthed);
 
-      if (!loading && fontLoaded && !isAuthenticating && isStravaAuthed) {
+      if (
+        !loading &&
+        fontLoaded &&
+        !isAuthenticating &&
+        isStravaAuthed &&
+        Number(athleteId) > 0
+      ) {
         log.debug(
           "useApp",
           "Redirecting to authed root as user is authenticated",
@@ -63,12 +70,27 @@ export const useAppProvider = () => {
     });
   }, [loading, fontLoaded, isAuthenticating, isStravaAuthed]);
 
+  const getAthleteId = () => {
+    if (!athleteId) {
+      setIsStravaAuthed(false);
+      Toast(
+        "error",
+        "Strava user not found",
+        "Try logging in again, if error persists, contact us",
+      );
+      throw new Error(
+        "athleteId not identified, please logout, log back in again",
+      );
+    }
+    return athleteId;
+  };
+
   return {
-    athleteId,
+    athleteId: getAthleteId(),
     loading,
     setLoading: (value: boolean) => setLoading(value),
     isStravaAuthed,
-    setIsStravaAuthed: (val: boolean) => setIsStravaAuthed(val),
+    setIsStravaAuthed: (value: boolean) => setIsStravaAuthed(value),
     isAuthenticating,
     setIsAuthenticating: (value: boolean) => setIsAuthenticating(value),
   };

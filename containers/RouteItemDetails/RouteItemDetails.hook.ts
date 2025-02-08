@@ -17,10 +17,8 @@ export const useRouteItemDetails = () => {
   const { athleteId } = useApp();
 
   const getRouteById = (db: SQLiteDatabase) => async (routeId: bigint) => {
-    if (!athleteId) {
-      return [];
-    }
     const routeIds = [routeId];
+
     log.debug("useRouteItemDetails", "Fetching route by ID", {
       athleteId,
       routeIds,

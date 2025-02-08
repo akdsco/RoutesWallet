@@ -24,15 +24,6 @@ export const AddTag = ({ checkTags }: AddTagProps) => {
   const styles = makeStyles(themeContext);
 
   const addRouteTag = async () => {
-    if (!athleteId) {
-      Toast(
-        "info",
-        "User not identified",
-        "Please try to logout and log back in",
-      );
-      return;
-    }
-
     if (newTagName.trim() === "") {
       log.info("useTags: addRouteTag", "User trying to add an empty tag");
       Toast(
