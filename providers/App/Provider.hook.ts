@@ -6,7 +6,6 @@ import { checkStravaConnection } from "@/integrations/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { Toast } from "@/library/Toast";
 
 export const useAppProvider = () => {
   const [loading, setLoading] = useState(true);
@@ -58,7 +57,7 @@ export const useAppProvider = () => {
             isStravaAuthed,
           },
         );
-        router.navigate("/(tabs)");
+        router.navigate("/(tabs)/routes/");
       }
     };
 
@@ -72,15 +71,7 @@ export const useAppProvider = () => {
 
   const getAthleteId = () => {
     if (!athleteId) {
-      setIsStravaAuthed(false);
-      Toast(
-        "error",
-        "Strava user not found",
-        "Try logging in again, if error persists, contact us",
-      );
-      throw new Error(
-        "athleteId not identified, please logout, log back in again",
-      );
+      // TODO: can we in any way make sure athleteId is always a number and not null?
     }
     return athleteId;
   };
