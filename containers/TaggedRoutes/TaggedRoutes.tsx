@@ -38,7 +38,7 @@ export const TaggedRoutes = () => {
             style={{ maxWidth: 200 }}
             title="Go to Routes"
             accessibilityLabel=""
-            onPress={() => router.navigate("/(app)/")}
+            onPress={() => router.navigate("/(app)/(tabs)/routes")}
           />
         </View>
       </Container>

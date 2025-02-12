@@ -1,5 +1,5 @@
-import { RouteItemDetails as RouteItemContainer } from "@/containers/RouteItemDetails/RouteItemDetails";
+import { RouteItemDetails } from "@/containers/RouteItemDetails/RouteItemDetails";
 
 export default function RouteItem() {
-  return <RouteItemContainer />;
+  return <RouteItemDetails />;
 }

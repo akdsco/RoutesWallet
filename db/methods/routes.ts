@@ -268,16 +268,25 @@ export const getStravaRoutesBaseFromDb =
     if (filters?.routeIds && filters.routeIds.length > 0) {
       const placeholders = filters.routeIds.map(() => "?").join(", ");
       query += ` AND sr.id IN (${placeholders})`;
-      params.push(...filters.routeIds);
+      params.push(...filters.routeIds.map((x) => x.toString()));
     }
 
     try {
-      logDb.debug(tables.stravaRoute, query, { athleteId });
       const flatBaseRoutes = await db.getAllAsync<StravaRouteBaseFlat>(
         query,
         params,
       );
-      return flatBaseRoutes.map(toBaseStravaRoutes);
+
+      const routes = flatBaseRoutes.map(toBaseStravaRoutes);
+      logDb.debug(tables.stravaRoute, query, {
+        athleteId,
+        params,
+        filters,
+        flatBaseRoutes,
+        routes,
+      });
+
+      return routes;
     } catch (error) {
       logDb.error(tables.stravaRoute, query, { athleteId });
       throw error;

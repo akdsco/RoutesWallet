@@ -240,3 +240,15 @@ export const getOrderedRawTagsFromDb =
       throw error;
     }
   };
+
+export const assignTagToRoute =
+  (db: SQLiteDatabase) => async (routeId: BigInt, tagId: number) => {
+    const query = `INSERT INTO ${tables.routeTagAssignments} (route_id, tag_id) VALUES (?, ?)`;
+
+    try {
+      await db.runAsync(query, [routeId.toString(), tagId]);
+      logDb.info(tables.routeTagAssignments, query, { routeId, tagId });
+    } catch (error) {
+      logDb.error(tables.routeTagAssignments, query, { routeId, tagId, error });
+    }
+  };

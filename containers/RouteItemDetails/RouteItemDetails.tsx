@@ -15,9 +15,13 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import React from "react";
 import { log } from "@/library/logger";
 import { StravaThemeUrl } from "@/integrations/strava";
+import { assignTagToRoute } from "@/db/methods/tags";
+import { useSQLiteContext } from "expo-sqlite";
+import { Toast } from "@/library/Toast";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, addTag } = useRouteItemDetails();
+  const db = useSQLiteContext();
 
   // Keeping mapColor logic here helps in re-rendering the component when colorMode changes
   // TODO: Can't we pack below up into a hook? feels messy ?
@@ -37,7 +41,7 @@ export const RouteItemDetails = () => {
     );
   }
 
-  const handleSelectedMenuOption = (
+  const handleSelectedMenuOption = async (
     selectedMenuItem: string,
     routeId: BigInt,
   ) => {
@@ -45,6 +49,8 @@ export const RouteItemDetails = () => {
       "handleSelectedMenuOption",
       `User adds tag ${selectedMenuItem} to routeId ${routeId}`,
     );
+    await assignTagToRoute(db)(routeId, Number(selectedMenuItem));
+    Toast("success", "Tag added successfully");
   };
 
   return (
@@ -112,8 +118,8 @@ export const RouteItemDetails = () => {
             <ThemedText>Add tags</ThemedText>
           </MenuTrigger>
           <MenuOptions>
-            <MenuOption value="edit" text="Editasdfas" />
-            <MenuOption value="remove" text="Remove" />
+            <MenuOption value="1" text="1" />
+            <MenuOption value="2" text="2" />
           </MenuOptions>
         </Menu>
       </View>
