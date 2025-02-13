@@ -48,7 +48,7 @@ export const RouteListItem = ({
       ]}
       onPress={() => {
         const routeName = item.name;
-        const pathname = `/(tabs)/${route}${item.id}`;
+        const pathname = `/(tabs)/${route}/${item.id}`;
 
         log.debug("RouteItem", "Navigating to route", {
           routeName,

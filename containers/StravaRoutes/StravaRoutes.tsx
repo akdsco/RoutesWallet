@@ -68,7 +68,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
           <View style={styles.gridContainer}>
             {routes.map((item) => (
               <RouteListItem
-                key={item.id.toString()}
+                key={`${route}-${item.id.toString()}`}
                 route={route}
                 item={item}
                 itemWidth={itemWidth}
