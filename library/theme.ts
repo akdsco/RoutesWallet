@@ -18,6 +18,7 @@ export type ColorMode = "light" | "dark";
 export type Theme = {
   text: string;
   background: string;
+  contrastBackground: string;
   tint: string;
   icon: string;
   tabIconDefault: string;
@@ -38,6 +39,7 @@ export const theme: Themes = {
   light: {
     text: "#4e535a",
     background: "#fff",
+    contrastBackground: "#efeff1",
     tint: tintColorLight,
     shadowColor: "#000",
     icon: "#687076",
@@ -53,6 +55,7 @@ export const theme: Themes = {
   dark: {
     text: "#fff",
     background: "#11111f",
+    contrastBackground: "#1a1a28",
     tint: tintColorDark,
     shadowColor: "#bfbfbf",
     icon: "#9BA1A6",

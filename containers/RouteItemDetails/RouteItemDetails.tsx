@@ -2,26 +2,24 @@ import Container from "@/components/Container";
 import { useRouteItemDetails } from "@/containers/RouteItemDetails/RouteItemDetails.hook";
 import { Loader } from "@/components/Loader";
 import { ThemedText } from "@/components/ThemedText";
-import { Dimensions, Image, ScrollView, View } from "react-native";
-import { Button } from "@/components/Button/Buttons";
+import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
 import { useTheme } from "@/hooks";
-import {
-  Menu,
-  MenuOption,
-  MenuOptions,
-  MenuTrigger,
-} from "react-native-popup-menu";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import React from "react";
+import React, { useRef } from "react";
 import { log } from "@/library/logger";
 import { StravaThemeUrl } from "@/integrations/strava";
 import { assignTagToRoute } from "@/db/methods/tags";
 import { useSQLiteContext } from "expo-sqlite";
 import { Toast } from "@/library/Toast";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ThemeContextType } from "@/library/theme";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, addTag } = useRouteItemDetails();
   const db = useSQLiteContext();
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const themeContext = useTheme();
+  const styles = makeStyles(themeContext);
 
   // Keeping mapColor logic here helps in re-rendering the component when colorMode changes
   // TODO: Can't we pack below up into a hook? feels messy ?
@@ -53,76 +51,81 @@ export const RouteItemDetails = () => {
     Toast("success", "Tag added successfully");
   };
 
+  const handleSheetChanges = (index: number) => {
+    console.log("handleSheetChanges", index);
+  };
+
   return (
     <Container>
-      <ScrollView style={{ display: "flex" }}>
-        <Image
-          source={{ uri: route.map_urls[mapColor] }}
-          style={{ width: ScreenWidth * 0.9 }}
-          className="h-64 object-cover rounded-lg mt-3"
-        />
-        <View style={{ display: "flex", justifyContent: "space-between" }}>
-          <View className="flex flex-row justify-between items-center mt-4">
-            <ThemedText className="text-xl font-bold">{route.name}</ThemedText>
+      <GestureHandlerRootView style={styles.gestureContainer}>
+        <ScrollView>
+          <Image
+            source={{ uri: route.map_urls[mapColor] }}
+            style={{ width: ScreenWidth * 0.9 }}
+            className="h-64 object-cover rounded-lg mt-3"
+          />
+          <View style={{ display: "flex", justifyContent: "space-between" }}>
+            <View className="flex flex-row justify-between items-center mt-4">
+              <ThemedText className="text-xl font-bold">
+                {route.name}
+              </ThemedText>
+            </View>
+            {/*<View>*/}
+            {/*  {assignedTags.map((tag) => (*/}
+            {/*    <View key={tag.id}>*/}
+            {/*      <ThemedText>{tag.name}</ThemedText>*/}
+            {/*    </View>*/}
+            {/*  ))}*/}
+            {/*</View>*/}
           </View>
-          <View>
-            {assignedTags.map((tag) => (
-              <View key={tag.id}>
-                <ThemedText>{tag.name}</ThemedText>
-              </View>
-            ))}
+          <View className="mt-4 mb-16 space-y-2">
+            <ThemedText>
+              Distance: {(route.distance / 1000).toFixed(2)} km
+            </ThemedText>
+            <ThemedText>
+              Elevation Gain: {route.elevation_gain.toFixed(1)} m
+            </ThemedText>
+            {route.description && (
+              <ThemedText>Description: {route.description}</ThemedText>
+            )}
+            <ThemedText>
+              Created At: {new Date(route.created_at).toLocaleDateString()}
+            </ThemedText>
           </View>
-        </View>
-        <View className="mt-4 space-y-2">
-          <ThemedText>
-            Distance: {(route.distance / 1000).toFixed(2)} km
-          </ThemedText>
-          <ThemedText>
-            Elevation Gain: {route.elevation_gain.toFixed(1)} m
-          </ThemedText>
-          {route.description && (
-            <ThemedText>Description: {route.description}</ThemedText>
-          )}
-          <ThemedText>
-            Created At: {new Date(route.created_at).toLocaleDateString()}
-          </ThemedText>
-        </View>
-      </ScrollView>
-      <View
-        className="my-5 flex flex-row justify-around"
-        style={{
-          alignItems: "center",
-        }}
-      >
-        <Button
-          title="Share"
-          onPress={() => console.log("share this route")}
-          accessibilityLabel=""
-        />
-        <Menu
-          onSelect={(value: string) =>
-            handleSelectedMenuOption(value, route.id)
-          }
+        </ScrollView>
+        <BottomSheet
+          ref={bottomSheetRef}
+          onChange={handleSheetChanges}
+          snapPoints={[25, "50%"]}
+          handleStyle={{
+            backgroundColor: themeContext.theme.contrastBackground,
+            borderColor: "grey",
+            borderTopLeftRadius: 5,
+            borderTopRightRadius: 5,
+          }}
+          handleIndicatorStyle={{
+            backgroundColor: themeContext.theme.text,
+          }}
         >
-          <MenuTrigger
-            style={{
-              width: 65,
-              borderRadius: 50,
-              height: 32,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <FontAwesome size={25} name="plus-square" color="white" />
-            <ThemedText>Add tags</ThemedText>
-          </MenuTrigger>
-          <MenuOptions>
-            <MenuOption value="1" text="1" />
-            <MenuOption value="2" text="2" />
-          </MenuOptions>
-        </Menu>
-      </View>
+          <BottomSheetView style={styles.contentContainer}>
+            <ThemedText>Awesome 🎉</ThemedText>
+          </BottomSheetView>
+        </BottomSheet>
+      </GestureHandlerRootView>
     </Container>
   );
 };
+
+const makeStyles = ({ theme }: ThemeContextType) =>
+  StyleSheet.create({
+    gestureContainer: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    contentContainer: {
+      flex: 1,
+      padding: 36,
+      alignItems: "center",
+      backgroundColor: theme.contrastBackground,
+    },
+  });
