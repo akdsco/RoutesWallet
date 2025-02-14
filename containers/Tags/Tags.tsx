@@ -1,11 +1,11 @@
 import Container from "@/components/Container";
 import { StyleSheet, View } from "react-native";
 import { useTags } from "@/containers/Tags/Tags.hook";
-import { TagItem } from "@/components/Tag/TagItem";
-import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import React from "react";
 import { AddTag } from "@/containers/Tags/AddTag";
 import { TagsEmpty } from "@/containers/Tags/TagsEmpty";
+import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
+import { TagItem } from "@/components/Tag/TagItem";
 
 export const Tags = () => {
   const { tags, setTags, checkTags } = useTags();
@@ -22,10 +22,6 @@ export const Tags = () => {
           onDragEnd={({ data }) => setTags(data, true)}
           keyExtractor={(item) => item.id.toString()}
           renderItem={TagItem}
-          style={{
-            // TODO: questionable solution, but it works? test it on different devices, load up more tags
-            height: "89%",
-          }}
         />
         <AddTag checkTags={checkTags} />
       </View>
@@ -35,6 +31,7 @@ export const Tags = () => {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
+    height: "100%",
     justifyContent: "space-between",
   },
 });

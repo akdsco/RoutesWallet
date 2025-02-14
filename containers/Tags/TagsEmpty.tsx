@@ -1,5 +1,4 @@
 import { StyleSheet, View } from "react-native";
-import { ThemedText } from "@/components/ThemedText";
 import Container from "@/components/Container";
 import React from "react";
 import { AddTag } from "@/containers/Tags/AddTag";
@@ -13,19 +12,6 @@ export const TagsEmpty = ({ checkTags }: TagsEmptyProps) => {
   return (
     <Container>
       <View style={styles.scrollViewContent}>
-        <View
-          style={{
-            display: "flex",
-            alignContent: "center",
-            justifyContent: "center",
-            height: "89%",
-          }}
-        >
-          <ThemedText type="defaultSemiBold" style={{ textAlign: "center" }}>
-            Add tags by clicking on the Add tag button located on the bottom of
-            this screen
-          </ThemedText>
-        </View>
         <AddTag checkTags={checkTags} />
       </View>
     </Container>
@@ -34,6 +20,8 @@ export const TagsEmpty = ({ checkTags }: TagsEmptyProps) => {
 
 const styles = StyleSheet.create({
   scrollViewContent: {
-    justifyContent: "space-between",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -71,6 +71,7 @@ const makeStyles = ({ colorMode }: ThemeContextType) =>
       display: "flex",
       flexDirection: "row",
       justifyContent: "center",
+      marginBottom: 18,
     },
     textInput: {
       fontSize: 18,
