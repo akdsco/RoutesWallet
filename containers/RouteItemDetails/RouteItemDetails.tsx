@@ -99,12 +99,14 @@ export const RouteItemDetails = () => {
           snapPoints={[25, "50%"]}
           handleStyle={{
             backgroundColor: themeContext.theme.contrastBackground,
-            borderColor: "grey",
             borderTopLeftRadius: 5,
             borderTopRightRadius: 5,
           }}
           handleIndicatorStyle={{
             backgroundColor: themeContext.theme.text,
+          }}
+          backgroundStyle={{
+            backgroundColor: themeContext.theme.contrastBackground,
           }}
         >
           <BottomSheetView style={styles.contentContainer}>
