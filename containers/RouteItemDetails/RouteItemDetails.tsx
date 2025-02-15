@@ -2,25 +2,20 @@ import Container from "@/components/Container";
 import { useRouteItemDetails } from "@/containers/RouteItemDetails/RouteItemDetails.hook";
 import { Loader } from "@/components/Loader";
 import { ThemedText } from "@/components/ThemedText";
-import {
-  Dimensions,
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
 import { useTheme } from "@/hooks";
 import React, { useRef } from "react";
 import { log } from "@/library/logger";
 import { StravaThemeUrl } from "@/integrations/strava";
 import { assignTagToRoute, removeTagFromRoute } from "@/db/methods/tags";
 import { useSQLiteContext } from "expo-sqlite";
-import { Toast } from "@/library/Toast";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetFlatList,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeContextType } from "@/library/theme";
-import { ListItem } from "@rneui/themed";
+import { TagToggleItem } from "@/components/Tag/TagToggleItem";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, setAssignedTags } =
@@ -66,7 +61,6 @@ export const RouteItemDetails = () => {
           tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
         ),
       );
-      Toast("success", "Tag removed successfully");
       return;
     }
 
@@ -76,7 +70,10 @@ export const RouteItemDetails = () => {
         tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
       ),
     );
-    Toast("success", "Tag added successfully");
+  };
+
+  const handleTag = (tagId: number, isAssigned: boolean) => {
+    return handleTagToggle(tagId, route.id, isAssigned);
   };
 
   const handleSheetChanges = (index: number) => {
@@ -125,6 +122,8 @@ export const RouteItemDetails = () => {
           ref={bottomSheetRef}
           onChange={handleSheetChanges}
           snapPoints={[53, "50%"]}
+          enableDynamicSizing={false}
+          enableContentPanningGesture={false}
           handleStyle={{
             backgroundColor: theme.contrastBackground,
             borderTopLeftRadius: 5,
@@ -145,38 +144,18 @@ export const RouteItemDetails = () => {
               }}
             >
               <ThemedText style={{ marginBottom: 10, alignSelf: "center" }}>
-                Assigned tags
+                Edit tags
               </ThemedText>
-              <FlatList
-                data={assignedTags}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <ListItem
-                    bottomDivider
-                    onPress={() =>
-                      handleTagToggle(item.id, route.id, item.isAssigned)
-                    }
-                    style={{ backgroundColor: theme.background }}
-                  >
-                    <ListItem.CheckBox
-                      iconType="material-community"
-                      checkedIcon="checkbox-marked"
-                      uncheckedIcon="checkbox-blank-outline"
-                      checked={item.isAssigned}
-                      onPress={() =>
-                        handleTagToggle(item.id, route.id, item.isAssigned)
-                      }
-                    />
-                    <ListItem.Content
-                      style={{ backgroundColor: theme.background }}
-                    >
-                      <ListItem.Title style={{ color: theme.text }}>
-                        {item.name}
-                      </ListItem.Title>
-                    </ListItem.Content>
-                  </ListItem>
-                )}
-              />
+              <BottomSheetView style={{ flex: 1 }}>
+                <BottomSheetFlatList
+                  data={assignedTags}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TagToggleItem item={item} handleTagToggle={handleTag} />
+                  )}
+                  showsVerticalScrollIndicator={true}
+                />
+              </BottomSheetView>
             </View>
           </BottomSheetView>
         </BottomSheet>
