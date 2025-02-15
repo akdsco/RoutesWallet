@@ -20,11 +20,7 @@ export const TagToggleItem = ({
       activeOpacity={1}
       onPress={() => handleTagToggle(item.id, item.isAssigned)}
     >
-      <ListItem
-        bottomDivider
-        onPress={() => handleTagToggle(item.id, item.isAssigned)}
-        style={{ backgroundColor: theme.background }}
-      >
+      <ListItem bottomDivider style={{ backgroundColor: theme.background }}>
         <ListItem.CheckBox
           iconType="material-community"
           checkedIcon="checkbox-marked"
