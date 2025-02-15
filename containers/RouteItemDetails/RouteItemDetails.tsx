@@ -2,23 +2,33 @@ import Container from "@/components/Container";
 import { useRouteItemDetails } from "@/containers/RouteItemDetails/RouteItemDetails.hook";
 import { Loader } from "@/components/Loader";
 import { ThemedText } from "@/components/ThemedText";
-import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
+import {
+  Dimensions,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useTheme } from "@/hooks";
 import React, { useRef } from "react";
 import { log } from "@/library/logger";
 import { StravaThemeUrl } from "@/integrations/strava";
-import { assignTagToRoute } from "@/db/methods/tags";
+import { assignTagToRoute, removeTagFromRoute } from "@/db/methods/tags";
 import { useSQLiteContext } from "expo-sqlite";
 import { Toast } from "@/library/Toast";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeContextType } from "@/library/theme";
+import { ListItem } from "@rneui/themed";
 
 export const RouteItemDetails = () => {
-  const { loading, route, assignedTags, addTag } = useRouteItemDetails();
+  const { loading, route, assignedTags, setAssignedTags } =
+    useRouteItemDetails();
   const db = useSQLiteContext();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const themeContext = useTheme();
+  const { theme } = themeContext;
   const styles = makeStyles(themeContext);
 
   // Keeping mapColor logic here helps in re-rendering the component when colorMode changes
@@ -39,15 +49,33 @@ export const RouteItemDetails = () => {
     );
   }
 
-  const handleSelectedMenuOption = async (
-    selectedMenuItem: string,
+  const handleTagToggle = async (
+    tagId: number,
     routeId: BigInt,
+    isAssigned: boolean,
   ) => {
-    log.info(
-      "handleSelectedMenuOption",
-      `User adds tag ${selectedMenuItem} to routeId ${routeId}`,
+    if (isAssigned) {
+      log.debug("handleTagToggle", "Removing tag from route", {
+        tagId,
+        routeId,
+      });
+
+      await removeTagFromRoute(db)(tagId, routeId);
+      setAssignedTags((prevTags) =>
+        prevTags.map((tag) =>
+          tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
+        ),
+      );
+      Toast("success", "Tag removed successfully");
+      return;
+    }
+
+    await assignTagToRoute(db)(tagId, routeId);
+    setAssignedTags((prevTags) =>
+      prevTags.map((tag) =>
+        tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
+      ),
     );
-    await assignTagToRoute(db)(routeId, Number(selectedMenuItem));
     Toast("success", "Tag added successfully");
   };
 
@@ -96,21 +124,60 @@ export const RouteItemDetails = () => {
         <BottomSheet
           ref={bottomSheetRef}
           onChange={handleSheetChanges}
-          snapPoints={[25, "50%"]}
+          snapPoints={[53, "50%"]}
           handleStyle={{
-            backgroundColor: themeContext.theme.contrastBackground,
+            backgroundColor: theme.contrastBackground,
             borderTopLeftRadius: 5,
             borderTopRightRadius: 5,
           }}
           handleIndicatorStyle={{
-            backgroundColor: themeContext.theme.text,
+            backgroundColor: theme.text,
           }}
           backgroundStyle={{
-            backgroundColor: themeContext.theme.contrastBackground,
+            backgroundColor: theme.contrastBackground,
           }}
         >
           <BottomSheetView style={styles.contentContainer}>
-            <ThemedText>Awesome 🎉</ThemedText>
+            <View
+              style={{
+                width: "100%",
+                flex: 1,
+              }}
+            >
+              <ThemedText style={{ marginBottom: 10, alignSelf: "center" }}>
+                Assigned tags
+              </ThemedText>
+              <FlatList
+                data={assignedTags}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <ListItem
+                    bottomDivider
+                    onPress={() =>
+                      handleTagToggle(item.id, route.id, item.isAssigned)
+                    }
+                    style={{ backgroundColor: theme.background }}
+                  >
+                    <ListItem.CheckBox
+                      iconType="material-community"
+                      checkedIcon="checkbox-marked"
+                      uncheckedIcon="checkbox-blank-outline"
+                      checked={item.isAssigned}
+                      onPress={() =>
+                        handleTagToggle(item.id, route.id, item.isAssigned)
+                      }
+                    />
+                    <ListItem.Content
+                      style={{ backgroundColor: theme.background }}
+                    >
+                      <ListItem.Title style={{ color: theme.text }}>
+                        {item.name}
+                      </ListItem.Title>
+                    </ListItem.Content>
+                  </ListItem>
+                )}
+              />
+            </View>
           </BottomSheetView>
         </BottomSheet>
       </GestureHandlerRootView>
@@ -126,7 +193,8 @@ const makeStyles = ({ theme }: ThemeContextType) =>
     },
     contentContainer: {
       flex: 1,
-      padding: 36,
+      paddingRight: 20,
+      paddingLeft: 20,
       alignItems: "center",
       backgroundColor: theme.contrastBackground,
     },

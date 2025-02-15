@@ -11,6 +11,10 @@ export type TagWithFunctions = RawTag & {
   updateTag: UpdateTag;
 };
 
+export type TagWithAssignment = RawTag & {
+  isAssigned: boolean;
+};
+
 export type RemoveTag = (tagId: number) => Promise<void>;
 export type UpdateTag = (tag: RawTag) => Promise<void>;
 
