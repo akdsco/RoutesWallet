@@ -6,7 +6,11 @@ import { StravaRouteDetailed } from "@/integrations/strava";
 import { useApp } from "@/hooks";
 import { TagWithAssignment } from "@/library/types";
 import { getStravaRoutesDetailedFromDb } from "@/db/methods";
-import { getAssignedTagsForRoute } from "@/db/methods/tags";
+import {
+  assignTagToRoute,
+  getAssignedTagsForRoute,
+  removeTagFromRoute,
+} from "@/db/methods/tags";
 
 export const useRouteItemDetails = () => {
   const db = useSQLiteContext();
@@ -22,7 +26,7 @@ export const useRouteItemDetails = () => {
         return;
       }
 
-      log.debug("useRouteItemDetails", "Fetching route", { params });
+      log.info("useRouteItemDetails", "Fetching route", { params });
       // @ts-ignore
       const routeId: BigInt = params.route as BigInt;
 
@@ -59,10 +63,46 @@ export const useRouteItemDetails = () => {
       });
   }, []);
 
+  const handleTagToggle = async (tagId: number, isAssigned: boolean) => {
+    if (!route) {
+      log.warn("handleTagToggle", "Route not found", { route });
+      return;
+    }
+
+    const routeId = route.id;
+    const action = isAssigned ? removeTagFromRoute : assignTagToRoute;
+
+    log.debug(
+      "handleTagToggle",
+      `${isAssigned ? "Removing" : "Assigning"} tag`,
+      {
+        tagId,
+        routeId,
+      },
+    );
+
+    await action(db)(tagId, routeId);
+
+    setAssignedTags((prevTags) =>
+      prevTags.map((tag) =>
+        tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
+      ),
+    );
+  };
+
+  const handleSheetChanges = (index: number) => {
+    log.info(
+      "handleSheetChanges",
+      `Bottom sheet ${index === 0 ? "closed" : "open"}`,
+      { index },
+    );
+  };
+
   return {
     route,
     assignedTags,
-    setAssignedTags,
+    handleTagToggle,
+    handleSheetChanges,
     loading,
   };
 };

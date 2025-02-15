@@ -5,9 +5,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
 import { useTheme } from "@/hooks";
 import React, { useRef } from "react";
-import { log } from "@/library/logger";
 import { StravaThemeUrl } from "@/integrations/strava";
-import { assignTagToRoute, removeTagFromRoute } from "@/db/methods/tags";
 import { useSQLiteContext } from "expo-sqlite";
 import BottomSheet, {
   BottomSheetFlatList,
@@ -18,7 +16,7 @@ import { ThemeContextType } from "@/library/theme";
 import { TagToggleItem } from "@/components/Tag/TagToggleItem";
 
 export const RouteItemDetails = () => {
-  const { loading, route, assignedTags, setAssignedTags } =
+  const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
     useRouteItemDetails();
   const db = useSQLiteContext();
   const bottomSheetRef = useRef<BottomSheet>(null);
@@ -43,42 +41,6 @@ export const RouteItemDetails = () => {
       </Container>
     );
   }
-
-  const handleTagToggle = async (
-    tagId: number,
-    routeId: BigInt,
-    isAssigned: boolean,
-  ) => {
-    if (isAssigned) {
-      log.debug("handleTagToggle", "Removing tag from route", {
-        tagId,
-        routeId,
-      });
-
-      await removeTagFromRoute(db)(tagId, routeId);
-      setAssignedTags((prevTags) =>
-        prevTags.map((tag) =>
-          tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
-        ),
-      );
-      return;
-    }
-
-    await assignTagToRoute(db)(tagId, routeId);
-    setAssignedTags((prevTags) =>
-      prevTags.map((tag) =>
-        tag.id === tagId ? { ...tag, isAssigned: !isAssigned } : tag,
-      ),
-    );
-  };
-
-  const handleTag = (tagId: number, isAssigned: boolean) => {
-    return handleTagToggle(tagId, route.id, isAssigned);
-  };
-
-  const handleSheetChanges = (index: number) => {
-    console.log("handleSheetChanges", index);
-  };
 
   return (
     <Container>
@@ -151,7 +113,7 @@ export const RouteItemDetails = () => {
                   data={assignedTags}
                   keyExtractor={(item) => item.id.toString()}
                   renderItem={({ item }) => (
-                    <TagToggleItem item={item} handleTagToggle={handleTag} />
+                    <TagToggleItem {...{ item, handleTagToggle }} />
                   )}
                   showsVerticalScrollIndicator={true}
                 />
