@@ -45,82 +45,106 @@ export const RouteItemDetails = () => {
   return (
     <Container>
       <GestureHandlerRootView style={styles.gestureContainer}>
-        <ScrollView>
-          <Image
-            source={{ uri: route.map_urls[mapColor] }}
-            style={{ width: ScreenWidth * 0.9 }}
-            className="h-64 object-cover rounded-lg mt-3"
-          />
-          <View style={{ display: "flex", justifyContent: "space-between" }}>
-            <View className="flex flex-row justify-between items-center mt-4">
-              <ThemedText className="text-xl font-bold">
-                {route.name}
-              </ThemedText>
-            </View>
-            {/*<View>*/}
-            {/*  {assignedTags.map((tag) => (*/}
-            {/*    <View key={tag.id}>*/}
-            {/*      <ThemedText>{tag.name}</ThemedText>*/}
-            {/*    </View>*/}
-            {/*  ))}*/}
-            {/*</View>*/}
-          </View>
-          <View className="mt-4 mb-16 space-y-2">
-            <ThemedText>
-              Distance: {(route.distance / 1000).toFixed(2)} km
-            </ThemedText>
-            <ThemedText>
-              Elevation Gain: {route.elevation_gain.toFixed(1)} m
-            </ThemedText>
-            {route.description && (
-              <ThemedText>Description: {route.description}</ThemedText>
-            )}
-            <ThemedText>
-              Created At: {new Date(route.created_at).toLocaleDateString()}
-            </ThemedText>
-          </View>
-        </ScrollView>
-        <BottomSheet
-          ref={bottomSheetRef}
-          onChange={handleSheetChanges}
-          snapPoints={[53, "50%"]}
-          enableDynamicSizing={false}
-          enableContentPanningGesture={false}
-          handleStyle={{
-            backgroundColor: theme.contrastBackground,
-            borderTopLeftRadius: 5,
-            borderTopRightRadius: 5,
-          }}
-          handleIndicatorStyle={{
-            backgroundColor: theme.text,
-          }}
-          backgroundStyle={{
-            backgroundColor: theme.contrastBackground,
+        <View
+          style={{
+            width: ScreenWidth * 0.98,
+            flex: 1,
           }}
         >
-          <BottomSheetView style={styles.contentContainer}>
+          <ScrollView
+            contentContainerStyle={{
+              alignItems: "center",
+            }}
+          >
+            <Image
+              source={{ uri: route.map_urls[mapColor] }}
+              style={{ width: ScreenWidth * 0.9 }}
+              className="h-64 object-cover rounded-lg mt-3"
+            />
             <View
               style={{
                 width: "100%",
-                flex: 1,
+                paddingLeft: "4%",
+                paddingRight: "4%",
               }}
             >
-              <ThemedText style={{ marginBottom: 10, alignSelf: "center" }}>
-                Edit tags
-              </ThemedText>
-              <BottomSheetView style={{ flex: 1 }}>
-                <BottomSheetFlatList
-                  data={assignedTags}
-                  keyExtractor={(item) => item.id.toString()}
-                  renderItem={({ item }) => (
-                    <TagToggleItem {...{ item, handleTagToggle }} />
-                  )}
-                  showsVerticalScrollIndicator={true}
-                />
-              </BottomSheetView>
+              <View
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                }}
+              >
+                <View className="flex flex-row justify-between items-center mt-4">
+                  <ThemedText className="text-xl font-bold">
+                    {route.name}
+                  </ThemedText>
+                </View>
+                {/*<View>*/}
+                {/*  {assignedTags.map((tag) => (*/}
+                {/*    <View key={tag.id}>*/}
+                {/*      <ThemedText>{tag.name}</ThemedText>*/}
+                {/*    </View>*/}
+                {/*  ))}*/}
+                {/*</View>*/}
+              </View>
+              <View className="mt-4 mb-16 space-y-2">
+                <ThemedText>
+                  Distance: {(route.distance / 1000).toFixed(2)} km
+                </ThemedText>
+                <ThemedText>
+                  Elevation Gain: {route.elevation_gain.toFixed(1)} m
+                </ThemedText>
+                {route.description && (
+                  <ThemedText>Description: {route.description}</ThemedText>
+                )}
+                <ThemedText>
+                  Created At: {new Date(route.created_at).toLocaleDateString()}
+                </ThemedText>
+              </View>
             </View>
-          </BottomSheetView>
-        </BottomSheet>
+          </ScrollView>
+          <BottomSheet
+            ref={bottomSheetRef}
+            onChange={handleSheetChanges}
+            snapPoints={[53, "50%"]}
+            enableDynamicSizing={false}
+            enableContentPanningGesture={false}
+            handleStyle={{
+              backgroundColor: theme.contrastBackground,
+              borderTopLeftRadius: 5,
+              borderTopRightRadius: 5,
+            }}
+            handleIndicatorStyle={{
+              backgroundColor: theme.text,
+            }}
+            backgroundStyle={{
+              backgroundColor: theme.contrastBackground,
+            }}
+          >
+            <BottomSheetView style={styles.contentContainer}>
+              <View
+                style={{
+                  width: "100%",
+                  flex: 1,
+                }}
+              >
+                <ThemedText style={{ marginBottom: 10, alignSelf: "center" }}>
+                  Edit tags
+                </ThemedText>
+                <BottomSheetView style={{ flex: 1 }}>
+                  <BottomSheetFlatList
+                    data={assignedTags}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => (
+                      <TagToggleItem {...{ item, handleTagToggle }} />
+                    )}
+                    showsVerticalScrollIndicator={true}
+                  />
+                </BottomSheetView>
+              </View>
+            </BottomSheetView>
+          </BottomSheet>
+        </View>
       </GestureHandlerRootView>
     </Container>
   );
@@ -131,11 +155,12 @@ const makeStyles = ({ theme }: ThemeContextType) =>
     gestureContainer: {
       flex: 1,
       backgroundColor: theme.background,
+      width: "100%",
     },
     contentContainer: {
       flex: 1,
-      paddingRight: 20,
-      paddingLeft: 20,
+      paddingRight: 9,
+      paddingLeft: 9,
       alignItems: "center",
       backgroundColor: theme.contrastBackground,
     },

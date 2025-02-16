@@ -1,9 +1,11 @@
-import React, { ReactNode } from "react";
+import React, { PropsWithChildren } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { Platform, SafeAreaView, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-const Container = ({ children }: { children: ReactNode }) => {
+type ContainerProps = PropsWithChildren;
+
+const Container = ({ children }: ContainerProps) => {
   const { theme } = useTheme();
 
   return (
