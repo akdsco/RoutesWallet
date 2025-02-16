@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, StyleSheet, TextInput, View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
 import React from "react";
 import { ThemeContextType } from "@/library/theme";
@@ -50,6 +50,7 @@ export const AddTag = ({ checkTags }: AddTagProps) => {
       `Route tag "${newTagName}" added successfully`,
     );
     setNewTagName("");
+    Keyboard.dismiss();
   };
 
   return (
