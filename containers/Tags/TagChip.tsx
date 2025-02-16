@@ -15,7 +15,7 @@ export const TagChip = ({ tag }: TagChipProps) => {
       type="outline"
       titleStyle={{
         fontSize: 12,
-        color: "white",
+        color: theme.text,
       }}
       buttonStyle={{
         borderColor: tag.color,
