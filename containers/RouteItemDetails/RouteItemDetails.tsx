@@ -14,6 +14,7 @@ import BottomSheet, {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeContextType } from "@/library/theme";
 import { TagToggleItem } from "@/components/Tag/TagToggleItem";
+import { TagChip } from "@/containers/Tags/TagChip";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
@@ -79,15 +80,22 @@ export const RouteItemDetails = () => {
                     {route.name}
                   </ThemedText>
                 </View>
-                {/*<View>*/}
-                {/*  {assignedTags.map((tag) => (*/}
-                {/*    <View key={tag.id}>*/}
-                {/*      <ThemedText>{tag.name}</ThemedText>*/}
-                {/*    </View>*/}
-                {/*  ))}*/}
-                {/*</View>*/}
+                <View
+                  style={{
+                    marginVertical: 10,
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 3,
+                  }}
+                >
+                  {assignedTags
+                    .filter(({ isAssigned }) => isAssigned)
+                    .map((tag) => (
+                      <TagChip key={tag.id} tag={tag} />
+                    ))}
+                </View>
               </View>
-              <View className="mt-4 mb-16 space-y-2">
+              <View className="mb-24 space-y-2">
                 <ThemedText>
                   Distance: {(route.distance / 1000).toFixed(2)} km
                 </ThemedText>
