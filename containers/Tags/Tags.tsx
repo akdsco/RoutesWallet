@@ -12,10 +12,10 @@ import { useTags } from "@/containers/Tags/Tags.hook";
 import React, { useEffect, useRef } from "react";
 import { AddTag } from "@/containers/Tags/AddTag";
 import { TagsEmpty } from "@/containers/Tags/TagsEmpty";
-import DraggableFlatList from "react-native-draggable-flatlist/src/components/DraggableFlatList";
 import { TagItem } from "@/components/Tag/TagItem";
 import { useKeyboard } from "@react-native-community/hooks";
 import { useTheme } from "@/hooks";
+import DraggableFlatList from "react-native-draggable-flatlist";
 
 export const Tags = () => {
   const { tags, setTags, checkTags } = useTags();
@@ -46,21 +46,20 @@ export const Tags = () => {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <Container>
-          <View style={styles.container}>
-            <View style={styles.contentWrapper}>
-              <View style={styles.list}>
-                <DraggableFlatList
-                  data={tags}
-                  onDragEnd={({ data }) => setTags(data, true)}
-                  keyExtractor={(item) => item.id.toString()}
-                  renderItem={TagItem}
-                  keyboardShouldPersistTaps="handled"
-                />
-              </View>
+          <View style={styles.fullWidthBackground}>
+            <View style={styles.listWrapper}>
+              <DraggableFlatList
+                data={tags}
+                onDragEnd={({ data }) => setTags(data, true)}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={TagItem}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.listContent}
+              />
             </View>
-            <View style={{ paddingVertical: 10 }}>
-              <AddTag checkTags={checkTags} />
-            </View>
+          </View>
+          <View style={styles.addTagContainer}>
+            <AddTag checkTags={checkTags} />
           </View>
         </Container>
       </TouchableWithoutFeedback>
@@ -69,17 +68,19 @@ export const Tags = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  fullWidthBackground: {
     flex: 1,
-    justifyContent: "space-between",
-  },
-  list: {
-    flex: 1,
-  },
-  contentWrapper: {
-    flex: 1,
-    paddingHorizontal: 5,
+    width: "100%",
     alignItems: "center",
-    justifyContent: "center",
+  },
+  listWrapper: {
+    width: "100%",
+  },
+  listContent: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  addTagContainer: {
+    paddingVertical: 15,
   },
 });
