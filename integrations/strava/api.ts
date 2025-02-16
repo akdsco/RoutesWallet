@@ -74,30 +74,59 @@ const getStravaAuthResponse = async (
   return response;
 };
 
+export const fetchAllStravaRoutes =
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<StravaRouteDetailed[]> => {
+    const fnName = "fetchAllStravaRoutes";
+    let page = 1;
+    const perPage = 200; // API max
+
+    let allRoutes: StravaRouteDetailed[] = [];
+
+    while (true) {
+      const url = new URL(
+        `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
+      );
+      url.searchParams.append("page", page.toString());
+      url.searchParams.append("per_page", perPage.toString());
+
+      const stravaRoutes = await getDataFromStravaApi(db)<
+        StravaRouteDetailed[]
+      >(athleteId, url.toString());
+
+      log.debug(fnName, `Fetched ${stravaRoutes.length} routes from Strava`, {
+        page,
+        perPage,
+        routesReceived: stravaRoutes.length,
+      });
+
+      if (stravaRoutes.length === 0) {
+        break; // No more routes to fetch
+      }
+
+      allRoutes = allRoutes.concat(stravaRoutes);
+      page++;
+    }
+
+    log.debug(fnName, `Fetched ${allRoutes.length} routes from Strava`, {
+      athleteId,
+    });
+
+    return allRoutes;
+  };
+
 export const initStravaRoutes =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const fnName = "initStravaRoutes";
-    const url = new URL(
-      `https://www.strava.com/api/v3/athletes/${athleteId}/routes`,
-    );
-
-    const stravaRoutes = await getDataFromStravaApi(db)<StravaRouteDetailed[]>(
-      athleteId,
-      url.toString(),
-    );
+    const stravaRoutes = await fetchAllStravaRoutes(db)(athleteId);
 
     if (stravaRoutes.length > 0) {
-      log.debug(
-        fnName,
-        `Strava routes exist, saving ${stravaRoutes.length} routes in Db`,
-        {
-          athleteId,
-        },
-      );
+      log.debug(fnName, `Saving ${stravaRoutes.length} routes in Db`, {
+        athleteId,
+      });
       await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
     } else {
       log.debug(fnName, "No routes found in Strava account", {
-        stravaRoutes,
         athleteId,
       });
     }

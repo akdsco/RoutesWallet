@@ -72,5 +72,7 @@ const getContext = (context?: object) => {
     return "";
   }
 
-  return `: ${JSON.stringify(context)}`;
+  const data = JSON.stringify(context);
+
+  return `: ${data.length > 250 ? data.slice(0, 250) + "..." : data}`;
 };
