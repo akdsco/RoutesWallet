@@ -48,12 +48,39 @@ export const useStravaAuthButton = () => {
       });
       handleStravaResponse(response)
         .then((response) => {
-          log.info(fnName, "Strava auth response handled", { response });
+          log.debug(fnName, "Strava auth response handled", { response });
           setTimeout(() => setInProgress(false), 300);
 
           router.replace("/");
         })
         .catch((error) => {
+          if (error.message === "User cancelled Strava auth flow") {
+            setInProgress(false);
+            Toast("info", "Strava authorisation cancelled", "Please try again");
+            return router.navigate("/sign-in");
+          }
+
+          if (error.message === "access_denied") {
+            setInProgress(false);
+            log.info(fnName, "User denied Strava authorisation");
+            Toast(
+              "warning",
+              "Strava authorisation cancelled",
+              "Access was denied, please try again",
+            );
+            return router.navigate("/sign-in");
+          }
+
+          if (error.message === "Scope is not as expected") {
+            setInProgress(false);
+            Toast(
+              "warning",
+              "Selected permissions are not valid",
+              "Please allow access to read all activities",
+            );
+            return router.navigate("/sign-in");
+          }
+
           setInProgress(false);
           log.error(
             fnName,
@@ -68,15 +95,11 @@ export const useStravaAuthButton = () => {
     const fnName = "handleStravaResponse";
 
     if (response?.type === "error") {
-      log.error(fnName, "Strava authorisation response returns error", {
-        response,
-      });
-      // TODO: Inform user?
-      throw new Error(response.error?.message);
+      throw new Error(response.error?.code);
     }
     if (response?.type === "dismiss" || response?.type === "cancel") {
       log.info(fnName, `User ${response?.type}ed Strava authentication flow`);
-      return;
+      throw new Error("User cancelled Strava auth flow");
     }
 
     if (response?.type === "success") {
@@ -87,19 +110,15 @@ export const useStravaAuthButton = () => {
       const { code, scope } = response.params;
 
       if (scope !== "read,activity:read_all") {
-        // TODO: "scope is not as expected, send user back to auth page", improve scope checking
-        Toast(
-          "error",
-          "Selected permissions are not valid",
-          "Please allow access to read all activities",
-        );
-        log.error(fnName, "Scope is not as expected, user should auth again", {
-          scope,
-        });
+        log.warn(fnName, "Selected permissions are not valid", { scope });
         throw new Error("Scope is not as expected");
       }
 
       const athleteId = await handleStravaAuthorisation(db)(code, scope);
+      log.info(fnName, "User logged in successfully with Strava", {
+        athleteId,
+      });
+
       await initStravaRoutes(db)(athleteId);
 
       setIsStravaAuthed(true);

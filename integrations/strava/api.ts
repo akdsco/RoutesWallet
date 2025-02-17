@@ -126,6 +126,10 @@ export const initStravaRoutes =
         athleteId,
       });
       await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
+
+      log.info(fnName, "Strava routes found and saved in the database", {
+        athleteId,
+      });
     } else {
       log.debug(fnName, "No routes found in Strava account", {
         athleteId,
