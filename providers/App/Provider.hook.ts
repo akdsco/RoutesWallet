@@ -15,7 +15,7 @@ export const useAppProvider = () => {
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
   // TODO: can we deal with  null athleteId in the root? so we don't pass it null ever?
-  const [athleteId, setAthleteId] = useState<number>(0);
+  const [athleteId, setAthleteId] = useState<number>(-1);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
 

@@ -10,16 +10,25 @@ export const saveInLocalSecureStorage = async (key: string, value: string) => {
   await SecureStore.setItemAsync(key, value);
 };
 
-export const getFromLocalSecureStorage = async <T>(key: string) => {
-  const value = (await SecureStore.getItemAsync(key)) as unknown as T;
-  log.debug("getUserData", "Secure store GET", { key, value });
+export const getFromLocalSecureStorage = async <T extends string | number>(
+  key: string,
+): Promise<T> => {
+  const rawValue = await SecureStore.getItemAsync(key);
+  log.debug("getUserData", "Secure store GET", { key, rawValue });
 
-  // TODO: do we need such check if state / initial context is set to 0?
-  if (key === "USER_ID" && !value) {
-    return 0 as T;
+  if (rawValue === null) {
+    throw new Error("Value not found in secure store");
   }
 
-  // TODO: we should cast to a number if T is of type number
+  // ✅ If T is a number, cast `rawValue` to a number
+  if (typeof ({} as T) === "number") {
+    const parsedNumber = Number(rawValue);
+    if (isNaN(parsedNumber)) {
+      throw new Error("Number parsing failed");
+    }
 
-  return value;
+    return parsedNumber as T;
+  }
+
+  return rawValue as T;
 };
