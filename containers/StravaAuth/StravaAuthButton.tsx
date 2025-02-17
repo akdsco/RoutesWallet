@@ -1,8 +1,5 @@
-import { Platform, View } from "react-native";
-
-import { Pressable } from "react-native";
-import { ThemedText } from "@/components/ThemedText";
-import { LogoStravaSquare } from "@/components/Logo/Strava";
+import { Platform, Pressable, View } from "react-native";
+import { ConnectWithStravaSvg } from "@/components/Logo/Strava";
 import * as WebBrowser from "expo-web-browser";
 import { AuthRequest } from "expo-auth-session";
 
@@ -25,16 +22,11 @@ export const StravaAuthButton = ({
         style={{
           display: "flex",
           flexDirection: "row",
-          alignItems: "center",
-          borderWidth: 1,
-          borderColor: "#fc4c02",
-          padding: 20,
+          justifyContent: "center",
+          padding: 14,
         }}
       >
-        <View style={{ marginRight: 15 }}>
-          <LogoStravaSquare width={40} height={40} />
-        </View>
-        <ThemedText>Sign in with Strava</ThemedText>
+        <ConnectWithStravaSvg />
       </View>
     </Pressable>
   );

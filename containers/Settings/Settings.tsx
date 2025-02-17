@@ -1,6 +1,5 @@
 import Container from "@/components/Container";
 import { ThemedText } from "@/components/ThemedText";
-import { LogoStravaSquare } from "@/components/Logo/Strava";
 import { View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
 import { useSettings } from "@/containers/Settings/Settings.hook";
@@ -18,7 +17,8 @@ export const Settings = () => {
           paddingVertical: 30,
         }}
       >
-        <LogoStravaSquare width={40} height={40} />
+        {/*TODO: use different strava logo here*/}
+        {/*<ConnectWithStravaSvg width={40} height={40} />*/}
         <ThemedText style={{ paddingTop: 8 }}>
           Strava is {isStravaAuthed ? "connected" : "disconnected"}
         </ThemedText>
