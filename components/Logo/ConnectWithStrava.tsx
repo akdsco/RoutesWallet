@@ -1,6 +1,6 @@
 import Svg, { G, Path, Rect } from "react-native-svg";
 
-export const ConnectWithStravaSvg = () => {
+export const ConnectWithStrava = () => {
   return (
     <Svg width="193px" height="48px" viewBox="0 0 193 48">
       <G

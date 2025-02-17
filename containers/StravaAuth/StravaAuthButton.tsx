@@ -1,5 +1,5 @@
 import { Platform, Pressable, View } from "react-native";
-import { ConnectWithStravaSvg } from "@/components/Logo/Strava";
+import { ConnectWithStrava } from "@/components/Logo/ConnectWithStrava";
 import * as WebBrowser from "expo-web-browser";
 import { AuthRequest } from "expo-auth-session";
 
@@ -26,7 +26,7 @@ export const StravaAuthButton = ({
           padding: 14,
         }}
       >
-        <ConnectWithStravaSvg />
+        <ConnectWithStrava />
       </View>
     </Pressable>
   );

@@ -1,15 +1,22 @@
 import { useApp } from "@/hooks";
 import { log } from "@/library/logger";
-import { useStravaAuthButton } from "@/containers/StravaAuth/StravaAuthButton.hook";
 import { useSQLiteContext } from "expo-sqlite";
-import { disconnectStrava } from "@/integrations/strava";
+import { disconnectStrava, StravaAthleteBasic } from "@/integrations/strava";
+import { useEffect, useState } from "react";
+import { getStravaAthleteBasicProfile } from "@/db/methods/athlete";
 
 const fnName = "useSettings";
 
 export const useSettings = () => {
   const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
-  const { request } = useStravaAuthButton();
+  const [userData, setUserData] = useState<StravaAthleteBasic | null>(null);
   const db = useSQLiteContext();
+
+  useEffect(() => {
+    getStravaAthleteBasicProfile(db)(athleteId).then((user) => {
+      setUserData(user);
+    });
+  }, []);
 
   const handleDisconnection = async () => {
     if (!isStravaAuthed || athleteId === 0) {
@@ -24,7 +31,7 @@ export const useSettings = () => {
   };
 
   return {
-    request,
+    userData,
     isStravaAuthed,
     handleDisconnection,
   };

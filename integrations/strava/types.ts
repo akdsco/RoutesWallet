@@ -1,9 +1,13 @@
-export type StravaAthlete = {
-  id: number;
+export type StravaAthleteBasic = {
   username: string | null;
-  resource_state: number;
   firstname: string;
   lastname: string;
+  profile_medium: string;
+};
+
+export type StravaAthlete = StravaAthleteBasic & {
+  id: number;
+  resource_state: number;
   bio: string | null;
   city: string;
   state: string | null;
@@ -14,7 +18,6 @@ export type StravaAthlete = {
   created_at: string;
   updated_at: string;
   badge_type_id: number;
-  profile_medium: string;
   profile: string;
   friend: null;
   follower: null;

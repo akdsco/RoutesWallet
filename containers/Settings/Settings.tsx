@@ -3,32 +3,56 @@ import { ThemedText } from "@/components/ThemedText";
 import { View } from "react-native";
 import { Button } from "@/components/Button/Buttons";
 import { useSettings } from "@/containers/Settings/Settings.hook";
+import { PoweredByStrava } from "@/components/Logo/PoweredByStrava";
+import { Avatar } from "@rneui/base";
 
 export const Settings = () => {
-  const { request, isStravaAuthed, handleDisconnection } = useSettings();
+  const { userData, handleDisconnection } = useSettings();
 
   return (
     <Container>
-      <View
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingVertical: 30,
-        }}
-      >
-        {/*TODO: use different strava logo here*/}
-        {/*<ConnectWithStravaSvg width={40} height={40} />*/}
-        <ThemedText style={{ paddingTop: 8 }}>
-          Strava is {isStravaAuthed ? "connected" : "disconnected"}
-        </ThemedText>
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
+        <View>
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              paddingVertical: 30,
+            }}
+          >
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Avatar
+                size={54}
+                rounded
+                source={{ uri: userData?.profile_medium }}
+                containerStyle={{ marginBottom: 16 }}
+              />
+              <View style={{ display: "flex", flexDirection: "row" }}>
+                <ThemedText style={{ marginRight: 5 }}>
+                  {userData?.firstname}
+                </ThemedText>
+                <ThemedText>{userData?.lastname}</ThemedText>
+              </View>
+            </View>
+          </View>
+          <Button
+            title="Logout"
+            onPress={handleDisconnection}
+            accessibilityLabel="This will log you out"
+          />
+        </View>
+        <View style={{ height: 50, marginBottom: 40, opacity: 0.4 }}>
+          <PoweredByStrava />
+        </View>
       </View>
-      <Button
-        title="Logout"
-        disabled={!request}
-        onPress={handleDisconnection}
-        accessibilityLabel="This will log you out"
-      />
     </Container>
   );
 };

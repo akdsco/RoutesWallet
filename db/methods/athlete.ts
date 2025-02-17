@@ -1,5 +1,5 @@
 import { SQLiteDatabase } from "expo-sqlite";
-import { StravaAthlete } from "@/integrations/strava";
+import { StravaAthlete, StravaAthleteBasic } from "@/integrations/strava";
 import { logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 
@@ -63,6 +63,29 @@ export const insertStravaAthleteInDb =
         athlete,
         fnName,
       });
+      throw error;
+    }
+  };
+
+export const getStravaAthleteBasicProfile =
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<StravaAthleteBasic> => {
+    const fnName = "getStravaAthleteProfileData";
+
+    const query = `SELECT username, firstname, lastname, profile_medium FROM ${tables.stravaAthlete} WHERE id = ?`;
+    logDb.debug(tables.stravaAthlete, query, { athleteId, fnName });
+
+    try {
+      const userData = await db.getFirstAsync<StravaAthleteBasic>(query, [
+        athleteId,
+      ]);
+      if (!userData) {
+        throw new Error(`User with id ${athleteId} not found`);
+      }
+
+      return userData;
+    } catch (error) {
+      logDb.error(tables.stravaAthlete, query, { error, athleteId, fnName });
       throw error;
     }
   };
