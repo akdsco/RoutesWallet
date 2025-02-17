@@ -48,7 +48,7 @@ export const RouteItemDetails = () => {
       <GestureHandlerRootView style={styles.gestureContainer}>
         <View
           style={{
-            width: ScreenWidth * 0.98,
+            width: ScreenWidth * 0.96,
             flex: 1,
           }}
         >
