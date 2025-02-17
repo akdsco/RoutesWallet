@@ -11,7 +11,7 @@ import {
 import { Alert } from "react-native";
 import { log } from "@/library/logger";
 
-export const useTags = () => {
+export const useTagList = () => {
   const db = useSQLiteContext();
   const { athleteId } = useApp();
   const [tags, setTags] = useState<TagWithFunctions[]>([]);
@@ -31,9 +31,11 @@ export const useTags = () => {
           style: "cancel",
         },
         {
-          text: "Yes",
+          text: "Delete",
           onPress: async () => {
-            log.info("useTags:removeTag", "User confirmed tag remove action");
+            log.info("useTags:removeTag", "User confirmed tag remove action", {
+              tagId,
+            });
             await removeTagFromDb(db)(athleteId, tagId);
             await checkTags();
           },

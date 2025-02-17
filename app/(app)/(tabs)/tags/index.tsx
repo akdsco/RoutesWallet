@@ -1,5 +1,5 @@
-import { Tags } from "@/containers/Tags/Tags";
+import { TagList } from "@/containers/Tags/TagList/TagList";
 
 export default function TagLayout() {
-  return <Tags />;
+  return <TagList />;
 }

@@ -1,6 +1,6 @@
 import { type SQLiteDatabase } from "expo-sqlite";
 import {
-  athleteTagOrder,
+  createAthleteTagOrderTable,
   createRouteTagAssignmentsTable,
   createRouteTagsTable,
   createStravaAthleteTable,
@@ -8,7 +8,7 @@ import {
   createStravaMapTable,
   createStravaMapUrlsTable,
   createStravaRouteTable,
-  primeRouteTags,
+  loadDbWithInitialTags,
 } from "@/db/tables";
 import { log } from "@/library/logger";
 
@@ -55,7 +55,9 @@ const initialiseDatabaseTables = async (db: SQLiteDatabase) => {
     const stravaMapUrlsTablePromise = db.execAsync(createStravaMapUrlsTable);
     const stravaRouteTablePromise = db.execAsync(createStravaRouteTable);
     const stravaRouteTagsTablePromise = db.execAsync(createRouteTagsTable);
-    const athleteTagOrderTablePromise = db.execAsync(athleteTagOrder);
+    const athleteTagOrderTablePromise = db.execAsync(
+      createAthleteTagOrderTable,
+    );
     const routeTagsAssignmentsTablePromise = db.execAsync(
       createRouteTagAssignmentsTable,
     );
@@ -72,7 +74,7 @@ const initialiseDatabaseTables = async (db: SQLiteDatabase) => {
       routeTagsAssignmentsTablePromise,
     ]);
 
-    const routeTagsTableDataPromise = db.execAsync(primeRouteTags);
+    const routeTagsTableDataPromise = db.execAsync(loadDbWithInitialTags);
 
     // Prime tables with initial data
     await Promise.all([routeTagsTableDataPromise]);

@@ -13,23 +13,15 @@ import {
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
 import { ThemeContextType } from "@/library/theme";
-import { RemoveTag, UpdateTag } from "@/library/types";
-import { useTagItem } from "@/components/Tag/TagItem.hook";
+import { TagWithFunctions } from "@/library/types";
+import { useTagItem } from "@/components/Tag/TagItem/TagItem.hook";
 import { useTheme } from "@/hooks";
-
-export type TagItemProps = {
-  id: number;
-  name: string;
-  color: string;
-  removeTag: RemoveTag;
-  updateTag: UpdateTag;
-};
 
 export const TagItem = ({
   item,
   drag,
   isActive,
-}: RenderItemParams<TagItemProps>) => {
+}: RenderItemParams<TagWithFunctions>) => {
   const {
     isEditing,
     editedName,
@@ -101,7 +93,7 @@ export const TagItem = ({
               </MenuTrigger>
               <MenuOptions>
                 <MenuOption value="edit" text="Edit" />
-                <MenuOption value="remove" text="Remove" />
+                <MenuOption value="delete" text="Delete" />
               </MenuOptions>
             </Menu>
           )}

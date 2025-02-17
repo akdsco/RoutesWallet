@@ -1,3 +1,5 @@
+import { AppConfig } from "@/library/config";
+
 type LogLevel = "info" | "warn" | "error" | "debug";
 
 type LogParams = {
@@ -14,9 +16,11 @@ type LogDbParams = {
   context?: object;
 };
 
+const isDebugModeOn = AppConfig.DEBUG_MODE === "true";
+
 export const log = {
   debug: (fnName: string, action: string, context?: object) =>
-    logger({ level: "debug", fnName, action, context }),
+    isDebugModeOn ? logger({ level: "debug", fnName, action, context }) : {},
   info: (fnName: string, action: string, context?: object) =>
     logger({ level: "info", fnName, action, context }),
   warn: (fnName: string, action: string, context?: object) =>
@@ -34,7 +38,9 @@ const logger = ({ level, fnName, action, context }: LogParams) => {
 
 export const logDb = {
   debug: (tableName: string, query: string, context?: object) =>
-    loggerDb({ level: "debug", tableName, query, context }),
+    isDebugModeOn
+      ? loggerDb({ level: "debug", tableName, query, context })
+      : {},
   info: (tableName: string, query: string, context?: object) =>
     loggerDb({ level: "info", tableName, query, context }),
   warn: (tableName: string, query: string, context?: object) =>

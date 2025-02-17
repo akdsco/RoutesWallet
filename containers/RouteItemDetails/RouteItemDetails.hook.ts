@@ -72,11 +72,12 @@ export const useRouteItemDetails = () => {
     const routeId = route.id;
     const action = isAssigned ? removeTagFromRoute : assignTagToRoute;
 
-    log.debug(
+    log.info(
       "handleTagToggle",
       `${isAssigned ? "Removing" : "Assigning"} tag`,
       {
         tagId,
+        routeName: route?.name,
         routeId,
       },
     );

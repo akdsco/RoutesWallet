@@ -37,7 +37,6 @@ export const useTaggedRoutes = () => {
     };
 
   useEffect(() => {
-    console.log(params);
     const useEffectRun = async () => {
       if (!params) {
         return;

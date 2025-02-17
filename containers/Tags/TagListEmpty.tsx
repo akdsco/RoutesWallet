@@ -1,14 +1,14 @@
 import { StyleSheet, View } from "react-native";
 import Container from "@/components/Container";
 import React from "react";
-import { AddTag } from "@/containers/Tags/AddTag";
 import { FunctionCall } from "@/library/types";
+import { AddTag } from "@/components/Tag/AddTag/AddTag";
 
 type TagsEmptyProps = {
   checkTags: FunctionCall;
 };
 
-export const TagsEmpty = ({ checkTags }: TagsEmptyProps) => {
+export const TagListEmpty = ({ checkTags }: TagsEmptyProps) => {
   return (
     <Container>
       <View style={styles.scrollViewContent}>

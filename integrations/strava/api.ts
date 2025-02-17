@@ -100,8 +100,9 @@ export const fetchAllStravaRoutes =
         routesReceived: stravaRoutes.length,
       });
 
-      if (stravaRoutes.length === 0) {
-        break; // No more routes to fetch
+      const routesPageEmpty = stravaRoutes.length === 0;
+      if (routesPageEmpty) {
+        break;
       }
 
       allRoutes = allRoutes.concat(stravaRoutes);

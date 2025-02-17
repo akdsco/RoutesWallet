@@ -96,7 +96,7 @@ export const createRouteTagsTable = `
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );`;
 
-export const primeRouteTags = `
+export const loadDbWithInitialTags = `
   INSERT INTO ${tables.routeTags} (name, color) VALUES 
     ('Long routes', 'red'),
     ('Weekend getaways', '#FFB3B3'),
@@ -104,7 +104,7 @@ export const primeRouteTags = `
     ('Best climbs', 'blue');
   `;
 
-export const athleteTagOrder = `
+export const createAthleteTagOrderTable = `
   CREATE TABLE IF NOT EXISTS ${tables.athleteTagOrder} (
     athlete_id INTEGER NOT NULL,
     tag_id INTEGER NOT NULL,

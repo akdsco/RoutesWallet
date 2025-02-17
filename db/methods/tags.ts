@@ -248,7 +248,7 @@ export const assignTagToRoute =
 
     try {
       await db.runAsync(query, [routeId.toString(), tagId]);
-      logDb.info(tables.routeTagAssignments, query, { routeId, tagId });
+      logDb.debug(tables.routeTagAssignments, query, { routeId, tagId });
     } catch (error) {
       logDb.error(tables.routeTagAssignments, query, { routeId, tagId, error });
     }
@@ -287,7 +287,7 @@ export const removeTagFromRoute =
 
     try {
       await db.runAsync(query, [tagId, routeId.toString()]);
-      logDb.info(tables.routeTagAssignments, query, { tagId, routeId });
+      logDb.debug(tables.routeTagAssignments, query, { tagId, routeId });
     } catch (error) {
       logDb.error(tables.routeTagAssignments, query, { tagId, routeId, error });
     }

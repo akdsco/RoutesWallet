@@ -14,7 +14,7 @@ import BottomSheet, {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeContextType } from "@/library/theme";
 import { TagToggleItem } from "@/components/Tag/TagToggleItem";
-import { TagChip } from "@/containers/Tags/TagChip";
+import { TagChip } from "@/components/Tag/TagChip";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
@@ -91,7 +91,7 @@ export const RouteItemDetails = () => {
                   {assignedTags
                     .filter(({ isAssigned }) => isAssigned)
                     .map((tag) => (
-                      <TagChip key={tag.id} tag={tag} />
+                      <TagChip key={tag.id} {...tag} />
                     ))}
                 </View>
               </View>

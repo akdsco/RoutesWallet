@@ -2,7 +2,7 @@ import { useState } from "react";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import { Toast } from "@/library/Toast";
-import { TagItemProps } from "@/components/Tag/TagItem";
+import { TagWithFunctions } from "@/library/types";
 
 const colors = [
   "#FFB3B3", // pastel red
@@ -19,7 +19,7 @@ const colors = [
   "yellow",
 ];
 
-export const useTagItem = (item: TagItemProps) => {
+export const useTagItem = (item: TagWithFunctions) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
   const [editedColor, setEditedColor] = useState(item.color);
@@ -39,7 +39,7 @@ export const useTagItem = (item: TagItemProps) => {
   };
 
   const handleSelectedMenuOption = async (value: string) => {
-    log.debug(
+    log.info(
       "useTagItem",
       `Menu selected option: ${value} tag \"${item.name}\", tagId: ${item.id}`,
     );
@@ -48,7 +48,7 @@ export const useTagItem = (item: TagItemProps) => {
       case "edit":
         setIsEditing(true);
         break;
-      case "remove":
+      case "delete":
         await item.removeTag(item.id);
         break;
       default:
@@ -68,6 +68,11 @@ export const useTagItem = (item: TagItemProps) => {
     }
 
     await item.updateTag({ id: item.id, name, color: editedColor });
+    log.info("useTagItem", `Tag updated: ${item.name} -> ${name}`, {
+      item,
+      name,
+      editedColor,
+    });
     setIsEditing(false);
   };
 

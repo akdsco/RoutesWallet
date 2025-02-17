@@ -8,17 +8,17 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useTags } from "@/containers/Tags/Tags.hook";
 import React, { useEffect, useRef } from "react";
-import { AddTag } from "@/containers/Tags/AddTag";
-import { TagsEmpty } from "@/containers/Tags/TagsEmpty";
-import { TagItem } from "@/components/Tag/TagItem";
+import { TagListEmpty } from "@/containers/Tags/TagListEmpty";
+import { TagItem } from "@/components/Tag/TagItem/TagItem";
 import { useKeyboard } from "@react-native-community/hooks";
 import { useTheme } from "@/hooks";
 import DraggableFlatList from "react-native-draggable-flatlist";
+import { useTagList } from "@/containers/Tags/TagList/TagList.hook";
+import { AddTag } from "@/components/Tag/AddTag/AddTag";
 
-export const Tags = () => {
-  const { tags, setTags, checkTags } = useTags();
+export const TagList = () => {
+  const { tags, setTags, checkTags } = useTagList();
   const { theme } = useTheme();
   const keyboard = useKeyboard();
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -32,11 +32,11 @@ export const Tags = () => {
   }, [keyboard.keyboardShown]);
 
   if (tags.length === 0) {
-    return <TagsEmpty checkTags={checkTags} />;
+    return <TagListEmpty checkTags={checkTags} />;
   }
 
   if (tags.length === 0) {
-    return <TagsEmpty checkTags={checkTags} />;
+    return <TagListEmpty checkTags={checkTags} />;
   }
 
   return (
