@@ -67,7 +67,17 @@ export const useTagItem = (item: TagWithFunctions) => {
       return;
     }
 
-    await item.updateTag({ id: item.id, name, color: editedColor });
+    const updateResult = await item.updateTag({
+      id: item.id,
+      name,
+      color: editedColor,
+    });
+
+    if (updateResult) {
+      Toast("error", updateResult.error, "Use a different tag name");
+      return;
+    }
+
     log.info("useTagItem", `Tag updated: ${item.name} -> ${name}`, {
       item,
       name,

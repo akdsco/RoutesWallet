@@ -41,8 +41,9 @@ export const insertTag =
     } catch (error) {
       if (isSQLiteError(error)) {
         if (isConstraintError(error)) {
-          log.error("addRouteTag", "Tag most likely already exists", {
-            error,
+          log.warn("addRouteTag", "Tag most likely already exists", {
+            error: error.message,
+            query,
           });
           return { error: "Tag already exists" };
         }
@@ -52,33 +53,20 @@ export const insertTag =
     }
   };
 
-export const updateAthleteTagOrderToTop =
-  (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {
-    const tagId = await getTagIdByName(db)(tagName);
-    await updateTagOrderToTop(db)(athleteId, tagId);
+export const handleRouteTagInsert =
+  (db: SQLiteDatabase) =>
+  async (athleteId: number, tagName: string): DbOperationResult => {
+    const insertResult = await insertTag(db)(tagName);
+    if (insertResult) {
+      return insertResult;
+    }
+    await updateAthleteTagOrderToTop(db)(athleteId, tagName);
   };
 
-const getTagIdByName = (db: SQLiteDatabase) => async (tagName: string) => {
-  try {
-    const sql = `SELECT id FROM ${tables.routeTags} WHERE name = '${tagName}'`;
+const updateAthleteTagOrderToTop =
+  (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {
+    const tagId = await getTagIdByName(db)(tagName);
 
-    logDb.debug(tables.routeTags, sql, { tagName });
-    const result = await db.getAllAsync<{ id: number }>(sql);
-    const tagId = result[0]?.id;
-
-    if (!tagId) {
-      throw new Error("Failed to retrieve tag ID after insertion");
-    }
-
-    return tagId;
-  } catch (error) {
-    log.error("getTagIdByName", "Error fetching tag ID", { error });
-    throw error;
-  }
-};
-
-const updateTagOrderToTop =
-  (db: SQLiteDatabase) => async (athleteId: number, tagId: number) => {
     try {
       // Set the new tag as the first in the order
 
@@ -108,6 +96,25 @@ const updateTagOrderToTop =
       );
     }
   };
+
+const getTagIdByName = (db: SQLiteDatabase) => async (tagName: string) => {
+  try {
+    const sql = `SELECT id FROM ${tables.routeTags} WHERE name = '${tagName}'`;
+
+    logDb.debug(tables.routeTags, sql, { tagName });
+    const result = await db.getAllAsync<{ id: number }>(sql);
+    const tagId = result[0]?.id;
+
+    if (!tagId) {
+      throw new Error("Failed to retrieve tag ID after insertion");
+    }
+
+    return tagId;
+  } catch (error) {
+    log.error("getTagIdByName", "Error fetching tag ID", { error });
+    throw error;
+  }
+};
 
 export const saveTagOrderInDb =
   (db: SQLiteDatabase) =>
@@ -205,19 +212,28 @@ export const removeTagFromDb =
     }
   };
 
-export const updateTagInDb = (db: SQLiteDatabase) => async (tag: RawTag) => {
-  const fnName = "updateTagInDb";
-  const query = `UPDATE ${tables.routeTags} SET name = ?, color = ? WHERE id = ?;`;
+export const updateTagInDb =
+  (db: SQLiteDatabase) =>
+  async (tag: RawTag, athleteId: number): DbOperationResult => {
+    const listOfCurrentTags = await getOrderedRawTagsFromDb(db)(athleteId);
+    const tagExists = listOfCurrentTags.find(({ name }) => name === tag.name);
 
-  try {
-    logDb.debug(tables.routeTags, query, { newTag: tag });
-    await db.runAsync(query, [tag.name, tag.color, tag.id]);
-    log.debug(fnName, `Tag id "${tag.id}" updated`);
-  } catch (error) {
-    log.error(fnName, "Error updating tag", { error, tag, query });
-    throw error;
-  }
-};
+    if (tagExists) {
+      return { error: "Tag already exists" };
+    }
+
+    const fnName = "updateTagInDb";
+    const query = `UPDATE ${tables.routeTags} SET name = ?, color = ? WHERE id = ?;`;
+
+    try {
+      logDb.debug(tables.routeTags, query, { newTag: tag });
+      await db.runAsync(query, [tag.name, tag.color, tag.id]);
+      log.debug(fnName, `Tag id "${tag.id}" updated`);
+    } catch (error) {
+      log.error(fnName, "Error updating tag", { error, tag, query });
+      throw error;
+    }
+  };
 
 export const getOrderedRawTagsFromDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {

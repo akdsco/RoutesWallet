@@ -91,7 +91,26 @@ export const TagItem = ({
               <MenuTrigger style={styles.optionButtonContainer}>
                 <FontAwesome size={25} name="ellipsis-v" color={theme.text} />
               </MenuTrigger>
-              <MenuOptions>
+              <MenuOptions
+                customStyles={{
+                  optionTouchable: {
+                    padding: 5,
+                  },
+                  optionText: {
+                    color: theme.text,
+                    padding: 7,
+                    fontSize: 20,
+                  },
+                  optionsWrapper: {
+                    backgroundColor: theme.background,
+                    padding: 5,
+                  },
+                  optionsContainer: {
+                    borderColor: theme.contrastBackground,
+                    borderWidth: 2,
+                  },
+                }}
+              >
                 <MenuOption value="edit" text="Edit" />
                 <MenuOption value="delete" text="Delete" />
               </MenuOptions>

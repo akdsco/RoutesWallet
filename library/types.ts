@@ -1,5 +1,7 @@
 export type FunctionCall = () => Promise<void>;
 
+export type ExpectedError = { error: string };
+
 export type RawTag = {
   id: number;
   name: string;
@@ -16,7 +18,7 @@ export type TagWithAssignment = RawTag & {
 };
 
 export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (tag: RawTag) => Promise<void>;
+export type UpdateTag = (tag: RawTag) => DbOperationResult;
 
 export type AthleteTagOrder = {
   athlete_id: number;
@@ -24,4 +26,4 @@ export type AthleteTagOrder = {
   order_position: number;
 };
 
-export type DbOperationResult = Promise<void | { error: string }>;
+export type DbOperationResult = Promise<void | ExpectedError>;

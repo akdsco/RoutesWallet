@@ -7,7 +7,7 @@ import {
   removeTagFromDb,
   saveTagOrderInDb,
   updateTagInDb,
-} from "@/db/methods/tags";
+} from "@/db/methods";
 import { Alert } from "react-native";
 import { log } from "@/library/logger";
 
@@ -46,7 +46,15 @@ export const useTagList = () => {
   };
 
   const updateTag: UpdateTag = async (tag) => {
-    await updateTagInDb(db)(tag);
+    const dbUpdateResult = await updateTagInDb(db)(tag, athleteId);
+    if (dbUpdateResult) {
+      log.warn("useTagList:updateTag", "Error updating tag", {
+        athleteId,
+        tag,
+        dbUpdateResult,
+      });
+      return dbUpdateResult;
+    }
     await checkTags();
   };
 
