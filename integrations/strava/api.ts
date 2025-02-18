@@ -8,6 +8,7 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";
 import {
+  countStravaRoutesInDb,
   deleteStravaAuthResponseFromDb,
   getStravaAuthFromDb,
   insertDefaultTagOrderInDb,
@@ -16,6 +17,7 @@ import {
   insertStravaRoutesInDb,
 } from "@/db/methods";
 import { AppConfig } from "@/library/config";
+import { RouteInsertStats } from "@/library/types";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -116,10 +118,13 @@ export const fetchAllStravaRoutes =
     return allRoutes;
   };
 
-export const initStravaRoutes =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
-    const fnName = "initStravaRoutes";
+export const getStravaRoutesAndSaveInDb =
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<RouteInsertStats> => {
+    const fnName = "getStravaRoutesAndSaveInDb";
     const stravaRoutes = await fetchAllStravaRoutes(db)(athleteId);
+
+    const existingInDb = await countStravaRoutesInDb(db)(athleteId);
 
     if (stravaRoutes.length > 0) {
       log.debug(fnName, `Saving ${stravaRoutes.length} routes in Db`, {
@@ -130,10 +135,20 @@ export const initStravaRoutes =
       log.info(fnName, "Strava routes found and saved in the database", {
         athleteId,
       });
+      return {
+        inserted: stravaRoutes.length,
+        existingInDb,
+        newRoutesSaved: stravaRoutes.length - existingInDb,
+      };
     } else {
       log.debug(fnName, "No routes found in Strava account", {
         athleteId,
       });
+      return {
+        inserted: 0,
+        existingInDb,
+        newRoutesSaved: 0,
+      };
     }
   };
 

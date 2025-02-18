@@ -3,7 +3,7 @@ export * from "./types";
 export {
   stravaApiDiscovery,
   handleStravaAuthorisation,
-  initStravaRoutes,
+  getStravaRoutesAndSaveInDb,
   checkStravaConnection,
   disconnectStrava,
 } from "./api";

@@ -3,7 +3,7 @@ import { log } from "@/library/logger";
 import { useSQLiteContext } from "expo-sqlite";
 import { disconnectStrava, StravaAthleteBasic } from "@/integrations/strava";
 import { useEffect, useState } from "react";
-import { getStravaAthleteBasicProfile } from "@/db/methods/athlete";
+import { getStravaAthleteBasicProfile } from "@/db/methods";
 
 const fnName = "useSettings";
 

@@ -5,12 +5,12 @@ import { useSQLiteContext } from "expo-sqlite";
 import { StravaRouteDetailed } from "@/integrations/strava";
 import { useApp } from "@/hooks";
 import { TagWithAssignment } from "@/library/types";
-import { getStravaRoutesDetailedFromDb } from "@/db/methods";
 import {
   assignTagToRoute,
   getAssignedTagsForRoute,
+  getStravaRoutesDetailedFromDb,
   removeTagFromRoute,
-} from "@/db/methods/tags";
+} from "@/db/methods";
 
 export const useRouteItemDetails = () => {
   const db = useSQLiteContext();

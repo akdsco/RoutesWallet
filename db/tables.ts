@@ -83,8 +83,8 @@ export const createStravaRouteTable = `
     estimated_moving_time BIGINT NOT NULL,
     waypoints TEXT,
     FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id),
-    FOREIGN KEY (map_id) REFERENCES StravaMap(id),
-    FOREIGN KEY (map_urls_id) REFERENCES StravaMapUrls(url)
+    FOREIGN KEY (map_id) REFERENCES StravaMap(id) ON DELETE CASCADE,
+    FOREIGN KEY (map_urls_id) REFERENCES StravaMapUrls(url) ON DELETE CASCADE
   );`;
 
 export const createRouteTagsTable = `

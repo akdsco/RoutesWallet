@@ -27,3 +27,9 @@ export type AthleteTagOrder = {
 };
 
 export type DbOperationResult = Promise<void | ExpectedError>;
+
+export type RouteInsertStats = {
+  existingInDb: number;
+  inserted: number;
+  newRoutesSaved: number;
+};

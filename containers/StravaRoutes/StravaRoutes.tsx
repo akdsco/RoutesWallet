@@ -1,5 +1,6 @@
 import Container from "@/components/Container";
 import {
+  RefreshControl,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -26,7 +27,7 @@ export type RouteFilters =
 export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
   const { loading } = useApp();
-  const { loadingRoutes, routes } = useRoutes(filter);
+  const { refreshing, onRefresh, loadingRoutes, routes } = useRoutes(filter);
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -62,7 +63,12 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
 
   return (
     <Container>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.innerContainer}>
           {/* // TODO: Potentially move to FlatList for mobile devices only */}
           <View style={styles.gridContainer}>
@@ -84,6 +90,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
 const styles = StyleSheet.create({
   scrollViewContent: {
     flexGrow: 1,
+    paddingVertical: 15,
   },
   innerContainer: {
     flex: 1,

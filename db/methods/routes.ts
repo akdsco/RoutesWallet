@@ -320,3 +320,19 @@ const toBaseStravaRoutes = (
     },
   };
 };
+
+export const countStravaRoutesInDb =
+  (db: SQLiteDatabase) => async (athleteId: number) => {
+    const query = `SELECT COUNT(*) as count FROM ${tables.stravaRoute} WHERE athlete_id = ?`;
+
+    try {
+      const result = await db.getFirstAsync<{ count: number }>(query, [
+        athleteId,
+      ]);
+      logDb.debug(tables.stravaRoute, query, { result, athleteId });
+      return result?.count || 0;
+    } catch (error) {
+      logDb.error(tables.stravaRoute, query, { error, athleteId });
+      throw error;
+    }
+  };
