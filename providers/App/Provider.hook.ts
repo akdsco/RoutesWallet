@@ -14,8 +14,7 @@ export const useAppProvider = () => {
   const [fontLoaded, fontError] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
-  // TODO: can we deal with null athleteId in the root? so we don't pass it null ever?
-  // The challenge lies in state before logging in (no user id) and after logging in (always should be user id)
+
   const [athleteId, setAthleteId] = useState<number>(-1);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
