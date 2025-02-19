@@ -2,6 +2,7 @@ import {
   StravaAuthResponse,
   StravaAuthResponseRaw,
   StravaDisconnectResponse,
+  StravaRouteAPI,
   StravaRouteDetailed,
 } from "@/integrations/strava";
 import { SQLiteDatabase } from "expo-sqlite";
@@ -89,7 +90,7 @@ export const fetchAllStravaRoutes =
     let page = 1;
     const perPage = 200; // API max
 
-    let allRoutes: StravaRouteDetailed[] = [];
+    let allRoutes: StravaRouteAPI[] = [];
 
     while (true) {
       const url = new URL(
@@ -98,9 +99,10 @@ export const fetchAllStravaRoutes =
       url.searchParams.append("page", page.toString());
       url.searchParams.append("per_page", perPage.toString());
 
-      const stravaRoutes = await getDataFromStravaApi(db)<
-        StravaRouteDetailed[]
-      >(athleteId, url.toString());
+      const stravaRoutes = await getDataFromStravaApi(db)<StravaRouteAPI[]>(
+        athleteId,
+        url.toString(),
+      );
 
       log.debug(fnName, `Fetched ${stravaRoutes.length} routes from Strava`, {
         page,
@@ -121,7 +123,10 @@ export const fetchAllStravaRoutes =
       athleteId,
     });
 
-    return allRoutes;
+    return allRoutes.map(({ id, id_str, ...rest }) => ({
+      id: id_str,
+      ...rest,
+    }));
   };
 
 export const getStravaRoutesAndSaveInDb =
@@ -135,10 +140,8 @@ export const getStravaRoutesAndSaveInDb =
         getStravaRouteIdsFromDb(db)(athleteId),
       ]);
 
-      const currentRouteIds = new Set(
-        currentStravaRoutes.map((route) => route.id),
-      );
-      const routeIdsToRemove = [...routeIdsInDatabase].filter(
+      const currentRouteIds = new Set(currentStravaRoutes.map(({ id }) => id));
+      const routeIdsToRemove = routeIdsInDatabase.filter(
         (id) => !currentRouteIds.has(id),
       );
 
@@ -264,7 +267,7 @@ const fetchFromStravaApi = async <T>(
   const response = await fetch(url, init);
   const responseJson = (await response.json()) as T;
 
-  log.debug(fnName, "Fetch response", { responseJson });
+  log.debug(fnName, "Fetch response", { url, init, responseJson });
 
   return responseJson;
 };

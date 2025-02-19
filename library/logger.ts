@@ -80,5 +80,12 @@ const getContext = (context?: object) => {
 
   const data = JSON.stringify(context);
 
-  return `: ${data.length > 250 ? data.slice(0, 250) + "..." : data}`;
+  // TODO: fix up via env variable?
+  const trimmedData = false
+    ? data.length > 250
+      ? data.slice(0, 250) + "..."
+      : data
+    : data;
+
+  return trimmedData;
 };

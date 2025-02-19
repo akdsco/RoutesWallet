@@ -54,13 +54,13 @@ type StravaMapUrls = {
   dark_url: string;
 };
 
-export type StravaRouteDetailed = {
+export type StravaRouteAPI = {
+  id: BigInt;
+  id_str: string;
   athlete: StravaAthlete;
   description: string | null;
   distance: number;
   elevation_gain: number;
-  id: BigInt;
-  id_str: string;
   map: StravaMap;
   map_urls: StravaMapUrls;
   name: string;
@@ -68,18 +68,21 @@ export type StravaRouteDetailed = {
   resource_state: number;
   starred: boolean;
   sub_type: number;
-  created_at: string; // ISO 8601 date string
-  updated_at: string; // ISO 8601 date string
-  timestamp: BigInt;
+  created_at: string;
+  updated_at: string;
+  timestamp: number;
   type: number;
-  estimated_moving_time: BigInt;
+  estimated_moving_time: number;
   waypoints: any[];
+};
+
+export type StravaRouteDetailed = Omit<StravaRouteAPI, "id" | "id_str"> & {
+  id: string;
 };
 
 export type StravaRouteBase = {
   athlete: Pick<StravaAthlete, "id" | "username">;
-  id: BigInt;
-  id_str: string;
+  id: string;
   name: string;
   starred: boolean;
   created_at: string;
@@ -87,7 +90,7 @@ export type StravaRouteBase = {
   distance: number;
   elevation_gain: number;
   resource_state: number;
-  timestamp: BigInt;
+  timestamp: number;
   type: number;
   map_urls: StravaMapUrls;
 };
@@ -98,8 +101,7 @@ export type StravaRouteBaseFlat = {
   description: string | null;
   distance: number;
   elevation_gain: number;
-  id: BigInt;
-  id_str: string;
+  id: string;
   map_urls_url: string;
   map_urls_retina_url: string;
   map_urls_light_url: string;
@@ -109,7 +111,7 @@ export type StravaRouteBaseFlat = {
   resource_state: number;
   starred: boolean;
   created_at: string;
-  timestamp: BigInt;
+  timestamp: number;
   type: number;
 };
 
@@ -137,8 +139,7 @@ export type StravaRouteDetailedFlat = {
   description: string | null;
   distance: number;
   elevation_gain: number;
-  id: BigInt;
-  id_str: string;
+  id: string;
   map_id: string;
   map_summary_polyline: string;
   map_resource_state: number;
@@ -153,9 +154,9 @@ export type StravaRouteDetailedFlat = {
   sub_type: number;
   created_at: string;
   updated_at: string;
-  timestamp: BigInt;
+  timestamp: number;
   type: number;
-  estimated_moving_time: BigInt;
+  estimated_moving_time: number;
   waypoints: any[];
 };
 

@@ -27,8 +27,8 @@ export const useRouteItemDetails = () => {
       }
 
       log.info("useRouteItemDetails", "Fetching route", { params });
-      // @ts-ignore
-      const routeId: BigInt = params.route as BigInt;
+      // @ts-ignore TODO improve this shit
+      const routeId: string = params.route as string;
 
       const routesPromise = await getStravaRoutesDetailedFromDb(db)(athleteId, {
         routeIds: [routeId],

@@ -29,9 +29,6 @@ export const useAppProvider = () => {
 
   useEffect(() => {
     const run = async () => {
-      const athleteId = await getFromLocalSecureStorage<number>(SECURE.USER_ID);
-      setAthleteId(athleteId);
-
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
 
       log.debug("useApp", `useEffect`, {
@@ -48,7 +45,7 @@ export const useAppProvider = () => {
         fontLoaded &&
         !isAuthenticating &&
         isStravaAuthed &&
-        Number(athleteId) > 0
+        athleteId > 0
       ) {
         log.debug(
           "useApp",
@@ -71,8 +68,13 @@ export const useAppProvider = () => {
   }, [loading, fontLoaded, isAuthenticating, isStravaAuthed]);
 
   const getAthleteId = () => {
-    if (!athleteId) {
-      // TODO: can we in any way make sure athleteId is always a number and not null?
+    if (athleteId === -1) {
+      (async () => {
+        const athleteId = await getFromLocalSecureStorage<number>(
+          SECURE.USER_ID,
+        );
+        setAthleteId(athleteId);
+      })();
     }
     return athleteId;
   };

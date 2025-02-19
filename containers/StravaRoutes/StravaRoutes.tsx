@@ -20,7 +20,7 @@ type StravaRoutesProps = {
 
 export type RouteFilters =
   | {
-      routeIds?: BigInt[];
+      routeIds?: string[];
     }
   | undefined;
 
@@ -53,7 +53,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
           <ThemedText>No routes available.</ThemedText>
           <Button
             title="Refresh"
-            onPress={() => {}}
+            onPress={onRefresh}
             accessibilityLabel="This will pull in your latest routes from Strava."
           />
         </View>

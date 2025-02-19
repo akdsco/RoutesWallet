@@ -4,7 +4,6 @@ import {
 } from "@/integrations/strava";
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
-import { getFromLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { getStravaRoutesBaseFromDb } from "@/db/methods";
 import { useApp } from "@/hooks";
@@ -14,6 +13,7 @@ import { log } from "@/library/logger";
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();
   const { athleteId } = useApp();
+
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [routes, setRoutes] = useState<StravaRouteBase[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +28,11 @@ export const useRoutes = (filter: RouteFilters) => {
         athleteId,
         result,
       });
-      Toast("error", "Synchronising routes failed", result.error);
+      Toast(
+        "error",
+        "Synchronising routes failed",
+        "Try again later or get in touch if this error persists",
+      );
       setRefreshing(false);
       return;
     }
@@ -49,9 +53,7 @@ export const useRoutes = (filter: RouteFilters) => {
 
   useEffect(() => {
     const run = async () => {
-      const athleteId = await getFromLocalSecureStorage<number>(SECURE.USER_ID);
       const routes = await getStravaRoutesBaseFromDb(db)(athleteId, filter);
-
       setRoutes(routes);
     };
 

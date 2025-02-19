@@ -275,11 +275,11 @@ export const getOrderedRawTagsFromDb =
   };
 
 export const assignTagToRoute =
-  (db: SQLiteDatabase) => async (tagId: number, routeId: BigInt) => {
+  (db: SQLiteDatabase) => async (tagId: number, routeId: string) => {
     const query = `INSERT INTO ${tables.routeTagAssignments} (route_id, tag_id) VALUES (?, ?) ON CONFLICT(route_id, tag_id) DO NOTHING`;
 
     try {
-      await db.runAsync(query, [routeId.toString(), tagId]);
+      await db.runAsync(query, [routeId, tagId]);
       logDb.debug(tables.routeTagAssignments, query, { routeId, tagId });
     } catch (error) {
       logDb.error(tables.routeTagAssignments, query, { routeId, tagId, error });
@@ -287,7 +287,7 @@ export const assignTagToRoute =
   };
 
 export const getAssignedTagsForRoute =
-  (db: SQLiteDatabase) => async (routeId: BigInt) => {
+  (db: SQLiteDatabase) => async (routeId: string) => {
     const query = `
       SELECT 
         rt.id, 
@@ -304,9 +304,7 @@ export const getAssignedTagsForRoute =
 
     try {
       logDb.debug(tables.routeTags, query, { routeId });
-      return await db.getAllAsync<TagWithAssignment>(query, [
-        routeId.toString(),
-      ]);
+      return await db.getAllAsync<TagWithAssignment>(query, [routeId]);
     } catch (error) {
       logDb.error(tables.routeTags, query, { routeId, error });
       throw error;
@@ -314,11 +312,11 @@ export const getAssignedTagsForRoute =
   };
 
 export const removeTagFromRoute =
-  (db: SQLiteDatabase) => async (tagId: number, routeId: BigInt) => {
+  (db: SQLiteDatabase) => async (tagId: number, routeId: string) => {
     const query = `DELETE FROM ${tables.routeTagAssignments} WHERE tag_id = ? AND route_id = ?`;
 
     try {
-      await db.runAsync(query, [tagId, routeId.toString()]);
+      await db.runAsync(query, [tagId, routeId]);
       logDb.debug(tables.routeTagAssignments, query, { tagId, routeId });
     } catch (error) {
       logDb.error(tables.routeTagAssignments, query, { tagId, routeId, error });

@@ -67,8 +67,7 @@ export const createStravaRouteTable = `
     description TEXT,
     distance REAL NOT NULL,
     elevation_gain REAL NOT NULL,
-    id BIGINT PRIMARY KEY NOT NULL,
-    id_str TEXT NOT NULL,
+    id TEXT PRIMARY KEY NOT NULL,
     map_id TEXT NOT NULL,
     map_urls_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -78,9 +77,9 @@ export const createStravaRouteTable = `
     sub_type INTEGER NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    timestamp BIGINT NOT NULL,
+    timestamp INTEGER NOT NULL,
     type INTEGER NOT NULL,
-    estimated_moving_time BIGINT NOT NULL,
+    estimated_moving_time INTEGER NOT NULL,
     waypoints TEXT,
     FOREIGN KEY (athlete_id) REFERENCES StravaAthlete(id),
     FOREIGN KEY (map_id) REFERENCES StravaMap(id) ON DELETE CASCADE,
@@ -116,7 +115,7 @@ export const createAthleteTagOrderTable = `
 
 export const createRouteTagAssignmentsTable = `
   CREATE TABLE IF NOT EXISTS ${tables.routeTagAssignments} (
-    route_id BIGINT NOT NULL,
+    route_id TEXT NOT NULL,
     tag_id INTEGER NOT NULL,
     assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (route_id, tag_id),

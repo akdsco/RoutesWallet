@@ -14,8 +14,8 @@ export const insertStravaRoutesInDb =
   async (athleteId: number, routes: StravaRouteDetailed[]) => {
     const insertStravaRoutesSQL = `
         INSERT OR REPLACE INTO ${tables.stravaRoute} (
-          athlete_id, description, distance, elevation_gain, id, id_str, map_id, map_urls_id, name, private, resource_state, starred, sub_type, created_at, updated_at, timestamp, type, estimated_moving_time, waypoints
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          athlete_id, description, distance, elevation_gain, id, map_id, map_urls_id, name, private, resource_state, starred, sub_type, created_at, updated_at, timestamp, type, estimated_moving_time, waypoints
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
     const queryStravaMap = `INSERT OR REPLACE INTO ${tables.stravaMap} (id, summary_polyline, resource_state) VALUES (?, ?, ?);`;
@@ -25,13 +25,12 @@ export const insertStravaRoutesInDb =
 
     try {
       for (const route of routes) {
-        const routePromise = db.runAsync(insertStravaRoutesSQL, [
+        const routeData = [
           athleteId,
           route.description,
           route.distance,
           route.elevation_gain,
-          route.id.toString(),
-          route.id_str,
+          route.id,
           route.map.id,
           route.map_urls.url,
           route.name,
@@ -45,7 +44,8 @@ export const insertStravaRoutesInDb =
           route.type,
           route.estimated_moving_time.toString(),
           JSON.stringify(route.waypoints),
-        ]);
+        ];
+        const routePromise = db.runAsync(insertStravaRoutesSQL, routeData);
 
         const mapPromise = db.runAsync(queryStravaMap, [
           route.map.id,
@@ -201,7 +201,6 @@ const toDetailedStravaRoutes = (
       weight: routeData.athlete_weight,
     },
     id: routeData.id,
-    id_str: routeData.id_str,
     name: routeData.name,
     starred: routeData.starred,
     created_at: routeData.created_at,
@@ -244,7 +243,6 @@ export const getStravaRoutesBaseFromDb =
         sr.distance AS distance,
         sr.elevation_gain AS elevation_gain,
         sr.id AS id,
-        sr.id_str AS id_str,
         smu.url AS map_urls_url,
         smu.retina_url AS map_urls_retina_url,
         smu.light_url AS map_urls_light_url,
@@ -268,7 +266,7 @@ export const getStravaRoutesBaseFromDb =
     if (filters?.routeIds && filters.routeIds.length > 0) {
       const placeholders = filters.routeIds.map(() => "?").join(", ");
       query += ` AND sr.id IN (${placeholders})`;
-      params.push(...filters.routeIds.map((x) => x.toString()));
+      params.push(...filters.routeIds);
     }
 
     try {
@@ -288,6 +286,7 @@ export const getStravaRoutesBaseFromDb =
 
       return routes;
     } catch (error) {
+      // TODO: error like this should be better logged, figure out way to extract error message/stack etc and reuse it in each log?
       logDb.error(tables.stravaRoute, query, { athleteId });
       throw error;
     }
@@ -298,7 +297,6 @@ const toBaseStravaRoutes = (
 ): StravaRouteBase => {
   return {
     id: routeData.id,
-    id_str: routeData.id_str,
     name: routeData.name,
     description: routeData.description,
     distance: routeData.distance,
@@ -326,7 +324,7 @@ export const getStravaRouteIdsFromDb =
     const query = `SELECT id FROM ${tables.stravaRoute} WHERE athlete_id = ?`;
 
     try {
-      const result = await db.getAllAsync<{ id: BigInt }>(query, [athleteId]);
+      const result = await db.getAllAsync<{ id: string }>(query, [athleteId]);
       logDb.debug(tables.stravaRoute, query, { result, athleteId });
 
       return result.map(({ id }) => id);
@@ -337,7 +335,7 @@ export const getStravaRouteIdsFromDb =
   };
 
 export const removeStravaRoutesFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number, routeIds: BigInt[]) => {
+  (db: SQLiteDatabase) => async (athleteId: number, routeIds: string[]) => {
     if (routeIds.length === 0) {
       log.debug("removeStravaRoutesFromDb", "No routes to remove", {
         athleteId,
@@ -347,19 +345,17 @@ export const removeStravaRoutesFromDb =
     }
 
     const placeholders = routeIds.map(() => "?").join(", ");
-    const routeIdsAsStrings = routeIds.map((id) => id.toString());
 
     const query = `DELETE FROM ${tables.stravaRoute} WHERE athlete_id = ? AND id IN (${placeholders})`;
 
     try {
-      await db.runAsync(query, [athleteId, ...routeIdsAsStrings]);
+      await db.runAsync(query, [athleteId, ...routeIds]);
       logDb.debug(tables.stravaRoute, query, { athleteId, routeIds });
     } catch (error) {
       logDb.error(tables.stravaRoute, query, {
         error,
         athleteId,
         routeIds,
-        routeIdsAsStrings,
         placeholders,
       });
       throw error;
@@ -375,7 +371,6 @@ export const fromDetailedToBaseRoute = (
       username: route.athlete.username,
     },
     id: route.id,
-    id_str: route.id_str,
     name: route.name,
     starred: route.starred,
     created_at: route.created_at,
