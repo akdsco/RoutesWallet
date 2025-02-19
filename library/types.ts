@@ -1,6 +1,6 @@
-export type FunctionCall = () => Promise<void>;
+import { StravaRouteBase } from "@/integrations/strava";
 
-export type ExpectedError = { error: string };
+export type FunctionCall = () => Promise<void>;
 
 export type RawTag = {
   id: number;
@@ -18,7 +18,7 @@ export type TagWithAssignment = RawTag & {
 };
 
 export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (tag: RawTag) => DbOperationResult;
+export type UpdateTag = (tag: RawTag) => DbOperationResult<void>;
 
 export type AthleteTagOrder = {
   athlete_id: number;
@@ -26,10 +26,13 @@ export type AthleteTagOrder = {
   order_position: number;
 };
 
-export type DbOperationResult = Promise<void | ExpectedError>;
-
 export type RouteInsertStats = {
-  existingInDb: number;
-  inserted: number;
-  newRoutesSaved: number;
+  totalRoutes: number;
+  routes: StravaRouteBase[];
 };
+
+export type ExpectedError = { success: false; error: string };
+
+export type SuccessResult<T> = { success: true; data: T };
+
+export type DbOperationResult<T> = Promise<SuccessResult<T> | ExpectedError>;

@@ -25,7 +25,7 @@ export const useAddTag = (checkTags: FunctionCall) => {
 
     const tagInsetResult = await handleRouteTagInsert(db)(athleteId, tagName);
 
-    if (tagInsetResult) {
+    if (!tagInsetResult.success) {
       Toast("error", "Error adding tag", tagInsetResult.error);
       return;
     }

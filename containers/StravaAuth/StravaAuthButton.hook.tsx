@@ -75,8 +75,8 @@ export const useStravaAuthButton = () => {
             setInProgress(false);
             Toast(
               "warning",
-              "Selected permissions are not valid",
-              "Please allow access to read all activities",
+              "Permissions required",
+              "Access to read all activities is essential to get your routes",
             );
             return router.navigate("/sign-in");
           }

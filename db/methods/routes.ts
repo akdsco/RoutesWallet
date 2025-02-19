@@ -321,18 +321,70 @@ const toBaseStravaRoutes = (
   };
 };
 
-export const countStravaRoutesInDb =
+export const getStravaRouteIdsFromDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `SELECT COUNT(*) as count FROM ${tables.stravaRoute} WHERE athlete_id = ?`;
+    const query = `SELECT id FROM ${tables.stravaRoute} WHERE athlete_id = ?`;
 
     try {
-      const result = await db.getFirstAsync<{ count: number }>(query, [
-        athleteId,
-      ]);
+      const result = await db.getAllAsync<{ id: BigInt }>(query, [athleteId]);
       logDb.debug(tables.stravaRoute, query, { result, athleteId });
-      return result?.count || 0;
+
+      return result.map(({ id }) => id);
     } catch (error) {
       logDb.error(tables.stravaRoute, query, { error, athleteId });
       throw error;
     }
   };
+
+export const removeStravaRoutesFromDb =
+  (db: SQLiteDatabase) => async (athleteId: number, routeIds: BigInt[]) => {
+    if (routeIds.length === 0) {
+      log.debug("removeStravaRoutesFromDb", "No routes to remove", {
+        athleteId,
+        routeIds,
+      });
+      return;
+    }
+
+    const placeholders = routeIds.map(() => "?").join(", ");
+    const routeIdsAsStrings = routeIds.map((id) => id.toString());
+
+    const query = `DELETE FROM ${tables.stravaRoute} WHERE athlete_id = ? AND id IN (${placeholders})`;
+
+    try {
+      await db.runAsync(query, [athleteId, ...routeIdsAsStrings]);
+      logDb.debug(tables.stravaRoute, query, { athleteId, routeIds });
+    } catch (error) {
+      logDb.error(tables.stravaRoute, query, {
+        error,
+        athleteId,
+        routeIds,
+        routeIdsAsStrings,
+        placeholders,
+      });
+      throw error;
+    }
+  };
+
+export const fromDetailedToBaseRoute = (
+  route: StravaRouteDetailed,
+): StravaRouteBase => {
+  return {
+    athlete: {
+      id: route.athlete.id,
+      username: route.athlete.username,
+    },
+    id: route.id,
+    id_str: route.id_str,
+    name: route.name,
+    starred: route.starred,
+    created_at: route.created_at,
+    description: route.description,
+    distance: route.distance,
+    elevation_gain: route.elevation_gain,
+    resource_state: route.resource_state,
+    timestamp: route.timestamp,
+    type: route.type,
+    map_urls: route.map_urls,
+  };
+};

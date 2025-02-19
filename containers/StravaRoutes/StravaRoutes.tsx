@@ -26,8 +26,8 @@ export type RouteFilters =
 
 export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
-  const { loading } = useApp();
-  const { refreshing, onRefresh, loadingRoutes, routes } = useRoutes(filter);
+  const { loading: loadingApp } = useApp();
+  const { loadingRoutes, refreshing, onRefresh, routes } = useRoutes(filter);
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -40,7 +40,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
   const maxWidth = Math.min(width, 1200);
   const itemWidth = (maxWidth - 20) / numColumns - 10; // 20 px for container padding, 10 px for item margin
 
-  if (loading || loadingRoutes) {
+  if (loadingApp || loadingRoutes) {
     return <Loader />;
   }
 

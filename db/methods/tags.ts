@@ -32,12 +32,17 @@ export const insertDefaultTagOrderInDb =
 
 export const insertTag =
   (db: SQLiteDatabase) =>
-  async (tagName: string): DbOperationResult => {
+  async (tagName: string): DbOperationResult<void> => {
     const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
 
     try {
       logDb.debug(tables.routeTags, query, { tagName });
       await db.execAsync(query);
+
+      return {
+        success: true,
+        data: undefined,
+      };
     } catch (error) {
       if (isSQLiteError(error)) {
         if (isConstraintError(error)) {
@@ -45,7 +50,7 @@ export const insertTag =
             error: error.message,
             query,
           });
-          return { error: "Tag already exists" };
+          return { success: false, error: "Tag already exists" };
         }
       }
       log.error("insertRouteTag", "Error inserting tag", { error });
@@ -55,12 +60,18 @@ export const insertTag =
 
 export const handleRouteTagInsert =
   (db: SQLiteDatabase) =>
-  async (athleteId: number, tagName: string): DbOperationResult => {
+  async (athleteId: number, tagName: string): DbOperationResult<void> => {
     const insertResult = await insertTag(db)(tagName);
-    if (insertResult) {
+    if (!insertResult.success) {
       return insertResult;
     }
+
     await updateAthleteTagOrderToTop(db)(athleteId, tagName);
+
+    return {
+      success: true,
+      data: undefined,
+    };
   };
 
 const updateAthleteTagOrderToTop =
@@ -214,12 +225,12 @@ export const removeTagFromDb =
 
 export const updateTagInDb =
   (db: SQLiteDatabase) =>
-  async (tag: RawTag, athleteId: number): DbOperationResult => {
+  async (tag: RawTag, athleteId: number): DbOperationResult<void> => {
     const listOfCurrentTags = await getOrderedRawTagsFromDb(db)(athleteId);
     const tagExists = listOfCurrentTags.find(({ name }) => name === tag.name);
 
     if (tagExists) {
-      return { error: "Tag already exists" };
+      return { success: false, error: "Tag already exists" };
     }
 
     const fnName = "updateTagInDb";
@@ -229,6 +240,11 @@ export const updateTagInDb =
       logDb.debug(tables.routeTags, query, { newTag: tag });
       await db.runAsync(query, [tag.name, tag.color, tag.id]);
       log.debug(fnName, `Tag id "${tag.id}" updated`);
+
+      return {
+        success: true,
+        data: undefined,
+      };
     } catch (error) {
       log.error(fnName, "Error updating tag", { error, tag, query });
       throw error;

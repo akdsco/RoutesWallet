@@ -23,18 +23,27 @@ export const useRoutes = (filter: RouteFilters) => {
     log.info("useRoutes:onRefresh", "Refreshing Strava routes");
     const result = await getStravaRoutesAndSaveInDb(db)(athleteId);
 
+    if (!result.success) {
+      log.error("useRoutes:onRefresh", "Error when refreshing Strava routes", {
+        athleteId,
+        result,
+      });
+      Toast("error", "Synchronising routes failed", result.error);
+      setRefreshing(false);
+      return;
+    }
+
     log.info("useRoutes:onRefresh", "Strava routes refreshed", { result });
 
-    const { newRoutesSaved } = result;
-    if (newRoutesSaved > 0) {
-      Toast(
-        "success",
-        "Routes synchronised",
-        `Found ${newRoutesSaved} new route${newRoutesSaved === 1 ? "" : "s"}`,
-      );
-    } else {
-      Toast("info", "Routes synchronised", "No new routes found");
-    }
+    const { totalRoutes, routes } = result.data;
+
+    Toast(
+      "success",
+      "Routes synchronised",
+      `${totalRoutes} route${totalRoutes === 1 ? "" : "s"} available for tagging`,
+    );
+
+    setRoutes(routes);
     setRefreshing(false);
   };
 

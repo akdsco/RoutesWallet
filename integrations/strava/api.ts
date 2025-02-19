@@ -8,16 +8,22 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { saveInLocalSecureStorage, SECURE } from "@/db/secureStore";
 import { log } from "@/library/logger";
 import {
-  countStravaRoutesInDb,
   deleteStravaAuthResponseFromDb,
+  fromDetailedToBaseRoute,
   getStravaAuthFromDb,
+  getStravaRouteIdsFromDb,
   insertDefaultTagOrderInDb,
   insertStravaAthleteInDb,
   insertStravaAuthResponseInDb,
   insertStravaRoutesInDb,
+  removeStravaRoutesFromDb,
 } from "@/db/methods";
 import { AppConfig } from "@/library/config";
-import { RouteInsertStats } from "@/library/types";
+import {
+  DbOperationResult,
+  RouteInsertStats,
+  SuccessResult,
+} from "@/library/types";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -120,34 +126,57 @@ export const fetchAllStravaRoutes =
 
 export const getStravaRoutesAndSaveInDb =
   (db: SQLiteDatabase) =>
-  async (athleteId: number): Promise<RouteInsertStats> => {
+  async (athleteId: number): DbOperationResult<RouteInsertStats> => {
     const fnName = "getStravaRoutesAndSaveInDb";
-    const stravaRoutes = await fetchAllStravaRoutes(db)(athleteId);
 
-    const existingInDb = await countStravaRoutesInDb(db)(athleteId);
+    try {
+      const [currentStravaRoutes, routeIdsInDatabase] = await Promise.all([
+        fetchAllStravaRoutes(db)(athleteId),
+        getStravaRouteIdsFromDb(db)(athleteId),
+      ]);
 
-    if (stravaRoutes.length > 0) {
-      log.debug(fnName, `Saving ${stravaRoutes.length} routes in Db`, {
-        athleteId,
-      });
-      await insertStravaRoutesInDb(db)(athleteId, stravaRoutes);
+      const currentRouteIds = new Set(
+        currentStravaRoutes.map((route) => route.id),
+      );
+      const routeIdsToRemove = [...routeIdsInDatabase].filter(
+        (id) => !currentRouteIds.has(id),
+      );
 
-      log.info(fnName, "Strava routes found and saved in the database", {
-        athleteId,
-      });
-      return {
-        inserted: stravaRoutes.length,
-        existingInDb,
-        newRoutesSaved: stravaRoutes.length - existingInDb,
+      if (routeIdsToRemove.length > 0) {
+        log.debug(
+          fnName,
+          `Removing ${routeIdsToRemove.length} routes from Db`,
+          {
+            athleteId,
+          },
+        );
+        await removeStravaRoutesFromDb(db)(athleteId, routeIdsToRemove);
+      }
+
+      if (currentStravaRoutes.length > 0) {
+        log.debug(fnName, `Saving ${currentStravaRoutes.length} routes in Db`, {
+          athleteId,
+        });
+        await insertStravaRoutesInDb(db)(athleteId, currentStravaRoutes);
+      }
+
+      const result: SuccessResult<RouteInsertStats> = {
+        success: true,
+        data: {
+          totalRoutes: currentStravaRoutes.length,
+          routes: currentStravaRoutes.map(fromDetailedToBaseRoute),
+        },
       };
-    } else {
-      log.debug(fnName, "No routes found in Strava account", {
-        athleteId,
-      });
+
+      log.debug(fnName, "Strava routes sync completed", { athleteId, result });
+
+      return result;
+    } catch (error) {
+      log.error(fnName, "Error while refreshing Strava routes", { error });
+
       return {
-        inserted: 0,
-        existingInDb,
-        newRoutesSaved: 0,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   };
