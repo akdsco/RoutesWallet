@@ -49,7 +49,7 @@ export const Settings = () => {
             accessibilityLabel="This will log you out"
           />
         </View>
-        <View style={{ height: 50, marginBottom: 40, opacity: 0.4 }}>
+        <View style={{ height: 40, marginBottom: 30 }}>
           <PoweredByStrava />
         </View>
       </View>
