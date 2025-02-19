@@ -12,21 +12,36 @@ import {
 
 export const insertDefaultTagOrderInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `
-    INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
-    SELECT ${athleteId} AS athlete_id,
-      id AS tag_id,
-      ROW_NUMBER() OVER (ORDER BY id) AS order_position
-    FROM RouteTags;
-  `;
-    logDb.debug(tables.athleteTagOrder, query, { athleteId });
+    const checkQuery = `SELECT COUNT(*) as count FROM ${tables.athleteTagOrder} WHERE athlete_id = ?;`;
+
     try {
-      await db.execAsync(query);
+      const result = await db.getFirstAsync<{ count: number }>(checkQuery, [
+        athleteId,
+      ]);
+
+      if (result && result.count > 0) {
+        logDb.info(tables.athleteTagOrder, `Order already exists`, {
+          athleteId,
+        });
+        return;
+      }
+
+      const insertQuery = `
+        INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
+        SELECT ? AS athlete_id,
+          id AS tag_id,
+          ROW_NUMBER() OVER (ORDER BY id) AS order_position
+        FROM RouteTags;
+      `;
+
+      logDb.debug(tables.athleteTagOrder, insertQuery, { athleteId });
+      await db.runAsync(insertQuery, [athleteId]);
     } catch (error) {
-      logDb.error(tables.athleteTagOrder, query, {
+      logDb.error(tables.athleteTagOrder, "Error inserting default tag order", {
         athleteId,
         error,
       });
+      throw error;
     }
   };
 
