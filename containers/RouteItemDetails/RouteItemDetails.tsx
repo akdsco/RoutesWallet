@@ -137,7 +137,7 @@ export const RouteItemDetails = () => {
                 }}
               >
                 <ThemedText style={{ marginBottom: 10, alignSelf: "center" }}>
-                  Edit tags
+                  Edit route tags
                 </ThemedText>
                 <BottomSheetView style={{ flex: 1 }}>
                   <BottomSheetFlatList

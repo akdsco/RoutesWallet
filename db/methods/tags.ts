@@ -229,7 +229,7 @@ export const updateTagInDb =
     const listOfCurrentTags = await getOrderedRawTagsFromDb(db)(athleteId);
     const tagExists = listOfCurrentTags.find(({ name }) => name === tag.name);
 
-    if (tagExists) {
+    if (tagExists && tagExists.id !== tag.id) {
       return { success: false, error: "Tag already exists" };
     }
 

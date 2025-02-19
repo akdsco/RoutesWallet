@@ -47,15 +47,12 @@ export const useTagList = () => {
 
   const updateTag: UpdateTag = async (tag) => {
     const dbUpdateResult = await updateTagInDb(db)(tag, athleteId);
-    if (dbUpdateResult) {
-      log.warn("useTagList:updateTag", "Error updating tag", {
-        athleteId,
-        tag,
-        dbUpdateResult,
-      });
+    if (!dbUpdateResult.success) {
       return dbUpdateResult;
     }
     await checkTags();
+
+    return dbUpdateResult;
   };
 
   const checkTags = async () => {

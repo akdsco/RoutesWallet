@@ -80,6 +80,7 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
                 itemWidth={itemWidth}
               />
             ))}
+            {routes.length % 2 === 1 && <View style={{ width: itemWidth }} />}
           </View>
         </View>
       </ScrollView>
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

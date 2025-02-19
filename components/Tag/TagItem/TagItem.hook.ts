@@ -73,8 +73,8 @@ export const useTagItem = (item: TagWithFunctions) => {
       color: editedColor,
     });
 
-    if (updateResult) {
-      Toast("error", updateResult.error, "Use a different tag name");
+    if (!updateResult.success) {
+      Toast("error", "Error when updating tag", updateResult.error);
       return;
     }
 
