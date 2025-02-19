@@ -14,7 +14,7 @@ export default function HomeLayout() {
     try {
       const result = await Share.share({
         message: "🚴‍♀️Strava route 🚴‍",
-        url: `https://www.strava.com/routes/${routeNumber}`,
+        url: "https://www.strava.com/routes/" + routeNumber,
       });
 
       if (result.action === Share.sharedAction) {

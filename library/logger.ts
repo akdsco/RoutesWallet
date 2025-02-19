@@ -78,14 +78,11 @@ const getContext = (context?: object) => {
     return "";
   }
 
-  const data = JSON.stringify(context);
+  const stringifiedObject = JSON.stringify(context);
 
-  // TODO: fix up via env variable?
-  const trimmedData = false
-    ? data.length > 250
-      ? data.slice(0, 250) + "..."
-      : data
-    : data;
-
-  return trimmedData;
+  return AppConfig.DEBUG_MODE_VERBOSE === "true"
+    ? stringifiedObject
+    : stringifiedObject.length > 250
+      ? stringifiedObject.slice(0, 250) + "..."
+      : stringifiedObject;
 };
