@@ -10,15 +10,13 @@ export const saveInLocalSecureStorage = async (key: string, value: string) => {
   await SecureStore.setItemAsync(key, value);
 };
 
-export const getFromLocalSecureStorage = async <T extends string | number>(
+export const getFromLocalSecureStorage = async <
+  T extends string | number | null,
+>(
   key: string,
 ): Promise<T> => {
   const rawValue = await SecureStore.getItemAsync(key);
   log.debug("getUserData", "Secure store GET", { key, rawValue });
-
-  if (rawValue === null) {
-    throw new Error("Value not found in secure store");
-  }
 
   // ✅ If T is a number, cast `rawValue` to a number
   if (typeof ({} as T) === "number") {

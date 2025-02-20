@@ -39,6 +39,10 @@ export const useAppProvider = () => {
 
       setIsStravaAuthed(isStravaAuthed);
 
+      if (athleteId === -1) {
+        router.navigate("/sign-in");
+      }
+
       if (
         !loading &&
         fontLoaded &&
@@ -69,9 +73,14 @@ export const useAppProvider = () => {
   const getAthleteId = () => {
     if (athleteId === -1) {
       (async () => {
-        const athleteId = await getFromLocalSecureStorage<number>(
+        const athleteId = await getFromLocalSecureStorage<number | null>(
           SECURE.USER_ID,
         );
+
+        if (!athleteId) {
+          return;
+        }
+
         setAthleteId(athleteId);
       })();
     }

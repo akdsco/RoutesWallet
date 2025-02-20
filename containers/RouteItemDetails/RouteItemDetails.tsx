@@ -6,7 +6,6 @@ import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
 import { useTheme } from "@/hooks";
 import React, { useRef } from "react";
 import { StravaThemeUrl } from "@/integrations/strava";
-import { useSQLiteContext } from "expo-sqlite";
 import BottomSheet, {
   BottomSheetFlatList,
   BottomSheetView,
@@ -19,7 +18,6 @@ import { TagChip } from "@/components/Tag/TagChip";
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
     useRouteItemDetails();
-  const db = useSQLiteContext();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const themeContext = useTheme();
   const { theme } = themeContext;
