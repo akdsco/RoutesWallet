@@ -306,9 +306,14 @@ const toBaseStravaRoutes = (
     timestamp: routeData.timestamp,
     resource_state: routeData.resource_state,
     type: routeData.type,
+    private: routeData.private,
     athlete: {
       id: routeData.athlete_id,
       username: routeData.athlete_username,
+      // TODO: save each route's athlete details in the db and pull them from db (in the joint query above)
+      firstname: "to-be-saved-in-db-and-pushed",
+      lastname: "to-be-saved-in-db-and-pushed",
+      profile_medium: "to-be-saved-in-db-and-pushed",
     },
     map_urls: {
       url: routeData.map_urls_url,
@@ -369,6 +374,10 @@ export const fromDetailedToBaseRoute = (
     athlete: {
       id: route.athlete.id,
       username: route.athlete.username,
+      // TODO: save each route's athlete details in the db and pull them from db (in the joint query above)
+      firstname: "to-be-saved-in-db-and-pushed",
+      lastname: "to-be-saved-in-db-and-pushed",
+      profile_medium: "to-be-saved-in-db-and-pushed",
     },
     id: route.id,
     name: route.name,
@@ -380,6 +389,7 @@ export const fromDetailedToBaseRoute = (
     resource_state: route.resource_state,
     timestamp: route.timestamp,
     type: route.type,
+    private: route.private,
     map_urls: route.map_urls,
   };
 };

@@ -1,4 +1,5 @@
 export type StravaAthleteBasic = {
+  id: number;
   username: string | null;
   firstname: string;
   lastname: string;
@@ -6,7 +7,6 @@ export type StravaAthleteBasic = {
 };
 
 export type StravaAthlete = StravaAthleteBasic & {
-  id: number;
   resource_state: number;
   bio: string | null;
   city: string;
@@ -33,15 +33,15 @@ export type StravaAuthResponse = {
   athlete: StravaAthlete;
 };
 
-export type StravaDisconnectResponse = {
-  access_token: string;
-} | null;
-
 export type StravaAuthResponseRaw = Omit<StravaAuthResponse, "athlete"> & {
   scope?: string;
 };
 
-type StravaMap = {
+export type StravaDisconnectResponse = {
+  access_token: string;
+} | null;
+
+export type StravaMap = {
   id: string;
   summary_polyline: string;
   resource_state: number;
@@ -54,68 +54,44 @@ type StravaMapUrls = {
   dark_url: string;
 };
 
-export type StravaRouteAPI = {
-  id: BigInt;
-  id_str: string;
-  athlete: StravaAthlete;
+export type StravaThemeUrl = "dark_url" | "light_url";
+
+type StravaRouteCommon = {
+  id: string;
+  name: string;
   description: string | null;
   distance: number;
   elevation_gain: number;
-  map: StravaMap;
-  map_urls: StravaMapUrls;
-  name: string;
-  private: boolean;
   resource_state: number;
-  starred: boolean;
-  sub_type: number;
-  created_at: string;
-  updated_at: string;
   timestamp: number;
   type: number;
+  created_at: string;
+  private: boolean;
+  starred: boolean;
+};
+
+export type StravaRouteAPI = StravaRouteCommon & {
+  id: BigInt;
+  id_str: string;
+  athlete: StravaAthlete;
+  map: StravaMap;
+  map_urls: StravaMapUrls;
+  sub_type: number;
   estimated_moving_time: number;
+  updated_at: string;
   waypoints: any[];
+};
+
+export type StravaRouteBase = StravaRouteCommon & {
+  athlete: StravaAthleteBasic;
+  map_urls: StravaMapUrls;
 };
 
 export type StravaRouteDetailed = Omit<StravaRouteAPI, "id" | "id_str"> & {
   id: string;
 };
 
-export type StravaRouteBase = {
-  athlete: Pick<StravaAthlete, "id" | "username">;
-  id: string;
-  name: string;
-  starred: boolean;
-  created_at: string;
-  description: string | null;
-  distance: number;
-  elevation_gain: number;
-  resource_state: number;
-  timestamp: number;
-  type: number;
-  map_urls: StravaMapUrls;
-};
-
-export type StravaRouteBaseFlat = {
-  athlete_id: number;
-  athlete_username: string | null;
-  description: string | null;
-  distance: number;
-  elevation_gain: number;
-  id: string;
-  map_urls_url: string;
-  map_urls_retina_url: string;
-  map_urls_light_url: string;
-  map_urls_dark_url: string;
-  name: string;
-  private: boolean;
-  resource_state: number;
-  starred: boolean;
-  created_at: string;
-  timestamp: number;
-  type: number;
-};
-
-export type StravaRouteDetailedFlat = {
+export type StravaAthleteFlat = {
   athlete_id: number;
   athlete_username: string | null;
   athlete_resource_state: number;
@@ -136,28 +112,32 @@ export type StravaRouteDetailedFlat = {
   athlete_friend: null;
   athlete_follower: null;
   athlete_weight?: number;
-  description: string | null;
-  distance: number;
-  elevation_gain: number;
-  id: string;
+};
+
+export type StravaMapFlat = {
   map_id: string;
   map_summary_polyline: string;
   map_resource_state: number;
+};
+
+export type StravaMapUrlsFlat = {
   map_urls_url: string;
   map_urls_retina_url: string;
   map_urls_light_url: string;
   map_urls_dark_url: string;
-  name: string;
-  private: boolean;
-  resource_state: number;
-  starred: boolean;
-  sub_type: number;
-  created_at: string;
-  updated_at: string;
-  timestamp: number;
-  type: number;
-  estimated_moving_time: number;
-  waypoints: any[];
 };
 
-export type StravaThemeUrl = "dark_url" | "light_url";
+export type StravaRouteBaseFlat = StravaRouteCommon &
+  StravaMapUrlsFlat & {
+    athlete_id: number;
+    athlete_username: string | null;
+  };
+
+export type StravaRouteDetailedFlat = StravaRouteBaseFlat &
+  StravaAthleteFlat &
+  StravaMapFlat & {
+    sub_type: number;
+    estimated_moving_time: number;
+    updated_at: string;
+    waypoints: any[];
+  };
