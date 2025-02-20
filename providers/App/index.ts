@@ -1,7 +1,7 @@
+import { UpdateFn } from "@/library/types";
+
 export { AppProvider } from "./Provider";
 export { AppContext } from "./Context";
-
-type UpdateFn<T> = (value: T) => void;
 
 export type AppContextType = {
   athleteId: number;
