@@ -80,7 +80,9 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
                 itemWidth={itemWidth}
               />
             ))}
-            {routes.length % 2 === 1 && <View style={{ width: itemWidth }} />}
+            {routes.length % 2 === 1 && (
+              <View style={{ width: itemWidth + 10 }} />
+            )}
           </View>
         </View>
       </ScrollView>
