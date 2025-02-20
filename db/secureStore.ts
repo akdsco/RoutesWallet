@@ -5,6 +5,11 @@ export const SECURE = {
   USER_ID: "USER_ID",
 };
 
+export const removeFromLocalSecureStorage = async (key: string) => {
+  log.debug("removeUserData", "Secure store REMOVE", { key });
+  await SecureStore.deleteItemAsync(key);
+};
+
 export const saveInLocalSecureStorage = async (key: string, value: string) => {
   log.debug("saveUserData", "Secure store SET", { key, value });
   await SecureStore.setItemAsync(key, value);

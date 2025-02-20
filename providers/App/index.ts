@@ -1,12 +1,15 @@
 export { AppProvider } from "./Provider";
 export { AppContext } from "./Context";
 
+type UpdateFn<T> = (value: T) => void;
+
 export type AppContextType = {
   athleteId: number;
+  setAthleteId: UpdateFn<number>;
   loading: boolean;
-  setLoading: (value: boolean) => void;
+  setLoading: UpdateFn<boolean>;
   isAuthenticating: boolean;
-  setIsAuthenticating: (value: boolean) => void;
+  setIsAuthenticating: UpdateFn<boolean>;
   isStravaAuthed: boolean;
-  setIsStravaAuthed: (value: boolean) => void;
+  setIsStravaAuthed: UpdateFn<boolean>;
 };

@@ -4,11 +4,13 @@ import { useSQLiteContext } from "expo-sqlite";
 import { disconnectStrava, StravaAthleteBasic } from "@/integrations/strava";
 import { useEffect, useState } from "react";
 import { getStravaAthleteBasicProfile } from "@/db/methods";
+import { removeFromLocalSecureStorage, SECURE } from "@/db/secureStore";
 
 const fnName = "useSettings";
 
 export const useSettings = () => {
-  const { isStravaAuthed, athleteId, setIsStravaAuthed } = useApp();
+  const { isStravaAuthed, athleteId, setIsStravaAuthed, setAthleteId } =
+    useApp();
   const [userData, setUserData] = useState<StravaAthleteBasic | null>(null);
   const db = useSQLiteContext();
 
@@ -19,15 +21,14 @@ export const useSettings = () => {
   }, []);
 
   const handleDisconnection = async () => {
-    if (!isStravaAuthed || athleteId === 0) {
-      log.info(fnName, "User is not connected to Strava");
-      setIsStravaAuthed(false);
-      return;
-    }
-
     log.info(fnName, "Removing strava authentication");
     await disconnectStrava(db)(athleteId);
+
+    setAthleteId(-1);
+    await removeFromLocalSecureStorage(SECURE.USER_ID);
+
     setIsStravaAuthed(false);
+    log.info(fnName, "User logged out");
   };
 
   return {

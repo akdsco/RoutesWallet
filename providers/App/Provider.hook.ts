@@ -6,8 +6,9 @@ import { checkStravaConnection } from "@/integrations/strava";
 import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import { AppContextType } from "@/providers/App/index";
 
-export const useAppProvider = () => {
+export const useAppProvider = (): AppContextType => {
   const [loading, setLoading] = useState(true);
 
   const db = useSQLiteContext();
@@ -35,6 +36,7 @@ export const useAppProvider = () => {
         loading,
         isAuthenticating,
         isStravaAuthed,
+        athleteId,
       });
 
       setIsStravaAuthed(isStravaAuthed);
@@ -89,6 +91,7 @@ export const useAppProvider = () => {
 
   return {
     athleteId: getAthleteId(),
+    setAthleteId: (value: number) => setAthleteId(value),
     loading,
     setLoading: (value: boolean) => setLoading(value),
     isStravaAuthed,
