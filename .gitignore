@@ -23,3 +23,6 @@ expo-env.d.ts
 # Native App Builds
 /android/
 /ios/
+
+# iOS locally built files
+*.ipa
