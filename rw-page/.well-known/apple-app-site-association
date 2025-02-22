@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [ "PBK4432XP7.tech.akds.routeswallet" ],
+        "components": [
+          {
+            "/": "/authenticate*"
+          }
+        ]
+      }
+    ]
+  }
+}
