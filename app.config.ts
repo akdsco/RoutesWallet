@@ -15,7 +15,7 @@ const config: ExpoConfig = {
     backgroundColor: "#11111f",
   },
   ios: {
-    supportsTablet: true,
+    supportsTablet: false,
     bundleIdentifier: "tech.akds.routeswallet",
     associatedDomains: [
       "applinks:routeswallet.app",

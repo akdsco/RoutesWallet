@@ -68,8 +68,10 @@
     "lint": "expo lint",
     "prebuild": "expo prebuild",
     "build": "eas build --profile development",
-    "build-ios": "eas build --profile development --platform ios",
-    "build-simulator-ios": "eas build -p ios --profile preview",
-    "build-android": "eas build --profile development --platform android"
+    "build-ios": "eas build -p ios --local",
+    "build-ios-developement-device": "npm run build-ios -- --profile development",
+    "build-ios-developement-sim": "npm run build-ios -- --profile development-simulator",
+    "build-ios-preview-device": "npm run build-ios -- --profile preview",
+    "build-ios-preview-sim": "npm run build-ios -- --profile preview-simulator"
   }
 }

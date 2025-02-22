@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useTheme } from "@/hooks";
+import { ShareButton } from "@/components/ShareButton/ShareButton";
 
 export default function Layout() {
   const { theme } = useTheme();
@@ -26,6 +27,7 @@ export default function Layout() {
           headerStyle: { backgroundColor: theme.background },
           headerBackTitle: "Back",
           headerTintColor: theme.tint,
+          headerRight: () => <ShareButton route={route} />,
         })}
       />
     </Stack>
