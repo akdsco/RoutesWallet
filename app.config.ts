@@ -17,6 +17,9 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: "tech.akds.routeswallet",
+    entitlements: {
+      "aps-environment": "production",
+    },
     associatedDomains: [
       "applinks:routeswallet.app",
       "applinks:routeswallet.app",

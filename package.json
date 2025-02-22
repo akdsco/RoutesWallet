@@ -72,6 +72,8 @@
     "build-ios-developement-device": "npm run build-ios -- --profile development",
     "build-ios-developement-sim": "npm run build-ios -- --profile development-simulator",
     "build-ios-preview-device": "npm run build-ios -- --profile preview",
-    "build-ios-preview-sim": "npm run build-ios -- --profile preview-simulator"
+    "build-ios-preview-sim": "npm run build-ios -- --profile preview-simulator",
+    "build-ios-production": "eas build -p ios --profile production",
+    "submit-ios": "eas submit -p ios"
   }
 }

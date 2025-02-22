@@ -21,6 +21,7 @@ const requestConfig = {
   scopes: ["activity:read_all"],
   redirectUri: makeRedirectUri({
     native: AppConfig.STRAVA_REDIRECT_URI,
+    scheme: "routeswallet",
   }),
 };
 
