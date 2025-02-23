@@ -16,13 +16,15 @@ import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
 import { AppConfig } from "@/library/config";
 
+const redirectUri = makeRedirectUri({
+  scheme: "routeswallet",
+  path: AppConfig.STRAVA_REDIRECT_URI,
+});
+
 const requestConfig = {
   clientId: AppConfig.STRAVA_CLIENT_ID,
   scopes: ["activity:read_all"],
-  redirectUri: makeRedirectUri({
-    native: AppConfig.STRAVA_REDIRECT_URI,
-    scheme: "routeswallet",
-  }),
+  redirectUri,
 };
 
 export const useStravaAuthButton = () => {

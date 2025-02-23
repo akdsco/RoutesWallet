@@ -20,10 +20,7 @@ const config: ExpoConfig = {
     entitlements: {
       "aps-environment": "production",
     },
-    associatedDomains: [
-      "applinks:routeswallet.app",
-      "applinks:routeswallet.app",
-    ],
+    associatedDomains: ["applinks:routeswallet.app"],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },
