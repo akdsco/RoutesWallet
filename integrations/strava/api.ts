@@ -25,7 +25,7 @@ import {
   RouteInsertStats,
   SuccessResult,
 } from "@/library/types";
-import { registerUser } from "@/library/analytics";
+import { registerUser } from "@/library/analytics/register";
 import { PostHog } from "posthog-react-native";
 
 export const stravaApiDiscovery = {

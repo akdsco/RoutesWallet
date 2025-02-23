@@ -13,7 +13,7 @@ import { useApp } from "@/hooks";
 import { Toast } from "@/library/Toast";
 import { log } from "@/library/logger";
 import { usePostHog } from "posthog-react-native";
-import { registerUser } from "@/library/analytics";
+import { registerUser } from "@/library/analytics/register";
 
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();

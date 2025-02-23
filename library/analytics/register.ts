@@ -2,6 +2,7 @@ import { PostHog } from "posthog-react-native";
 import { StravaAthleteBasic } from "@/integrations/strava";
 import { log } from "@/library/logger";
 import { isProduction } from "@/library/config";
+import LogRocket from "@logrocket/react-native";
 
 export const registerUser =
   (postHog: PostHog) => async (athlete: StravaAthleteBasic) => {
@@ -19,5 +20,9 @@ export const registerUser =
       $set_once: {
         firstLogin: new Date(),
       },
+    });
+
+    LogRocket.identify(athlete.id.toString(), {
+      name: `${athlete.firstname} ${athlete.lastname}`,
     });
   };

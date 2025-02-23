@@ -1,5 +1,5 @@
 import { AppConfig } from "@/library/config";
-import { postHog } from "@/library/posthog";
+import { postHog } from "@/library/analytics/posthog";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
