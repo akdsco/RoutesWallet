@@ -10,21 +10,26 @@ import Toast from "react-native-toast-message";
 import { toastConfig } from "@/library/Toast";
 import { MenuProvider } from "react-native-popup-menu";
 import { ElementsProvider } from "@/providers/ElementsProvider";
+import { PostHogProvider } from "posthog-react-native";
+import { postHog } from "@/library/posthog";
+import { isProduction } from "@/library/config";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().then();
 
-export default function Layout() {
+export default function Root() {
   return (
     <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
       <AppProvider>
         <AppThemeProvider>
-          <ElementsProvider>
-            <MenuProvider>
-              <Slot />
-              <Toast config={toastConfig} />
-            </MenuProvider>
-          </ElementsProvider>
+          <PostHogProvider client={postHog} autocapture={isProduction}>
+            <ElementsProvider>
+              <MenuProvider>
+                <Slot />
+                <Toast config={toastConfig} />
+              </MenuProvider>
+            </ElementsProvider>
+          </PostHogProvider>
         </AppThemeProvider>
       </AppProvider>
     </SQLiteProvider>

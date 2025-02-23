@@ -5,14 +5,20 @@ import {
 import { useEffect, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
-import { getStravaRoutesBaseFromDb } from "@/db/methods";
+import {
+  getStravaAthleteBasicProfile,
+  getStravaRoutesBaseFromDb,
+} from "@/db/methods";
 import { useApp } from "@/hooks";
 import { Toast } from "@/library/Toast";
 import { log } from "@/library/logger";
+import { usePostHog } from "posthog-react-native";
+import { registerUser } from "@/library/analytics";
 
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();
   const { athleteId } = useApp();
+  const postHog = usePostHog();
 
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [routes, setRoutes] = useState<StravaRouteBase[]>([]);
@@ -55,9 +61,16 @@ export const useRoutes = (filter: RouteFilters) => {
     const run = async () => {
       const routes = await getStravaRoutesBaseFromDb(db)(athleteId, filter);
       setRoutes(routes);
+
+      return await getStravaAthleteBasicProfile(db)(athleteId);
     };
 
-    run().then(() => setLoadingRoutes(false));
+    if (Number(athleteId) > 0) {
+      run().then((athlete) => {
+        setLoadingRoutes(false);
+        registerUser(postHog)(athlete);
+      });
+    }
   }, []);
 
   return {

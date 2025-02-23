@@ -25,6 +25,8 @@ import {
   RouteInsertStats,
   SuccessResult,
 } from "@/library/types";
+import { registerUser } from "@/library/analytics";
+import { PostHog } from "posthog-react-native";
 
 export const stravaApiDiscovery = {
   authorizationEndpoint: "https://www.strava.com/oauth/mobile/authorize",
@@ -33,7 +35,8 @@ export const stravaApiDiscovery = {
 };
 
 export const handleStravaAuthorisation =
-  (db: SQLiteDatabase) => async (code: string, scope: string) => {
+  (db: SQLiteDatabase, postHog: PostHog) =>
+  async (code: string, scope: string) => {
     const { athlete, ...authData } = {
       scope,
       ...(await getStravaAuthResponse(code)),
@@ -57,6 +60,7 @@ export const handleStravaAuthorisation =
     const orderPromise = insertDefaultTagOrderInDb(db)(athlete.id);
 
     await Promise.all([athletePromise, authPromise, orderPromise]);
+    await registerUser(postHog)(athlete);
 
     return athlete.id;
   };

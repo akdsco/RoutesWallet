@@ -69,6 +69,7 @@ const config: ExpoConfig = {
         },
       },
     ],
+    "expo-localization",
   ],
   experiments: {
     typedRoutes: true,
@@ -78,11 +79,13 @@ const config: ExpoConfig = {
     eas: {
       projectId: "6a53160b-99d0-4c40-bed4-00358d699f94",
     },
+    APP_ENV: process.env.APP_ENV,
     DEBUG_MODE: process.env.DEBUG_MODE,
     DEBUG_MODE_VERBOSE: process.env.DEBUG_MODE_VERBOSE,
     STRAVA_CLIENT_ID: process.env.STRAVA_CLIENT_ID,
     STRAVA_CLIENT_SECRET: process.env.STRAVA_CLIENT_SECRET,
     STRAVA_REDIRECT_URI: process.env.STRAVA_REDIRECT_URI,
+    POSTHOG_API_KEY: process.env.POSTHOG_API_KEY,
   },
 };
 

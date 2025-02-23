@@ -1,4 +1,5 @@
 import { AppConfig } from "@/library/config";
+import { postHog } from "@/library/posthog";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -21,8 +22,9 @@ const isDebugModeOn = AppConfig.DEBUG_MODE === "true";
 export const log = {
   debug: (fnName: string, action: string, context?: object) =>
     isDebugModeOn ? logger({ level: "debug", fnName, action, context }) : {},
-  info: (fnName: string, action: string, context?: object) =>
-    logger({ level: "info", fnName, action, context }),
+  info: (fnName: string, action: string, context?: object) => {
+    postHog.capture(action, { fnName, ...context }, { timestamp: new Date() });
+  },
   warn: (fnName: string, action: string, context?: object) =>
     logger({ level: "warn", fnName, action, context }),
   error: (fnName: string, action: string, context?: object) =>

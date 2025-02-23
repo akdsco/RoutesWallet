@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
 import { AppConfig } from "@/library/config";
+import { usePostHog } from "posthog-react-native";
 
 const redirectUri = makeRedirectUri({
   scheme: "routeswallet",
@@ -30,6 +31,7 @@ const requestConfig = {
 export const useStravaAuthButton = () => {
   const fnName = "useStravaAuthButton";
   const db = useSQLiteContext();
+  const postHog = usePostHog();
   const router = useRouter();
   const { setLoading, setIsAuthenticating, setIsStravaAuthed } = useApp();
 
@@ -117,7 +119,10 @@ export const useStravaAuthButton = () => {
         throw new Error("Scope is not as expected");
       }
 
-      const athleteId = await handleStravaAuthorisation(db)(code, scope);
+      const athleteId = await handleStravaAuthorisation(db, postHog)(
+        code,
+        scope,
+      );
       log.info(fnName, "User logged in successfully with Strava", {
         athleteId,
       });
