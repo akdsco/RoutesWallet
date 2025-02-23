@@ -3,11 +3,11 @@ import { AppContextType } from "@/providers/App";
 
 export const AppContext = createContext<AppContextType>({
   athleteId: 0,
-  setAthleteId: (value: number) => undefined,
+  setAthleteId: () => undefined,
   loading: true,
-  setLoading: (value: boolean) => undefined,
+  setLoading: () => undefined,
   isAuthenticating: false,
-  setIsAuthenticating: (value: boolean) => undefined,
+  setIsAuthenticating: () => undefined,
   isStravaAuthed: false,
-  setIsStravaAuthed: (value: boolean) => undefined,
+  setIsStravaAuthed: () => undefined,
 });

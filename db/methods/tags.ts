@@ -337,3 +337,29 @@ export const removeTagFromRoute =
       logDb.error(tables.routeTagAssignments, query, { tagId, routeId, error });
     }
   };
+
+export const getRouteIdsByTagId =
+  (db: SQLiteDatabase) =>
+  async (tagId: number): Promise<string[]> => {
+    try {
+      const query = `SELECT route_id FROM RouteTagAssignments WHERE tag_id = ?`;
+
+      const results = await db.getAllAsync<{ route_id: string }>(query, [
+        tagId,
+      ]);
+
+      const routeIds = results.map(({ route_id }) => route_id);
+
+      log.info("useTaggedRoutes", `Fetched route IDs for tag ${tagId}`, {
+        routeIds,
+      });
+
+      return routeIds;
+    } catch (error) {
+      // TODO: notify user of error?
+      log.error("useTaggedRoutes", "Error fetching route IDs by tag", {
+        error,
+      });
+      return [];
+    }
+  };
