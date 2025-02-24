@@ -7,7 +7,6 @@ import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AppContextType } from "@/providers/App/index";
-import { initLogRocket } from "@/library/analytics/logrocket";
 
 export const useAppProvider = (): AppContextType => {
   const [loading, setLoading] = useState(true);
@@ -20,10 +19,6 @@ export const useAppProvider = (): AppContextType => {
   const [athleteId, setAthleteId] = useState<number>(-1);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
   const [isStravaAuthed, setIsStravaAuthed] = useState<boolean>(false);
-
-  useEffect(() => {
-    initLogRocket();
-  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {

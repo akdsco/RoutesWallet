@@ -70,7 +70,6 @@ const config: ExpoConfig = {
       },
     ],
     "expo-localization",
-    "@logrocket/react-native",
   ],
   experiments: {
     typedRoutes: true,
