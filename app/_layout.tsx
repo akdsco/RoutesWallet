@@ -14,6 +14,9 @@ import { PostHogProvider } from "posthog-react-native";
 import { postHog } from "@/library/analytics/posthog";
 import { isProduction } from "@/library/config";
 
+if (typeof self === "undefined") {
+  (global as any).self = global;
+}
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync().then();
 
