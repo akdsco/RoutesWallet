@@ -5,7 +5,6 @@ import { Button } from "@/components/Button/Buttons";
 import { useSettings } from "@/containers/Settings/Settings.hook";
 import { PoweredByStrava } from "@/components/Logo/PoweredByStrava";
 import { Avatar } from "@rneui/base";
-import * as Sentry from "@sentry/react-native";
 
 export const Settings = () => {
   const { userData, handleDisconnection } = useSettings();
@@ -50,13 +49,6 @@ export const Settings = () => {
             accessibilityLabel="This will log you out"
           />
         </View>
-        <Button
-          title="Try!"
-          onPress={() => {
-            Sentry.captureException(new Error("First error"));
-          }}
-          accessibilityLabel=""
-        />
         <View style={{ height: 40, marginBottom: 30 }}>
           <PoweredByStrava />
         </View>
