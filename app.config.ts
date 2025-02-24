@@ -70,6 +70,14 @@ const config: ExpoConfig = {
       },
     ],
     "expo-localization",
+    [
+      "@sentry/react-native/expo",
+      {
+        url: "https://sentry.io/",
+        project: "react-native",
+        organization: "routes-wallet",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

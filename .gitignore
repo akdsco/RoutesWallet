@@ -26,3 +26,4 @@ expo-env.d.ts
 
 # iOS locally built files
 *.ipa
+.env.local

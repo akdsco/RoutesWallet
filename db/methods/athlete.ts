@@ -1,6 +1,6 @@
 import { SQLiteDatabase } from "expo-sqlite";
 import { StravaAthlete, StravaAthleteBasic } from "@/integrations/strava";
-import { logDb } from "@/library/logger";
+import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 
 export const insertStravaAthleteInDb =
@@ -72,15 +72,16 @@ export const getStravaAthleteBasicProfile =
   async (athleteId: number): Promise<StravaAthleteBasic> => {
     const fnName = "getStravaAthleteProfileData";
 
-    const query = `SELECT username, firstname, lastname, profile_medium FROM ${tables.stravaAthlete} WHERE id = ?`;
+    const query = `SELECT id, username, firstname, lastname, profile_medium FROM ${tables.stravaAthlete} WHERE id = ?`;
     logDb.debug(tables.stravaAthlete, query, { athleteId, fnName });
 
     try {
       const userData = await db.getFirstAsync<StravaAthleteBasic>(query, [
         athleteId,
       ]);
-      if (!userData) {
-        throw new Error(`User with id ${athleteId} not found`);
+      if (!userData || !userData.id) {
+        log.error(fnName, `User with id ${athleteId} not found`, { userData });
+        throw new Error(`Problem with data for user with id ${athleteId}`);
       }
 
       return userData;
