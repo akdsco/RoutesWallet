@@ -3,9 +3,11 @@ import { useTheme } from "@/hooks/useTheme";
 import { Platform, SafeAreaView, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-type ContainerProps = PropsWithChildren;
+type ContainerProps = PropsWithChildren & {
+  noCenter?: boolean;
+};
 
-const Container = ({ children }: ContainerProps) => {
+const Container = ({ children, noCenter }: ContainerProps) => {
   const { theme } = useTheme();
 
   return (
@@ -15,7 +17,7 @@ const Container = ({ children }: ContainerProps) => {
           display: "flex",
           flexGrow: 1,
           backgroundColor: theme.background,
-          alignItems: "center",
+          alignItems: noCenter ? undefined : "center",
           marginTop: Platform.OS === "android" ? 30 : undefined,
         }}
       >

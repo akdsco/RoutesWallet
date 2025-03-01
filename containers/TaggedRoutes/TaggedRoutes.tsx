@@ -35,5 +35,7 @@ export const TaggedRoutes = () => {
     );
   }
 
-  return <StravaRoutes route="tags/tagged-routes/" filter={{ routeIds }} />;
+  return (
+    <StravaRoutes route="tags/tagged-routes/" filter={{ routeIds }} noRefresh />
+  );
 };

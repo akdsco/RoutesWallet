@@ -1,8 +1,9 @@
 import Container from "@/components/Container";
 import {
+  FlatList,
   RefreshControl,
-  ScrollView,
-  StyleSheet,
+  RefreshControlProps,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -12,10 +13,12 @@ import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useApp } from "@/hooks";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
+import { ReactElement } from "react";
 
 type StravaRoutesProps = {
   route: string;
   filter?: RouteFilters;
+  noRefresh?: boolean;
 };
 
 export type RouteFilters =
@@ -24,7 +27,11 @@ export type RouteFilters =
     }
   | undefined;
 
-export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
+export const StravaRoutes = ({
+  route,
+  filter,
+  noRefresh,
+}: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
   const { loading: loadingApp } = useApp();
   const { loadingRoutes, refreshing, onRefresh, routes } = useRoutes(filter);
@@ -61,49 +68,33 @@ export const StravaRoutes = ({ route, filter }: StravaRoutesProps) => {
     );
   }
 
+  const refreshControl: ReactElement<RefreshControlProps> | undefined =
+    noRefresh ? undefined : (
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    );
+
+  const SearchInput = () => (
+    <View style={{ padding: 5 }}>
+      <TextInput
+        placeholder="Search..."
+        onChangeText={() => console.log("Search")}
+        style={{ borderWidth: 1, borderColor: "#999", padding: 8 }}
+      />
+    </View>
+  );
+
   return (
-    <Container>
-      <ScrollView
-        contentContainerStyle={styles.scrollViewContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <View style={styles.innerContainer}>
-          {/* // TODO: Potentially move to FlatList for mobile devices only */}
-          <View style={styles.gridContainer}>
-            {routes.map((item) => (
-              <RouteListItem
-                key={`${route}-${item.id.toString()}`}
-                route={route}
-                item={item}
-                itemWidth={itemWidth}
-              />
-            ))}
-            {routes.length % 2 === 1 && (
-              <View style={{ width: itemWidth + 10 }} />
-            )}
-          </View>
-        </View>
-      </ScrollView>
+    <Container noCenter>
+      <FlatList
+        keyExtractor={({ id }) => id}
+        data={routes}
+        renderItem={({ item }) => (
+          <RouteListItem {...{ item, route, itemWidth }} />
+        )}
+        ListHeaderComponent={<SearchInput />}
+        refreshControl={refreshControl}
+        numColumns={2}
+      />
     </Container>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingVertical: 15,
-  },
-  innerContainer: {
-    flex: 1,
-    maxWidth: 1200,
-    width: "100%",
-  },
-  gridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
