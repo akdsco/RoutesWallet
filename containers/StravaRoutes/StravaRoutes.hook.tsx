@@ -14,6 +14,7 @@ import { Toast } from "@/library/Toast";
 import { log } from "@/library/logger";
 import { usePostHog } from "posthog-react-native";
 import { registerUser } from "@/library/analytics/register";
+import Fuse from "fuse.js";
 
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();
@@ -22,7 +23,18 @@ export const useRoutes = (filter: RouteFilters) => {
 
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [routes, setRoutes] = useState<StravaRouteBase[]>([]);
+  const [searchFoundRoutes, setSearchFoundRoutes] = useState<StravaRouteBase[]>(
+    [],
+  );
+  const [isInSearchMode, setIsInSearchMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // TODO: when adding paging, this will need to be updated (so we always pull all routes and search through all)
+  const fuse = new Fuse(routes, {
+    includeScore: true,
+    threshold: 0.4,
+    keys: ["name", "description"],
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -58,7 +70,20 @@ export const useRoutes = (filter: RouteFilters) => {
   };
 
   const executeSearch = async (searchTerm: string) => {
-    console.log("Searching for", searchTerm);
+    const result = fuse.search(searchTerm);
+
+    const foundRoutes = result.map(({ item }) => item);
+
+    log.info("useRoutes: executeSearch", "Routes found", {
+      searchTerm,
+      result,
+    });
+
+    setSearchFoundRoutes(foundRoutes);
+  };
+
+  const onSearchReset = () => {
+    setSearchFoundRoutes([]);
   };
 
   useEffect(() => {
@@ -81,7 +106,10 @@ export const useRoutes = (filter: RouteFilters) => {
     refreshing,
     onRefresh,
     loadingRoutes,
-    routes,
+    routes: isInSearchMode ? searchFoundRoutes : routes,
     executeSearch,
+    onSearchReset,
+    isInSearchMode,
+    setIsInSearchMode: (value: boolean) => setIsInSearchMode(value),
   };
 };

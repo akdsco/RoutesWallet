@@ -34,8 +34,16 @@ export const StravaRoutes = ({
 }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
   const { loading: loadingApp } = useApp();
-  const { loadingRoutes, refreshing, onRefresh, routes, executeSearch } =
-    useRoutes(filter);
+  const {
+    loadingRoutes,
+    refreshing,
+    onRefresh,
+    routes,
+    executeSearch,
+    onSearchReset,
+    isInSearchMode,
+    setIsInSearchMode,
+  } = useRoutes(filter);
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -52,7 +60,7 @@ export const StravaRoutes = ({
     return <Loader />;
   }
 
-  if (routes.length === 0) {
+  if (!isInSearchMode && routes.length === 0) {
     return (
       <Container>
         <View
@@ -82,7 +90,17 @@ export const StravaRoutes = ({
         renderItem={({ item }) => (
           <RouteListItem {...{ item, route, itemWidth }} />
         )}
-        ListHeaderComponent={<SearchInput {...{ executeSearch }} />}
+        ListHeaderComponent={
+          <SearchInput
+            {...{
+              executeSearch,
+              onSearchReset,
+              isInSearchMode,
+              setIsInSearchMode,
+              foundRoutes: routes.length,
+            }}
+          />
+        }
         refreshControl={refreshControl}
         numColumns={2}
       />
