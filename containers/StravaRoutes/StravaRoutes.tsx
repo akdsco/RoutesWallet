@@ -16,6 +16,7 @@ import { Loader } from "@/components/Loader";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 import React, { ReactElement } from "react";
 import { SearchInput } from "@/components/SearchInput/SearchInput";
+import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
 
 type StravaRoutesProps = {
   route: string;
@@ -111,6 +112,7 @@ export const StravaRoutes = ({
         refreshControl={refreshControl}
         numColumns={2}
       />
+      <FiltersButton />
     </Container>
   );
 };
