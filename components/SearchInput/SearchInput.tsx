@@ -1,53 +1,30 @@
 import { Pressable, TextInput, View } from "react-native";
-import { useTheme } from "@/hooks";
-import { useState } from "react";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemedText } from "@/components/ThemedText";
+import { useSearchInput } from "@/components/SearchInput/SearchInput.hook";
 
-type SearchInputProps = {
-  executeSearch: (searchTerm: string) => void;
+export type SearchInputProps = {
   foundRoutes: number;
+  executeSearch: (searchTerm: string) => void;
   onSearchReset: () => void;
   isInSearchMode: boolean;
   setIsInSearchMode: (isInSearchMode: boolean) => void;
 };
 
-export const SearchInput = ({
-  executeSearch,
-  foundRoutes,
-  onSearchReset,
-  isInSearchMode,
-  setIsInSearchMode,
-}: SearchInputProps) => {
-  const { theme } = useTheme();
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const { borderWidth, borderColor } = theme;
-
-  const handleSearch = () => {
-    if (isInSearchMode) {
-      onSearchReset();
-      setSearchTerm("");
-      setIsInSearchMode(false);
-      return;
-    }
-
-    executeSearch(searchTerm);
-    setIsInSearchMode(true);
-  };
-
-  const handleSearchTermChange = (newSearchTerm: string) => {
-    setSearchTerm(newSearchTerm);
-  };
+export const SearchInput = (props: SearchInputProps) => {
+  const { theme, searchTerm, onSearchTermChange, handleSearch } =
+    useSearchInput(props);
+  const { borderColor, borderWidth } = theme;
+  const { foundRoutes, isInSearchMode } = props;
 
   return (
     <View
       style={{
+        flex: 1,
         margin: 5,
         borderColor,
         borderWidth,
         borderRadius: 5,
-        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
@@ -61,22 +38,22 @@ export const SearchInput = ({
         <TextInput
           placeholder="Search..."
           value={searchTerm}
-          onChangeText={handleSearchTermChange}
+          onChangeText={onSearchTermChange}
+          onSubmitEditing={handleSearch}
+          returnKeyType="search"
           style={{
             padding: 12,
+            fontSize: 20,
             color: theme.text,
             width: "80%",
           }}
         />
       )}
-      <Pressable onPress={handleSearch}>
+      <Pressable onPress={handleSearch} style={{ padding: 14 }}>
         <FontAwesome
-          size={20}
+          size={22}
           name={isInSearchMode ? "times" : "search"}
           color={theme.tabIconDefault}
-          style={{
-            marginRight: 8,
-          }}
         />
       </Pressable>
     </View>

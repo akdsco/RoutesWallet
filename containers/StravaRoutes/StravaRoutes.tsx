@@ -1,8 +1,10 @@
 import Container from "@/components/Container";
 import {
   FlatList,
+  Keyboard,
   RefreshControl,
   RefreshControlProps,
+  TouchableWithoutFeedback,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -43,6 +45,7 @@ export const StravaRoutes = ({
     onSearchReset,
     isInSearchMode,
     setIsInSearchMode,
+    isKeyboardVisible,
   } = useRoutes(filter);
 
   const getNumColumns = (screenWidth: number) => {
@@ -84,7 +87,24 @@ export const StravaRoutes = ({
 
   return (
     <Container noCenter>
+      {isKeyboardVisible && (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View
+            style={{
+              position: "absolute",
+              top: 30,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: "auto",
+              zIndex: 10,
+              backgroundColor: "transparent",
+            }}
+          />
+        </TouchableWithoutFeedback>
+      )}
       <FlatList
+        keyboardShouldPersistTaps="handled"
         data={routes}
         keyExtractor={({ id }) => id}
         renderItem={({ item }) => (

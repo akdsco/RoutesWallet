@@ -15,6 +15,7 @@ import { log } from "@/library/logger";
 import { usePostHog } from "posthog-react-native";
 import { registerUser } from "@/library/analytics/register";
 import Fuse from "fuse.js";
+import { Keyboard } from "react-native";
 
 export const useRoutes = (filter: RouteFilters) => {
   const db = useSQLiteContext();
@@ -28,6 +29,22 @@ export const useRoutes = (filter: RouteFilters) => {
   );
   const [isInSearchMode, setIsInSearchMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardShowListener = Keyboard.addListener("keyboardDidShow", () => {
+      setIsKeyboardVisible(true);
+    });
+    const keyboardHideListener = Keyboard.addListener("keyboardDidHide", () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardShowListener.remove();
+      keyboardHideListener.remove();
+    };
+  }, []);
 
   // TODO: when adding paging, this will need to be updated (so we always pull all routes and search through all)
   const fuse = new Fuse(routes, {
@@ -110,6 +127,7 @@ export const useRoutes = (filter: RouteFilters) => {
     executeSearch,
     onSearchReset,
     isInSearchMode,
+    isKeyboardVisible,
     setIsInSearchMode: (value: boolean) => setIsInSearchMode(value),
   };
 };
