@@ -31,19 +31,12 @@ export const SearchInput = ({
       setIsInSearchMode(false);
       return;
     }
+
     executeSearch(searchTerm);
     setIsInSearchMode(true);
   };
 
   const handleSearchTermChange = (newSearchTerm: string) => {
-    if (isInSearchMode) {
-      setIsInSearchMode(false);
-    }
-
-    if (searchTerm !== "" && newSearchTerm === "") {
-      onSearchReset();
-    }
-
     setSearchTerm(newSearchTerm);
   };
 
