@@ -9,14 +9,18 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { RouteListItem } from "./RouteListItem";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
-import React, { ReactElement } from "react";
-import { SearchInput } from "@/components/SearchInput/SearchInput";
+import React, { ReactElement, useRef } from "react";
 import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
+import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { useTheme } from "@/hooks";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
+import { SearchInput } from "@/components/SearchInput/SearchInput";
+import { Theme } from "@/library/theme";
 
 type StravaRoutesProps = {
   route: string;
@@ -36,6 +40,16 @@ export const StravaRoutes = ({
   noRefresh,
 }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const onBottomSheetOpen = () => {
+    console.log("Opening bottom sheet");
+    if (!bottomSheetRef.current) {
+      return;
+    }
+
+    bottomSheetRef.current.expand();
+  };
+
   const {
     loading,
     noRoutesAvailable,
@@ -48,6 +62,8 @@ export const StravaRoutes = ({
     setIsInSearchMode,
     isKeyboardVisible,
   } = useRoutes(filter);
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
 
   const getNumColumns = (screenWidth: number) => {
     if (screenWidth >= 980) return 4; // Desktop and larger tablets
@@ -86,51 +102,86 @@ export const StravaRoutes = ({
 
   return (
     <Container noCenter>
-      {isKeyboardVisible && (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.closeKeyboardOverlay} />
-        </TouchableWithoutFeedback>
-      )}
-      <FlatList
-        keyboardShouldPersistTaps="handled"
-        data={routes}
-        keyExtractor={({ id }) => id}
-        renderItem={({ item }) => (
-          <RouteListItem {...{ item, route, itemWidth }} />
+      <GestureHandlerRootView style={styles.gestureContainer}>
+        {isKeyboardVisible && (
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+          >
+            <View style={styles.closeKeyboardOverlay} />
+          </TouchableWithoutFeedback>
         )}
-        ListHeaderComponent={
-          <SearchInput
-            {...{
-              executeSearch,
-              onSearchReset,
-              isInSearchMode,
-              setIsInSearchMode,
-              foundRoutes: routes.length,
-            }}
-          />
-        }
-        refreshControl={refreshControl}
-        numColumns={2}
-      />
-      <FiltersButton />
+        <FlatList
+          keyboardShouldPersistTaps="handled"
+          data={routes}
+          keyExtractor={({ id }) => id}
+          renderItem={({ item }) => (
+            <RouteListItem {...{ item, route, itemWidth }} />
+          )}
+          ListHeaderComponent={
+            <SearchInput
+              {...{
+                executeSearch,
+                onSearchReset,
+                isInSearchMode,
+                setIsInSearchMode,
+                foundRoutes: routes.length,
+              }}
+            />
+          }
+          refreshControl={refreshControl}
+          numColumns={2}
+        />
+        <FiltersButton expandBottomSheet={onBottomSheetOpen} />
+        <BottomSheet
+          ref={bottomSheetRef}
+          enablePanDownToClose
+          enableDynamicSizing={false}
+          snapPoints={[1, "85%"]}
+          handleStyle={{
+            backgroundColor: theme.contrastBackground,
+            borderTopLeftRadius: 5,
+            borderTopRightRadius: 5,
+          }}
+          handleIndicatorStyle={{
+            backgroundColor: theme.text,
+          }}
+          backgroundStyle={{
+            backgroundColor: theme.contrastBackground,
+          }}
+        >
+          <BottomSheetView style={styles.contentContainer}>
+            <ThemedText>Filters</ThemedText>
+          </BottomSheetView>
+        </BottomSheet>
+      </GestureHandlerRootView>
     </Container>
   );
 };
 
-const styles = StyleSheet.create({
-  noRoutesContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeKeyboardOverlay: {
-    position: "absolute",
-    top: 30,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    pointerEvents: "auto",
-    zIndex: 10,
-    backgroundColor: "transparent",
-  },
-});
+const makeStyles = (theme: Theme) =>
+  StyleSheet.create({
+    gestureContainer: {},
+    contentContainer: {
+      flex: 1,
+      paddingRight: 9,
+      paddingLeft: 9,
+      alignItems: "center",
+      backgroundColor: theme.contrastBackground,
+    },
+    noRoutesContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    closeKeyboardOverlay: {
+      position: "absolute",
+      top: 30,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      pointerEvents: "auto",
+      zIndex: 10,
+      backgroundColor: "transparent",
+    },
+  });
