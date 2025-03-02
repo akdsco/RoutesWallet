@@ -30,6 +30,8 @@ export type Theme = {
     warning: string;
     error: string;
   };
+  borderColor: string;
+  borderWidth: number;
 };
 
 const tintColorLight = "#151617";
@@ -51,6 +53,8 @@ export const theme: Themes = {
       warning: "#dd6b20",
       error: "#ef4444",
     },
+    borderColor: "#e1e1e1",
+    borderWidth: 1,
   },
   dark: {
     text: "#fff",
@@ -67,5 +71,7 @@ export const theme: Themes = {
       warning: "#fbd38d",
       error: "#fecaca",
     },
+    borderColor: "#6c6c6c",
+    borderWidth: 0.3,
   },
 };

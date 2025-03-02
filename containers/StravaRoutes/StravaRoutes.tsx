@@ -3,7 +3,6 @@ import {
   FlatList,
   RefreshControl,
   RefreshControlProps,
-  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -13,7 +12,8 @@ import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useApp } from "@/hooks";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
-import { ReactElement } from "react";
+import React, { ReactElement } from "react";
+import { SearchInput } from "@/components/SearchInput/SearchInput";
 
 type StravaRoutesProps = {
   route: string;
@@ -73,21 +73,11 @@ export const StravaRoutes = ({
       <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
     );
 
-  const SearchInput = () => (
-    <View style={{ padding: 5 }}>
-      <TextInput
-        placeholder="Search..."
-        onChangeText={() => console.log("Search")}
-        style={{ borderWidth: 1, borderColor: "#999", padding: 8 }}
-      />
-    </View>
-  );
-
   return (
     <Container noCenter>
       <FlatList
-        keyExtractor={({ id }) => id}
         data={routes}
+        keyExtractor={({ id }) => id}
         renderItem={({ item }) => (
           <RouteListItem {...{ item, route, itemWidth }} />
         )}

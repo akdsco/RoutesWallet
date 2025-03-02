@@ -12,7 +12,7 @@ import {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
-import { ThemeContextType } from "@/library/theme";
+import { Theme } from "@/library/theme";
 import { TagWithFunctions } from "@/library/types";
 import { useTagItem } from "@/components/Tag/TagItem/TagItem.hook";
 import { useTheme } from "@/hooks";
@@ -33,16 +33,15 @@ export const TagItem = ({
     onEditedTagPress,
   } = useTagItem(item);
 
-  const themeContext = useTheme();
-  const styles = makeStyles(themeContext);
-  const { theme } = themeContext;
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
 
   return (
     <ScaleDecorator>
       <TouchableOpacity
         onLongPress={drag}
         disabled={isActive}
-        style={styles.container}
+        style={[styles.container]}
         onPress={showTaggedRoutes}
       >
         <View style={styles.tagItemContainer}>
@@ -122,14 +121,14 @@ export const TagItem = ({
   );
 };
 
-const makeStyles = ({ colorMode }: ThemeContextType) =>
+const makeStyles = ({ borderWidth }: Theme) =>
   StyleSheet.create({
     container: {
       paddingVertical: 5,
       margin: 3,
       borderRadius: 5,
       borderColor: "#ccc",
-      borderWidth: colorMode === "light" ? 1 : 0.3,
+      borderWidth,
     },
     tagItemContainer: {
       display: "flex",
