@@ -4,6 +4,7 @@ import {
   Keyboard,
   RefreshControl,
   RefreshControlProps,
+  StyleSheet,
   TouchableWithoutFeedback,
   useWindowDimensions,
   View,
@@ -12,7 +13,6 @@ import { RouteListItem } from "./RouteListItem";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
-import { useApp } from "@/hooks";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 import React, { ReactElement } from "react";
 import { SearchInput } from "@/components/SearchInput/SearchInput";
@@ -35,9 +35,9 @@ export const StravaRoutes = ({
   noRefresh,
 }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
-  const { loading: loadingApp } = useApp();
   const {
-    loadingRoutes,
+    loading,
+    noRoutesAvailable,
     refreshing,
     onRefresh,
     routes,
@@ -59,16 +59,14 @@ export const StravaRoutes = ({
   const maxWidth = Math.min(width, 1200);
   const itemWidth = (maxWidth - 10) / numColumns - 10; // 20 px for container padding, 10 px for item margin
 
-  if (loadingApp || loadingRoutes) {
+  if (loading) {
     return <Loader />;
   }
 
-  if (!isInSearchMode && routes.length === 0) {
+  if (noRoutesAvailable) {
     return (
       <Container>
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
+        <View style={styles.noRoutesContainer}>
           <ThemedText>No routes available.</ThemedText>
           <Button
             title="Refresh"
@@ -89,18 +87,7 @@ export const StravaRoutes = ({
     <Container noCenter>
       {isKeyboardVisible && (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View
-            style={{
-              position: "absolute",
-              top: 30,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: "auto",
-              zIndex: 10,
-              backgroundColor: "transparent",
-            }}
-          />
+          <View style={styles.closeKeyboardOverlay} />
         </TouchableWithoutFeedback>
       )}
       <FlatList
@@ -127,3 +114,21 @@ export const StravaRoutes = ({
     </Container>
   );
 };
+
+const styles = StyleSheet.create({
+  noRoutesContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeKeyboardOverlay: {
+    position: "absolute",
+    top: 30,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: "auto",
+    zIndex: 10,
+    backgroundColor: "transparent",
+  },
+});

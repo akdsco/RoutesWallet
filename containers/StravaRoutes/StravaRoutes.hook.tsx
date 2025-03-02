@@ -18,6 +18,7 @@ import Fuse from "fuse.js";
 import { Keyboard } from "react-native";
 
 export const useRoutes = (filter: RouteFilters) => {
+  const { loading: loadingApp } = useApp();
   const db = useSQLiteContext();
   const { athleteId } = useApp();
   const postHog = usePostHog();
@@ -122,7 +123,8 @@ export const useRoutes = (filter: RouteFilters) => {
   return {
     refreshing,
     onRefresh,
-    loadingRoutes,
+    loading: loadingApp || loadingRoutes,
+    noRoutesAvailable: !isInSearchMode && routes.length === 0,
     routes: isInSearchMode ? searchFoundRoutes : routes,
     executeSearch,
     onSearchReset,
