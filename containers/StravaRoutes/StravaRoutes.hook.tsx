@@ -57,6 +57,10 @@ export const useRoutes = (filter: RouteFilters) => {
     setRefreshing(false);
   };
 
+  const executeSearch = async (searchTerm: string) => {
+    console.log("Searching for", searchTerm);
+  };
+
   useEffect(() => {
     const run = async () => {
       const routes = await getStravaRoutesBaseFromDb(db)(athleteId, filter);
@@ -78,5 +82,6 @@ export const useRoutes = (filter: RouteFilters) => {
     onRefresh,
     loadingRoutes,
     routes,
+    executeSearch,
   };
 };
