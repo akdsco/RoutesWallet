@@ -45,7 +45,7 @@ export const StravaRoutes = ({
 
   const numColumns = getNumColumns(width);
   const maxWidth = Math.min(width, 1200);
-  const itemWidth = (maxWidth - 20) / numColumns - 10; // 20 px for container padding, 10 px for item margin
+  const itemWidth = (maxWidth - 10) / numColumns - 10; // 20 px for container padding, 10 px for item margin
 
   if (loadingApp || loadingRoutes) {
     return <Loader />;
@@ -81,7 +81,7 @@ export const StravaRoutes = ({
         renderItem={({ item }) => (
           <RouteListItem {...{ item, route, itemWidth }} />
         )}
-        ListHeaderComponent={<SearchInput />}
+        ListHeaderComponent={SearchInput}
         refreshControl={refreshControl}
         numColumns={2}
       />
