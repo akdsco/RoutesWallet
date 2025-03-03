@@ -56,16 +56,20 @@ type StravaMapUrls = {
 
 export type StravaThemeUrl = "dark_url" | "light_url";
 
-type StravaRouteCommon = {
+export type StravaRouteCommonFilterable = {
+  distance: number;
+  elevation_gain: number;
+  created_at: string;
+  estimated_moving_time: number;
+};
+
+type StravaRouteCommon = StravaRouteCommonFilterable & {
   id: string;
   name: string;
   description: string | null;
-  distance: number;
-  elevation_gain: number;
   resource_state: number;
   timestamp: number;
   type: number;
-  created_at: string;
   private: boolean;
   starred: boolean;
 };
@@ -77,7 +81,6 @@ export type StravaRouteAPI = StravaRouteCommon & {
   map: StravaMap;
   map_urls: StravaMapUrls;
   sub_type: number;
-  estimated_moving_time: number;
   updated_at: string;
   waypoints: any[];
 };
@@ -137,7 +140,6 @@ export type StravaRouteDetailedFlat = StravaRouteBaseFlat &
   StravaAthleteFlat &
   StravaMapFlat & {
     sub_type: number;
-    estimated_moving_time: number;
     updated_at: string;
     waypoints: any[];
   };
