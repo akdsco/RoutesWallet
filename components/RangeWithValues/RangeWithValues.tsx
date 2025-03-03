@@ -2,25 +2,38 @@ import { RangeSlider } from "@/components/RangeSlider/RangeSlider";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
 import { RangeProps } from "@/library/types";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks";
 
-type RangeWithValuesProps = RangeProps & {
+type RangeWithLabelsProps = RangeProps & {
   rangeTitle: string;
-  unitName: string;
+  unitLabel: string;
+  iconLabel: "bicycle" | "trending-up-outline" | "time-outline";
 };
 
 export const RangeWithValues = ({
   rangeTitle,
-  unitName,
+  unitLabel,
+  iconLabel,
   range,
   onRangeChange,
-}: RangeWithValuesProps) => {
+}: RangeWithLabelsProps) => {
+  const { theme } = useTheme();
   return (
     <View style={styles.container}>
-      <ThemedText>{rangeTitle}</ThemedText>
+      <View style={styles.labelContainer}>
+        <Ionicons
+          name={iconLabel}
+          size={20}
+          color={theme.icon}
+          style={styles.icon}
+        />
+        <ThemedText type="defaultSemiBold">{rangeTitle}</ThemedText>
+      </View>
       <RangeSlider range={range} onRangeChange={onRangeChange} />
       <View style={styles.valuesAndUnitContainer}>
-        <ThemedText>{`${range[0]} ${unitName}`}</ThemedText>
-        <ThemedText>{`${range[1]} ${unitName}`}</ThemedText>
+        <ThemedText>{`${range[0]} ${unitLabel}`}</ThemedText>
+        <ThemedText>{`${range[1]} ${unitLabel}`}</ThemedText>
       </View>
     </View>
   );
@@ -28,13 +41,20 @@ export const RangeWithValues = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     minWidth: 250,
     maxWidth: 500,
     width: 330,
+    marginBottom: 16,
+  },
+  labelContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  icon: {
+    marginRight: 7,
   },
   valuesAndUnitContainer: {
-    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
   },

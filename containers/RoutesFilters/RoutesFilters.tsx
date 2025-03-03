@@ -1,13 +1,14 @@
-import { StyleSheet } from "react-native";
-import { ThemedText } from "@/components/ThemedText";
+import { StyleSheet, View } from "react-native";
 import { Theme } from "@/library/theme";
 import { useTheme } from "@/hooks";
 import { useRoutesFilters } from "@/containers/RoutesFilters/RoutesFilters.hook";
 import { RangeWithValues } from "@/components/RangeWithValues/RangeWithValues";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React from "react";
+import { ThemedText } from "@/components/ThemedText";
+import { Button } from "@/components/Button/Buttons";
 
-type RoutesFiltersProps = {
+export type RoutesFiltersProps = {
   bottomSheetRef: React.RefObject<BottomSheet>;
 };
 
@@ -21,7 +22,8 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     onElevationChange,
     movingTimeRange,
     onMovingTimeChange,
-  } = useRoutesFilters();
+    closeBottomSheet,
+  } = useRoutesFilters({ bottomSheetRef });
 
   return (
     <BottomSheet
@@ -36,24 +38,38 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     >
       <BottomSheetView style={styles.sheetViewContainer}>
         <ThemedText>Filters</ThemedText>
-        <RangeWithValues
-          range={distanceRange}
-          rangeTitle="Distance"
-          unitName="km"
-          onRangeChange={onDistanceChange}
-        />
-        <RangeWithValues
-          rangeTitle="Elevation"
-          unitName="m"
-          range={elevationRange}
-          onRangeChange={onElevationChange}
-        />
-        <RangeWithValues
-          rangeTitle="Moving Time"
-          unitName="min"
-          range={movingTimeRange}
-          onRangeChange={onMovingTimeChange}
-        />
+        <View style={styles.generalFilersContainer}>
+          <View>
+            <RangeWithValues
+              range={distanceRange}
+              rangeTitle="Distance"
+              unitLabel="km"
+              iconLabel="bicycle"
+              onRangeChange={onDistanceChange}
+            />
+            <RangeWithValues
+              rangeTitle="Elevation"
+              unitLabel="m"
+              iconLabel="trending-up-outline"
+              range={elevationRange}
+              onRangeChange={onElevationChange}
+            />
+            <RangeWithValues
+              rangeTitle="Moving Time"
+              unitLabel="min"
+              iconLabel="time-outline"
+              range={movingTimeRange}
+              onRangeChange={onMovingTimeChange}
+            />
+          </View>
+          <View>
+            <Button
+              title="Show X routes"
+              onPress={closeBottomSheet}
+              accessibilityLabel=""
+            />
+          </View>
+        </View>
       </BottomSheetView>
     </BottomSheet>
   );
@@ -75,5 +91,13 @@ const makeStyles = (theme: Theme) =>
     sheetViewContainer: {
       flex: 1,
       alignItems: "center",
+    },
+    generalFilersContainer: {
+      flex: 1,
+      paddingBottom: 16,
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "space-between",
+      width: "100%",
     },
   });
