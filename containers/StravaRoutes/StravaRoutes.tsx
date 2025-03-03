@@ -13,14 +13,15 @@ import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
-import React, { ReactElement, useRef } from "react";
+import React, { ReactElement } from "react";
 import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/hooks";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
 import { SearchInput } from "@/components/SearchInput/SearchInput";
 import { Theme } from "@/library/theme";
+import { RoutesFilters } from "@/containers/RoutesFilters/RoutesFilters";
 
 type StravaRoutesProps = {
   route: string;
@@ -40,15 +41,6 @@ export const StravaRoutes = ({
   noRefresh,
 }: StravaRoutesProps) => {
   const { width } = useWindowDimensions();
-  const bottomSheetRef = useRef<BottomSheet>(null);
-  const onBottomSheetOpen = () => {
-    console.log("Opening bottom sheet");
-    if (!bottomSheetRef.current) {
-      return;
-    }
-
-    bottomSheetRef.current.expand();
-  };
 
   const {
     loading,
@@ -61,7 +53,10 @@ export const StravaRoutes = ({
     isInSearchMode,
     setIsInSearchMode,
     isKeyboardVisible,
+    bottomSheetRef,
+    onBottomSheetOpen,
   } = useRoutes(filter);
+
   const { theme } = useTheme();
   const styles = makeStyles(theme);
 
@@ -131,8 +126,6 @@ export const StravaRoutes = ({
           }
           refreshControl={refreshControl}
           numColumns={2}
-          style={styles.flatListStyle}
-          // contentContainerStyle={{ flexGrow: 1 }}
         />
         <FiltersButton expandBottomSheet={onBottomSheetOpen} />
         <BottomSheet
@@ -140,21 +133,11 @@ export const StravaRoutes = ({
           enablePanDownToClose
           enableDynamicSizing={false}
           snapPoints={[1, "85%"]}
-          handleStyle={{
-            backgroundColor: theme.contrastBackground,
-            borderTopLeftRadius: 5,
-            borderTopRightRadius: 5,
-          }}
-          handleIndicatorStyle={{
-            backgroundColor: theme.text,
-          }}
-          backgroundStyle={{
-            backgroundColor: theme.contrastBackground,
-          }}
+          handleStyle={styles.bottomSheetHandleStyle}
+          handleIndicatorStyle={styles.bottomSheetHandleIndicatorStyle}
+          backgroundStyle={styles.bottomSheetBackgroundStyle}
         >
-          <BottomSheetView style={styles.contentContainer}>
-            <ThemedText>Filters</ThemedText>
-          </BottomSheetView>
+          <RoutesFilters />
         </BottomSheet>
       </GestureHandlerRootView>
     </Container>
@@ -166,19 +149,22 @@ const makeStyles = (theme: Theme) =>
     gestureContainer: {
       flex: 1,
     },
-    contentContainer: {
-      flex: 1,
-      paddingRight: 9,
-      paddingLeft: 9,
-      alignItems: "center",
-      backgroundColor: theme.contrastBackground,
-    },
     noRoutesContainer: {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
     },
-    flatListStyle: {},
+    bottomSheetHandleStyle: {
+      backgroundColor: theme.contrastBackground,
+      borderTopLeftRadius: 5,
+      borderTopRightRadius: 5,
+    },
+    bottomSheetHandleIndicatorStyle: {
+      backgroundColor: theme.text,
+    },
+    bottomSheetBackgroundStyle: {
+      backgroundColor: theme.contrastBackground,
+    },
     closeKeyboardOverlay: {
       position: "absolute",
       top: 30,

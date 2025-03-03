@@ -2,7 +2,7 @@ import {
   getStravaRoutesAndSaveInDb,
   StravaRouteBase,
 } from "@/integrations/strava";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSQLiteContext } from "expo-sqlite";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import {
@@ -16,6 +16,7 @@ import { usePostHog } from "posthog-react-native";
 import { registerUser } from "@/library/analytics/register";
 import Fuse from "fuse.js";
 import { Keyboard } from "react-native";
+import BottomSheet from "@gorhom/bottom-sheet";
 
 export const useRoutes = (filter: RouteFilters) => {
   const { loading: loadingApp } = useApp();
@@ -32,6 +33,16 @@ export const useRoutes = (filter: RouteFilters) => {
   const [refreshing, setRefreshing] = useState(false);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const onBottomSheetOpen = () => {
+    if (!bottomSheetRef.current) {
+      return;
+    }
+
+    log.info("useRoutes: onBottomSheetOpen", "Opening filters bottom sheet");
+    bottomSheetRef.current.expand();
+  };
 
   useEffect(() => {
     const keyboardShowListener = Keyboard.addListener("keyboardDidShow", () => {
@@ -131,5 +142,7 @@ export const useRoutes = (filter: RouteFilters) => {
     isInSearchMode,
     isKeyboardVisible,
     setIsInSearchMode: (value: boolean) => setIsInSearchMode(value),
+    bottomSheetRef,
+    onBottomSheetOpen,
   };
 };
