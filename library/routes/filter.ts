@@ -11,97 +11,62 @@ type RouteFilter = {
   endDate?: Date | string;
 };
 
-const filterRoutes = <T extends StravaRouteCommonFilterable>(
+export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   routes: T[],
   filters: RouteFilter,
 ): T[] => {
-  return routes.filter((route) => {
-    const createdAt = new Date(route.created_at);
+  const filterByDistance = (route: T) =>
+    rangeFilter(route.distance, filters.minDistance, filters.maxDistance);
 
-    // Filter by distance
-    if (
-      filters.minDistance !== undefined &&
-      route.distance < filters.minDistance
-    ) {
-      return false;
-    }
-    if (
-      filters.maxDistance !== undefined &&
-      route.distance > filters.maxDistance
-    ) {
-      return false;
-    }
+  const filterByElevation = (route: T) =>
+    rangeFilter(
+      route.elevation_gain,
+      filters.minElevationGain,
+      filters.maxElevationGain,
+    );
 
-    // Filter by elevation_gain
-    if (
-      filters.minElevationGain !== undefined &&
-      route.elevation_gain < filters.minElevationGain
-    ) {
-      return false;
-    }
-    if (
-      filters.maxElevationGain !== undefined &&
-      route.elevation_gain > filters.maxElevationGain
-    ) {
-      return false;
-    }
+  const filterByDate = (route: T) =>
+    dateFilter(route.created_at, filters.startDate, filters.endDate);
 
-    // Filter by created_at (date range)
-    if (filters.startDate !== undefined) {
-      const startDate =
-        typeof filters.startDate === "string"
-          ? new Date(filters.startDate)
-          : filters.startDate;
-      if (createdAt < startDate) {
-        return false;
-      }
-    }
-    if (filters.endDate !== undefined) {
-      const endDate =
-        typeof filters.endDate === "string"
-          ? new Date(filters.endDate)
-          : filters.endDate;
-      if (createdAt > endDate) {
-        return false;
-      }
-    }
+  const filterByEstimatedMovingTime = (route: T) =>
+    rangeFilter(
+      route.estimated_moving_time,
+      filters.minEstimatedMovingTime,
+      filters.maxEstimatedMovingTime,
+    );
 
-    // Filter by estimated_moving_time
-    if (
-      filters.minEstimatedMovingTime !== undefined &&
-      route.estimated_moving_time < filters.minEstimatedMovingTime
-    ) {
-      return false;
-    }
-    if (
-      filters.maxEstimatedMovingTime !== undefined &&
-      route.estimated_moving_time > filters.maxEstimatedMovingTime
-    ) {
-      return false;
-    }
+  const filtersToApply = [
+    filterByDistance,
+    filterByElevation,
+    filterByDate,
+    filterByEstimatedMovingTime,
+  ];
 
-    // If all checks pass, include the route in the results
-    return true;
-  });
+  return routes.filter((route) =>
+    filtersToApply.every((filterFunction) => filterFunction(route)),
+  );
 };
 
-// Example usage:
-const routes: StravaRouteCommonFilterable[] = [
-  {
-    distance: 160820.67,
-    elevation_gain: 2965.83,
-    created_at: "2021-04-15T10:58:09Z",
-    estimated_moving_time: 22912,
-  },
-];
+const rangeFilter = (value: number, min?: number, max?: number): boolean => {
+  if (min !== undefined && value < min) {
+    return false;
+  }
 
-const filters: RouteFilter = {
-  minDistance: 100000,
-  maxDistance: 200000,
-  minElevationGain: 2000,
-  startDate: "2021-01-01T00:00:00Z",
-  maxEstimatedMovingTime: 25000,
+  return !(max !== undefined && value > max);
 };
 
-const filteredRoutes = filterRoutes(routes, filters);
-console.log(filteredRoutes);
+const dateFilter = (
+  dateString: string,
+  startDate?: Date | string,
+  endDate?: Date | string,
+): boolean => {
+  const date = new Date(dateString);
+  const start = startDate ? new Date(startDate) : null;
+  const end = endDate ? new Date(endDate) : null;
+
+  if (start && date < start) {
+    return false;
+  }
+
+  return !(end && date > end);
+};

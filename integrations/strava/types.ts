@@ -57,6 +57,7 @@ type StravaMapUrls = {
 export type StravaThemeUrl = "dark_url" | "light_url";
 
 export type StravaRouteCommonFilterable = {
+  id: string;
   distance: number;
   elevation_gain: number;
   created_at: string;
@@ -64,7 +65,6 @@ export type StravaRouteCommonFilterable = {
 };
 
 type StravaRouteCommon = StravaRouteCommonFilterable & {
-  id: string;
   name: string;
   description: string | null;
   resource_state: number;
