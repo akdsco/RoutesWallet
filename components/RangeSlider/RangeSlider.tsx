@@ -1,13 +1,9 @@
 import { StyleSheet } from "react-native";
 import { RangeSlider as Slider } from "@react-native-assets/slider";
 import { useTheme } from "@/hooks";
+import { RangeProps } from "@/library/types";
 
-type RangeSliderProps = {
-  range: [number, number];
-  onValueChange: (value: [number, number]) => void;
-};
-
-export const RangeSlider = ({ range, onValueChange }: RangeSliderProps) => {
+export const RangeSlider = ({ range, onRangeChange }: RangeProps) => {
   const { theme } = useTheme();
 
   return (
@@ -33,7 +29,7 @@ export const RangeSlider = ({ range, onValueChange }: RangeSliderProps) => {
       thumbSize={18} // The thumb's size in pixel
       thumbImage={undefined} // An image that would represent the thumb
       slideOnTap={true} // If true, touching the slider will update it's value. No need to slide the thumb.
-      onValueChange={onValueChange} // Called each time the value changed. Return false to prevent the value from being updated. The type is (range: [number, number]) => boolean | void
+      onValueChange={onRangeChange} // Called each time the value changed. Return false to prevent the value from being updated. The type is (range: [number, number]) => boolean | void
       onSlidingStart={undefined} // Called when the slider is pressed. The type is (range: [number, number]) => void
       onSlidingComplete={undefined} // Called when the press is released. The type is (range: [number, number]) => void
       CustomThumb={undefined} // Provide your own component to render the thumb. The type is a component: ({ value: number, thumb: 'min' | 'max' }) => JSX.Element

@@ -5,7 +5,6 @@ import { Button } from "@/components/Button/Buttons";
 import { useSettings } from "@/containers/Settings/Settings.hook";
 import { PoweredByStrava } from "@/components/Logo/PoweredByStrava";
 import { Avatar } from "@rneui/base";
-import { RoutesFilters } from "@/containers/RoutesFilters/RoutesFilters";
 
 export const Settings = () => {
   const { userData, handleDisconnection } = useSettings();
@@ -50,7 +49,6 @@ export const Settings = () => {
             accessibilityLabel="This will log you out"
           />
         </View>
-        <RoutesFilters />
         <View style={{ height: 40, marginBottom: 30 }}>
           <PoweredByStrava />
         </View>

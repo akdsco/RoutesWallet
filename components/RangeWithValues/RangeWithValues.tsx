@@ -1,24 +1,23 @@
 import { RangeSlider } from "@/components/RangeSlider/RangeSlider";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
+import { RangeProps } from "@/library/types";
 
-type RangeWithValuesProps = {
+type RangeWithValuesProps = RangeProps & {
   rangeTitle: string;
   unitName: string;
-  range: [number, number];
-  onValueChange: (value: [number, number]) => void;
 };
 
 export const RangeWithValues = ({
   rangeTitle,
   unitName,
   range,
-  onValueChange,
+  onRangeChange,
 }: RangeWithValuesProps) => {
   return (
     <View style={styles.container}>
       <ThemedText>{rangeTitle}</ThemedText>
-      <RangeSlider range={range} onValueChange={onValueChange} />
+      <RangeSlider range={range} onRangeChange={onRangeChange} />
       <View style={styles.valuesAndUnitContainer}>
         <ThemedText>{`${range[0]} ${unitName}`}</ThemedText>
         <ThemedText>{`${range[1]} ${unitName}`}</ThemedText>
@@ -35,6 +34,7 @@ const styles = StyleSheet.create({
     width: 330,
   },
   valuesAndUnitContainer: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
   },

@@ -15,7 +15,6 @@ import { Loader } from "@/components/Loader";
 import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
 import React, { ReactElement } from "react";
 import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
-import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/hooks";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
@@ -128,17 +127,7 @@ export const StravaRoutes = ({
           numColumns={2}
         />
         <FiltersButton expandBottomSheet={onBottomSheetOpen} />
-        <BottomSheet
-          ref={bottomSheetRef}
-          enablePanDownToClose
-          enableDynamicSizing={false}
-          snapPoints={[1, "85%"]}
-          handleStyle={styles.bottomSheetHandleStyle}
-          handleIndicatorStyle={styles.bottomSheetHandleIndicatorStyle}
-          backgroundStyle={styles.bottomSheetBackgroundStyle}
-        >
-          <RoutesFilters />
-        </BottomSheet>
+        <RoutesFilters bottomSheetRef={bottomSheetRef} />
       </GestureHandlerRootView>
     </Container>
   );
@@ -153,17 +142,6 @@ const makeStyles = (theme: Theme) =>
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
-    },
-    bottomSheetHandleStyle: {
-      backgroundColor: theme.contrastBg,
-      borderTopLeftRadius: 5,
-      borderTopRightRadius: 5,
-    },
-    bottomSheetHandleIndicatorStyle: {
-      backgroundColor: theme.text,
-    },
-    bottomSheetBackgroundStyle: {
-      backgroundColor: theme.contrastBg,
     },
     closeKeyboardOverlay: {
       position: "absolute",
