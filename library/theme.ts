@@ -18,11 +18,11 @@ export type ColorMode = "light" | "dark";
 export type Theme = {
   text: string;
   background: string;
-  contrastBackground: string;
+  contrastBg: string;
+  contrastBgSecondary: string;
   tint: string;
   icon: string;
-  tabIconDefault: string;
-  tabIconSelected: string;
+  iconSelected: string;
   shadowColor: string;
   toast: {
     info: string;
@@ -35,18 +35,18 @@ export type Theme = {
 };
 
 const tintColorLight = "#151617";
-const tintColorDark = "#fff";
+const tintColorDark = "rgba(255,255,255,0.88)";
 
 export const theme: Themes = {
   light: {
     text: "#4e535a",
     background: "#fff",
-    contrastBackground: "#efeff1",
+    contrastBg: "#efeff1",
+    contrastBgSecondary: "#b8b8b8",
     tint: tintColorLight,
     shadowColor: "#000",
     icon: "#687076",
-    tabIconDefault: "#687076",
-    tabIconSelected: tintColorLight,
+    iconSelected: tintColorLight,
     toast: {
       info: "#3b82f6",
       success: "#10b981",
@@ -59,12 +59,12 @@ export const theme: Themes = {
   dark: {
     text: "#fff",
     background: "#11111f",
-    contrastBackground: "#1a1a28",
+    contrastBg: "#1a1a28",
+    contrastBgSecondary: "#272738",
     tint: tintColorDark,
     shadowColor: "#bfbfbf",
     icon: "#9BA1A6",
-    tabIconDefault: "#9BA1A6",
-    tabIconSelected: tintColorDark,
+    iconSelected: tintColorDark,
     toast: {
       info: "#bfdbfe",
       success: "#a7f3d0",

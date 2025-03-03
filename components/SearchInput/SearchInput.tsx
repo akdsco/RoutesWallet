@@ -53,7 +53,7 @@ export const SearchInput = (props: SearchInputProps) => {
         <FontAwesome
           size={22}
           name={isInSearchMode ? "times" : "search"}
-          color={theme.tabIconDefault}
+          color={theme.icon}
         />
       </Pressable>
     </View>

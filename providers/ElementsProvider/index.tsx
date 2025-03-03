@@ -9,7 +9,7 @@ const reactNativeElementsTheme = (theme: Theme) =>
       ListItem: {
         containerStyle: {
           backgroundColor: theme.background,
-          borderBottomColor: theme.contrastBackground,
+          borderBottomColor: theme.contrastBg,
           borderBottomWidth: 2,
         },
       },

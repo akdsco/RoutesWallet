@@ -15,7 +15,7 @@ export const FiltersButton = ({ expandBottomSheet }: FiltersButtonProps) => {
 
   return (
     <TouchableOpacity style={styles.floatingButton} onPress={expandBottomSheet}>
-      <FontAwesome name="filter" size={20} color={theme.tabIconDefault} />
+      <FontAwesome name="filter" size={20} color={theme.icon} />
       <ThemedText style={styles.floatingButtonText}>Filters</ThemedText>
     </TouchableOpacity>
   );
@@ -29,7 +29,7 @@ const makeStyles = (theme: Theme) =>
       alignSelf: "center",
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.contrastBackground,
+      backgroundColor: theme.contrastBg,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 25,

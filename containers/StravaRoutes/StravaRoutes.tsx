@@ -155,7 +155,7 @@ const makeStyles = (theme: Theme) =>
       alignItems: "center",
     },
     bottomSheetHandleStyle: {
-      backgroundColor: theme.contrastBackground,
+      backgroundColor: theme.contrastBg,
       borderTopLeftRadius: 5,
       borderTopRightRadius: 5,
     },
@@ -163,7 +163,7 @@ const makeStyles = (theme: Theme) =>
       backgroundColor: theme.text,
     },
     bottomSheetBackgroundStyle: {
-      backgroundColor: theme.contrastBackground,
+      backgroundColor: theme.contrastBg,
     },
     closeKeyboardOverlay: {
       position: "absolute",

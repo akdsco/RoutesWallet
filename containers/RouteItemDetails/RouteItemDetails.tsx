@@ -116,7 +116,7 @@ export const RouteItemDetails = () => {
             enableDynamicSizing={false}
             enableContentPanningGesture={false}
             handleStyle={{
-              backgroundColor: theme.contrastBackground,
+              backgroundColor: theme.contrastBg,
               borderTopLeftRadius: 5,
               borderTopRightRadius: 5,
             }}
@@ -124,7 +124,7 @@ export const RouteItemDetails = () => {
               backgroundColor: theme.text,
             }}
             backgroundStyle={{
-              backgroundColor: theme.contrastBackground,
+              backgroundColor: theme.contrastBg,
             }}
           >
             <BottomSheetView style={styles.contentContainer}>
@@ -168,6 +168,6 @@ const makeStyles = ({ theme }: ThemeContextType) =>
       paddingRight: 9,
       paddingLeft: 9,
       alignItems: "center",
-      backgroundColor: theme.contrastBackground,
+      backgroundColor: theme.contrastBg,
     },
   });

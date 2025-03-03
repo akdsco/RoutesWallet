@@ -105,7 +105,7 @@ export const TagItem = ({
                     padding: 5,
                   },
                   optionsContainer: {
-                    borderColor: theme.contrastBackground,
+                    borderColor: theme.contrastBg,
                     borderWidth: 2,
                   },
                 }}
