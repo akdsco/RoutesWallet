@@ -14,6 +14,7 @@ const Container = ({ children, noCenter }: ContainerProps) => {
     <GestureHandlerRootView>
       <SafeAreaView
         style={{
+          flex: 1,
           display: "flex",
           flexGrow: 1,
           backgroundColor: theme.background,
@@ -21,7 +22,7 @@ const Container = ({ children, noCenter }: ContainerProps) => {
           marginTop: Platform.OS === "android" ? 30 : undefined,
         }}
       >
-        <View style={{ margin: 5 }}>{children}</View>
+        <View style={{ flex: 1, margin: 5 }}>{children}</View>
       </SafeAreaView>
     </GestureHandlerRootView>
   );

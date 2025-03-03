@@ -17,9 +17,8 @@ import * as Sentry from "@sentry/react-native";
 
 Sentry.init({
   dsn: "https://e56d79cac77ee2deeb7a2fa22ba45102@o4508873874604032.ingest.de.sentry.io/4508873876242512",
-
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
+  spotlight: __DEV__,
 });
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.

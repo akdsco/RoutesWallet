@@ -131,6 +131,8 @@ export const StravaRoutes = ({
           }
           refreshControl={refreshControl}
           numColumns={2}
+          style={styles.flatListStyle}
+          // contentContainerStyle={{ flexGrow: 1 }}
         />
         <FiltersButton expandBottomSheet={onBottomSheetOpen} />
         <BottomSheet
@@ -161,7 +163,9 @@ export const StravaRoutes = ({
 
 const makeStyles = (theme: Theme) =>
   StyleSheet.create({
-    gestureContainer: {},
+    gestureContainer: {
+      flex: 1,
+    },
     contentContainer: {
       flex: 1,
       paddingRight: 9,
@@ -174,6 +178,7 @@ const makeStyles = (theme: Theme) =>
       justifyContent: "center",
       alignItems: "center",
     },
+    flatListStyle: {},
     closeKeyboardOverlay: {
       position: "absolute",
       top: 30,
