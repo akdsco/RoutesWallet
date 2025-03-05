@@ -17,9 +17,9 @@ import { registerUser } from "@/library/analytics/register";
 import Fuse from "fuse.js";
 import { Keyboard } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
-import { useRoutesFilters } from "@/containers/RoutesFilters/RoutesFilters.hook";
+import { useRoutesFilters } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 
-export const useRoutes = (filter: RouteFilters) => {
+export const useStravaRoutes = (filter: RouteFilters) => {
   const { loading: loadingApp } = useApp();
   const db = useSQLiteContext();
   const { athleteId } = useApp();

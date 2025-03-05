@@ -12,7 +12,7 @@ import {
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
-import { useRoutes } from "@/containers/StravaRoutes/StravaRoutes.hook";
+import { useStravaRoutes } from "@/containers/StravaRoutes/useStravaRoutes.hook";
 import React, { ReactElement } from "react";
 import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
 import { useTheme } from "@/hooks";
@@ -54,7 +54,7 @@ export const StravaRoutes = ({
     isKeyboardVisible,
     onBottomSheetOpen,
     ...filters
-  } = useRoutes(filter);
+  } = useStravaRoutes(filter);
 
   const { theme } = useTheme();
   const styles = makeStyles(theme);
