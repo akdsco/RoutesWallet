@@ -22,8 +22,11 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     onElevationChange,
     movingTimeRange,
     onMovingTimeChange,
+    extremeValues,
     closeBottomSheet,
   } = useRoutesFilters({ bottomSheetRef });
+
+  const resetFilters = () => {};
 
   return (
     <BottomSheet
@@ -46,6 +49,7 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               unitLabel="km"
               iconLabel="bicycle"
               onRangeChange={onDistanceChange}
+              extremeValues={extremeValues.distance}
             />
             <RangeWithValues
               rangeTitle="Elevation"
@@ -53,6 +57,7 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               iconLabel="trending-up-outline"
               range={elevationRange}
               onRangeChange={onElevationChange}
+              extremeValues={extremeValues.elevationGain}
             />
             <RangeWithValues
               rangeTitle="Moving Time"
@@ -60,9 +65,17 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               iconLabel="time-outline"
               range={movingTimeRange}
               onRangeChange={onMovingTimeChange}
+              extremeValues={extremeValues.estimatedMovingTime}
             />
           </View>
-          <View>
+          <View style={styles.filterBottomBtnContainer}>
+            {/*TODO improve disabled btn style?*/}
+            <Button
+              title="Reset filters"
+              disabled={true}
+              onPress={resetFilters}
+              accessibilityLabel=""
+            />
             <Button
               title="Show X routes"
               onPress={closeBottomSheet}
@@ -98,6 +111,11 @@ const makeStyles = (theme: Theme) =>
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "space-between",
+      width: "100%",
+    },
+    filterBottomBtnContainer: {
+      flexDirection: "row",
+      justifyContent: "space-around",
       width: "100%",
     },
   });

@@ -1,3 +1,5 @@
+import { NumberRange } from "@/library/types";
+
 export type StravaAthleteBasic = {
   id: number;
   username: string | null;
@@ -143,3 +145,18 @@ export type StravaRouteDetailedFlat = StravaRouteBaseFlat &
     updated_at: string;
     waypoints: any[];
   };
+
+export type StravaRouteFilterStatsFlat = {
+  shortest_distance: number;
+  longest_distance: number;
+  least_elevation_gain: number;
+  most_elevation_gain: number;
+  shortest_estimated_moving_time: number;
+  longest_estimated_moving_time: number;
+};
+
+export type StravaRouteFilterStats = {
+  distance: NumberRange;
+  elevationGain: NumberRange;
+  estimatedMovingTime: NumberRange;
+};

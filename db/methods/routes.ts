@@ -4,10 +4,13 @@ import {
   StravaRouteBaseFlat,
   StravaRouteDetailed,
   StravaRouteDetailedFlat,
+  StravaRouteFilterStats,
+  StravaRouteFilterStatsFlat,
 } from "@/integrations/strava";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
+import { NumberRange } from "@/library/types";
 
 export const insertStravaRoutesInDb =
   (db: SQLiteDatabase) =>
@@ -393,5 +396,68 @@ export const fromDetailedToBaseRoute = (
     type: route.type,
     private: route.private,
     map_urls: route.map_urls,
+  };
+};
+
+export const getStravaRoutesStatsFromDb =
+  (db: SQLiteDatabase) => async (athleteId: number) => {
+    const query = `
+      SELECT 
+        MIN(distance) AS shortest_distance,
+        MAX(distance) AS longest_distance,
+        MIN(elevation_gain) AS least_elevation_gain,
+        MAX(elevation_gain) AS most_elevation_gain,
+        MIN(estimated_moving_time) AS shortest_estimated_moving_time,
+        MAX(estimated_moving_time) AS longest_estimated_moving_time
+      FROM 
+        ${tables.stravaRoute}
+      WHERE 
+        athlete_id = ?
+    `;
+
+    try {
+      const result = await db.getFirstAsync<StravaRouteFilterStatsFlat>(query, [
+        athleteId,
+      ]);
+      if (!result) {
+        throw new Error("No stats found for athlete");
+      }
+      logDb.debug(tables.stravaRoute, query, { result, athleteId });
+
+      return transformToStravaRouteFilterStats(result);
+    } catch (error) {
+      logDb.error(tables.stravaRoute, query, { error, athleteId });
+      throw error;
+    }
+  };
+
+const extendRange = (min: number, max: number, margin: number): NumberRange => {
+  const lowEnd = Math.floor(min) - margin < 0 ? 0 : Math.floor(min) - margin;
+  return [lowEnd, Math.ceil(max) + margin];
+};
+
+const transformToStravaRouteFilterStats = (
+  flatStats: StravaRouteFilterStatsFlat,
+): StravaRouteFilterStats => {
+  const DISTANCE_MARGIN = 5;
+  const ELEVATION_GAIN_MARGIN = 10;
+  const ESTIMATED_MOVING_TIME_MARGIN = 5;
+
+  return {
+    distance: extendRange(
+      flatStats.shortest_distance / 1000,
+      flatStats.longest_distance / 1000,
+      DISTANCE_MARGIN,
+    ),
+    elevationGain: extendRange(
+      flatStats.least_elevation_gain,
+      flatStats.most_elevation_gain,
+      ELEVATION_GAIN_MARGIN,
+    ),
+    estimatedMovingTime: extendRange(
+      flatStats.shortest_estimated_moving_time / 60,
+      flatStats.longest_estimated_moving_time / 60,
+      ESTIMATED_MOVING_TIME_MARGIN,
+    ),
   };
 };

@@ -43,5 +43,6 @@ export type RangeUpdateFn = (value: NumberRange) => void;
 
 export type RangeProps = {
   range: NumberRange;
+  extremeValues: NumberRange;
   onRangeChange: RangeUpdateFn;
 };

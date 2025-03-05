@@ -16,9 +16,11 @@ export const RangeWithValues = ({
   unitLabel,
   iconLabel,
   range,
+  extremeValues,
   onRangeChange,
 }: RangeWithLabelsProps) => {
   const { theme } = useTheme();
+
   return (
     <View style={styles.container}>
       <View style={styles.labelContainer}>
@@ -30,7 +32,7 @@ export const RangeWithValues = ({
         />
         <ThemedText type="defaultSemiBold">{rangeTitle}</ThemedText>
       </View>
-      <RangeSlider range={range} onRangeChange={onRangeChange} />
+      <RangeSlider {...{ range, extremeValues, onRangeChange }} />
       <View style={styles.valuesAndUnitContainer}>
         <ThemedText>{`${range[0]} ${unitLabel}`}</ThemedText>
         <ThemedText>{`${range[1]} ${unitLabel}`}</ThemedText>
