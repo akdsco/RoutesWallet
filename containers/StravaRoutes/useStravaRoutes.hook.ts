@@ -14,7 +14,6 @@ import { Toast } from "@/library/Toast";
 import { log } from "@/library/logger";
 import { usePostHog } from "posthog-react-native";
 import { registerUser } from "@/library/analytics/register";
-import Fuse from "fuse.js";
 import { Keyboard } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useRoutesFilters } from "@/containers/StravaRoutes/useRoutesFilters.hook";
@@ -27,23 +26,11 @@ export const useStravaRoutes = (filter: RouteFilters) => {
 
   const [loadingRoutes, setLoadingRoutes] = useState(true);
   const [routes, setRoutes] = useState<StravaRouteBase[]>([]);
-  const [searchFoundRoutes, setSearchFoundRoutes] = useState<StravaRouteBase[]>(
-    [],
-  );
-  const [isInSearchMode, setIsInSearchMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const onBottomSheetOpen = () => {
-    if (!bottomSheetRef.current) {
-      return;
-    }
-
-    log.info("useRoutes: onBottomSheetOpen", "Opening filters bottom sheet");
-    bottomSheetRef.current.expand();
-  };
 
   useEffect(() => {
     const keyboardShowListener = Keyboard.addListener("keyboardDidShow", () => {
@@ -59,12 +46,23 @@ export const useStravaRoutes = (filter: RouteFilters) => {
     };
   }, []);
 
-  // TODO: when adding paging, this will need to be updated (so we always pull all routes and search through all)
-  const fuse = new Fuse(routes, {
-    includeScore: true,
-    threshold: 0.4,
-    keys: ["name", "description"],
-  });
+  useEffect(() => {
+    const run = async () => {
+      const routes = await getStravaRoutesBaseFromDb(db)(athleteId, filter);
+      setRoutes(routes);
+
+      //TODO: Probably should run this user registration only once (outside of this hook/component)
+      // remember that this is also rendered in Tags
+      return await getStravaAthleteBasicProfile(db)(athleteId);
+    };
+
+    if (Number(athleteId) > 0) {
+      run().then((athlete) => {
+        setLoadingRoutes(false);
+        registerUser(postHog)(athlete);
+      });
+    }
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -99,53 +97,14 @@ export const useStravaRoutes = (filter: RouteFilters) => {
     setRefreshing(false);
   };
 
-  const executeSearch = async (searchTerm: string) => {
-    const result = fuse.search(searchTerm);
-
-    const foundRoutes = result.map(({ item }) => item);
-
-    log.info("useRoutes: executeSearch", "Routes found", {
-      searchTerm,
-      result,
-    });
-
-    setSearchFoundRoutes(foundRoutes);
-  };
-
-  const onSearchReset = () => {
-    setSearchFoundRoutes([]);
-  };
-
-  useEffect(() => {
-    const run = async () => {
-      const routes = await getStravaRoutesBaseFromDb(db)(athleteId, filter);
-      setRoutes(routes);
-
-      return await getStravaAthleteBasicProfile(db)(athleteId);
-    };
-
-    if (Number(athleteId) > 0) {
-      run().then((athlete) => {
-        setLoadingRoutes(false);
-        registerUser(postHog)(athlete);
-      });
-    }
-  }, []);
-
-  const filters = useRoutesFilters(bottomSheetRef);
+  const filters = useRoutesFilters(bottomSheetRef, routes);
 
   return {
     refreshing,
     onRefresh,
     loading: loadingApp || loadingRoutes,
-    noRoutesAvailable: !isInSearchMode && routes.length === 0,
-    routes: isInSearchMode ? searchFoundRoutes : routes,
-    executeSearch,
-    onSearchReset,
-    isInSearchMode,
+    routes: filters.filteredRoutes,
     isKeyboardVisible,
-    setIsInSearchMode: (value: boolean) => setIsInSearchMode(value),
-    onBottomSheetOpen,
     bottomSheetRef,
     ...filters,
   };

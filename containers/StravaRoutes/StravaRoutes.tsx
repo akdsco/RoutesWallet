@@ -14,7 +14,7 @@ import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useStravaRoutes } from "@/containers/StravaRoutes/useStravaRoutes.hook";
 import React, { ReactElement } from "react";
-import { FiltersButton } from "@/components/FiltersButton/FiltersButton";
+import { FiltersOpenButton } from "@/components/FiltersOpenButton/FiltersOpenButton";
 import { useTheme } from "@/hooks";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
@@ -47,10 +47,6 @@ export const StravaRoutes = ({
     refreshing,
     onRefresh,
     routes,
-    executeSearch,
-    onSearchReset,
-    isInSearchMode,
-    setIsInSearchMode,
     isKeyboardVisible,
     onBottomSheetOpen,
     ...filters
@@ -114,19 +110,25 @@ export const StravaRoutes = ({
           )}
           ListHeaderComponent={
             <SearchInput
-              {...{
-                executeSearch,
-                onSearchReset,
-                isInSearchMode,
-                setIsInSearchMode,
-                foundRoutes: routes.length,
-              }}
+              isFiltered={filters.appliedFilters.search}
+              searchTerm={filters.search.term}
+              foundRoutes={routes.length}
+              onSearchTermChange={filters.search.onChange}
+              onSearchSubmit={filters.search.onSubmit}
             />
+          }
+          ListEmptyComponent={
+            <View>
+              <ThemedText>
+                {/*TODO: make that look better*/}
+                No routes for such filter or search criteria
+              </ThemedText>
+            </View>
           }
           refreshControl={refreshControl}
           numColumns={2}
         />
-        <FiltersButton expandBottomSheet={onBottomSheetOpen} />
+        <FiltersOpenButton onPress={onBottomSheetOpen} />
         <RoutesFilters {...filters} />
       </GestureHandlerRootView>
     </Container>

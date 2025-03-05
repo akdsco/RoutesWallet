@@ -8,7 +8,11 @@ export const RangeSlider = ({
   extremeValues,
   onRangeChange,
 }: RangeProps) => {
-  const { theme, isRangeApplied } = useRangeSlider(range, extremeValues);
+  const { theme, isRangeApplied, onValueChange } = useRangeSlider(
+    range,
+    onRangeChange,
+    extremeValues,
+  );
 
   return (
     <Slider
@@ -33,7 +37,7 @@ export const RangeSlider = ({
       thumbSize={18} // The thumb's size in pixel
       thumbImage={undefined} // An image that would represent the thumb
       slideOnTap={true} // If true, touching the slider will update it's value. No need to slide the thumb.
-      onValueChange={onRangeChange} // Called each time the value changed. Return false to prevent the value from being updated. The type is (range: [number, number]) => boolean | void
+      onValueChange={onValueChange} // Called each time the value changed. Return false to prevent the value from being updated. The type is (range: [number, number]) => boolean | void
       onSlidingStart={undefined} // Called when the slider is pressed. The type is (range: [number, number]) => void
       onSlidingComplete={undefined} // Called when the press is released. The type is (range: [number, number]) => void
       CustomThumb={undefined} // Provide your own component to render the thumb. The type is a component: ({ value: number, thumb: 'min' | 'max' }) => JSX.Element

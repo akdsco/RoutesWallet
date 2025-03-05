@@ -7,17 +7,20 @@ import React from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { NumberRange, RangeUpdateFn } from "@/library/types";
+import { AppliedFilters } from "@/containers/StravaRoutes/useRoutesFilters.hook";
+
+type RangeFilter = { range: NumberRange; onChange: RangeUpdateFn };
 
 export type RoutesFiltersProps = {
   bottomSheetRef: React.RefObject<BottomSheet>;
-  distance: { range: NumberRange; onChange: RangeUpdateFn };
-  elevation: { range: NumberRange; onChange: RangeUpdateFn };
-  movingTime: { range: NumberRange; onChange: RangeUpdateFn };
+  distance: RangeFilter;
+  elevation: RangeFilter;
+  movingTime: RangeFilter;
   extremeValues: Record<string, NumberRange>;
-  closeBottomSheet: () => void;
-  appliedFilters: Record<string, boolean>;
+  onBottomSheetClose: () => void;
+  appliedFilters: AppliedFilters;
   isFilterApplied: boolean;
-  resetFilters: () => void;
+  resetAllFilters: () => void;
 };
 
 export const RoutesFilters = ({
@@ -26,10 +29,10 @@ export const RoutesFilters = ({
   elevation,
   movingTime,
   extremeValues,
-  closeBottomSheet,
+  onBottomSheetClose,
   appliedFilters,
   isFilterApplied,
-  resetFilters,
+  resetAllFilters,
 }: RoutesFiltersProps) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
@@ -81,12 +84,12 @@ export const RoutesFilters = ({
             <Button
               title="Reset filters"
               disabled={!isFilterApplied}
-              onPress={resetFilters}
+              onPress={resetAllFilters}
               accessibilityLabel=""
             />
             <Button
               title="Show X routes"
-              onPress={closeBottomSheet}
+              onPress={onBottomSheetClose}
               accessibilityLabel=""
             />
           </View>

@@ -6,15 +6,15 @@ import { useTheme } from "@/hooks";
 import { Theme } from "@/library/theme";
 
 type FiltersButtonProps = {
-  expandBottomSheet: () => void;
+  onPress: () => void;
 };
 
-export const FiltersButton = ({ expandBottomSheet }: FiltersButtonProps) => {
+export const FiltersOpenButton = ({ onPress }: FiltersButtonProps) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
 
   return (
-    <TouchableOpacity style={styles.floatingButton} onPress={expandBottomSheet}>
+    <TouchableOpacity style={styles.floatingButton} onPress={onPress}>
       <FontAwesome name="filter" size={20} color={theme.icon} />
       <ThemedText style={styles.floatingButtonText}>Filters</ThemedText>
     </TouchableOpacity>
