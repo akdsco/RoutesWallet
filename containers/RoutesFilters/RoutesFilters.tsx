@@ -51,6 +51,7 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               iconLabel="bicycle"
               onRangeChange={onDistanceChange}
               extremeValues={extremeValues.distance}
+              step={5}
             />
             <RangeWithValues
               rangeTitle="Elevation"
@@ -61,6 +62,7 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               extremeValues={extremeValues.elevationGain}
             />
             <RangeWithValues
+              isTimeRange
               rangeTitle="Moving Time"
               unitLabel="min"
               iconLabel="time-outline"

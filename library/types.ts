@@ -45,4 +45,5 @@ export type RangeProps = {
   range: NumberRange;
   extremeValues: NumberRange;
   onRangeChange: RangeUpdateFn;
+  step?: number;
 };

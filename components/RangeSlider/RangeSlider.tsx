@@ -3,6 +3,7 @@ import { RangeProps } from "@/library/types";
 import { useRangeSlider } from "@/components/RangeSlider/RangeSlider.hook";
 
 export const RangeSlider = ({
+  step = 10,
   range,
   extremeValues,
   onRangeChange,
@@ -12,10 +13,10 @@ export const RangeSlider = ({
   return (
     <Slider
       range={range} // set the current slider's value
-      step={1} // The step for the slider (0 means that the slider will handle any decimal value within the range [min, max])
+      step={step} // The step for the slider (0 means that the slider will handle any decimal value within the range [min, max])
       minimumRange={5} // Minimum range between the two thumbs (defaults as "step")
       minimumValue={0} // Minimum value (defaults as 0)
-      maximumValue={extremeValues[1] + Math.round(0.1 * extremeValues[1])} // Maximum value (defaults as minimumValue + minimumRange)
+      maximumValue={Math.ceil((extremeValues[1] * 1.1) / 10) * 10} // Maximum value (defaults as minimumValue + minimumRange)
       crossingAllowed={true} // If true, the user can make one thumb cross over the second thumb
       outboundColor={theme.contrastBgSecondary} // The track color outside the current range value
       inboundColor={isRangeApplied ? theme.pop : theme.iconSelected} // The track color inside the current range value
