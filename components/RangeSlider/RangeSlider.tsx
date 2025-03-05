@@ -1,14 +1,13 @@
-import { StyleSheet } from "react-native";
 import { RangeSlider as Slider } from "@react-native-assets/slider";
-import { useTheme } from "@/hooks";
 import { RangeProps } from "@/library/types";
+import { useRangeSlider } from "@/components/RangeSlider/RangeSlider.hook";
 
 export const RangeSlider = ({
   range,
   extremeValues,
   onRangeChange,
 }: RangeProps) => {
-  const { theme } = useTheme();
+  const { theme, isRangeApplied } = useRangeSlider(range, extremeValues);
 
   return (
     <Slider
@@ -19,8 +18,8 @@ export const RangeSlider = ({
       maximumValue={extremeValues[1] + Math.round(0.1 * extremeValues[1])} // Maximum value (defaults as minimumValue + minimumRange)
       crossingAllowed={true} // If true, the user can make one thumb cross over the second thumb
       outboundColor={theme.contrastBgSecondary} // The track color outside the current range value
-      inboundColor={theme.iconSelected} // The track color inside the current range value
-      thumbTintColor={theme.tint} // The color of the slider's thumb
+      inboundColor={isRangeApplied ? theme.pop : theme.iconSelected} // The track color inside the current range value
+      thumbTintColor={isRangeApplied ? theme.popContrast : theme.tint} // The color of the slider's thumb
       thumbStyle={undefined} // Override the thumb's style
       trackStyle={undefined} // Override the tracks' style
       minTrackStyle={undefined} // Override the tracks' style for the minimum range
@@ -38,14 +37,8 @@ export const RangeSlider = ({
       onSlidingComplete={undefined} // Called when the press is released. The type is (range: [number, number]) => void
       CustomThumb={undefined} // Provide your own component to render the thumb. The type is a component: ({ value: number, thumb: 'min' | 'max' }) => JSX.Element
       CustomMark={undefined}
-      style={styles.slider}
+      style={{ height: 40 }}
       // Add any View Props that will be applied to the container (style, ref, etc)
     />
   );
 };
-
-const styles = StyleSheet.create({
-  slider: {
-    height: 40,
-  },
-});

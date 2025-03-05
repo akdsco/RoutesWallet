@@ -24,9 +24,10 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     onMovingTimeChange,
     extremeValues,
     closeBottomSheet,
+    appliedFilters,
+    isFilterApplied,
+    resetFilters,
   } = useRoutesFilters({ bottomSheetRef });
-
-  const resetFilters = () => {};
 
   return (
     <BottomSheet
@@ -69,10 +70,10 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
             />
           </View>
           <View style={styles.filterBottomBtnContainer}>
-            {/*TODO improve disabled btn style?*/}
+            {/*TODO improve disabled btn style (dark mode only)?*/}
             <Button
               title="Reset filters"
-              disabled={true}
+              disabled={!isFilterApplied}
               onPress={resetFilters}
               accessibilityLabel=""
             />

@@ -32,6 +32,8 @@ export type Theme = {
   };
   borderColor: string;
   borderWidth: number;
+  pop: string;
+  popContrast: string;
 };
 
 const tintColorLight = "#151617";
@@ -55,6 +57,8 @@ export const theme: Themes = {
     },
     borderColor: "#e1e1e1",
     borderWidth: 1,
+    pop: "#6ac8d5",
+    popContrast: "#40727f",
   },
   dark: {
     text: "#fff",
@@ -73,5 +77,7 @@ export const theme: Themes = {
     },
     borderColor: "#6c6c6c",
     borderWidth: 0.3,
+    pop: "#6ac8d5",
+    popContrast: "#40727f",
   },
 };

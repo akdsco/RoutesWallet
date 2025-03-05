@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NumberRange } from "@/library/types";
 import { RoutesFiltersProps } from "@/containers/RoutesFilters/RoutesFilters";
 import { useApp } from "@/hooks";
@@ -28,6 +28,8 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     extremeValuesInit.estimatedMovingTime,
   );
 
+  const [isFilterApplied, setIsFilterApplied] = useState(false);
+
   useEffect(() => {
     (async () => {
       const { distance, elevationGain, estimatedMovingTime } =
@@ -43,6 +45,34 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     bottomSheetRef.current?.close();
   };
 
+  const checkIfFilterApplied = (current: NumberRange, extreme: NumberRange) => {
+    return current[0] !== extreme[0] || current[1] !== extreme[1];
+  };
+
+  const appliedFilters = useMemo(() => {
+    const data = {
+      distance: checkIfFilterApplied(distanceRange, extremeValues.distance),
+      elevation: checkIfFilterApplied(
+        elevationRange,
+        extremeValues.elevationGain,
+      ),
+      movingTime: checkIfFilterApplied(
+        movingTimeRange,
+        extremeValues.estimatedMovingTime,
+      ),
+    };
+
+    setIsFilterApplied(Object.values(data).some(Boolean));
+
+    return data;
+  }, [distanceRange, elevationRange, movingTimeRange, extremeValues]);
+
+  const resetFilters = () => {
+    setDistanceRange(extremeValues.distance);
+    setElevationRange(extremeValues.elevationGain);
+    setMovingTimeRange(extremeValues.estimatedMovingTime);
+  };
+
   return {
     distanceRange,
     onDistanceChange: (value: NumberRange) => setDistanceRange(value),
@@ -52,5 +82,8 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
     onMovingTimeChange: (value: NumberRange) => setMovingTimeRange(value),
     extremeValues,
     closeBottomSheet,
+    appliedFilters,
+    isFilterApplied,
+    resetFilters,
   };
 };
