@@ -52,8 +52,8 @@ export const StravaRoutes = ({
     isInSearchMode,
     setIsInSearchMode,
     isKeyboardVisible,
-    bottomSheetRef,
     onBottomSheetOpen,
+    ...filters
   } = useRoutes(filter);
 
   const { theme } = useTheme();
@@ -127,7 +127,7 @@ export const StravaRoutes = ({
           numColumns={2}
         />
         <FiltersButton expandBottomSheet={onBottomSheetOpen} />
-        <RoutesFilters bottomSheetRef={bottomSheetRef} />
+        <RoutesFilters {...filters} />
       </GestureHandlerRootView>
     </Container>
   );

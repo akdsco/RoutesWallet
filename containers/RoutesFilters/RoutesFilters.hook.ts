@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NumberRange } from "@/library/types";
-import { RoutesFiltersProps } from "@/containers/RoutesFilters/RoutesFilters";
 import { useApp } from "@/hooks";
 import { useSQLiteContext } from "expo-sqlite";
 import { getStravaRoutesStatsFromDb } from "@/db/methods";
+import BottomSheet from "@gorhom/bottom-sheet";
 
-export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
+export const useRoutesFilters = (
+  bottomSheetRef: React.RefObject<BottomSheet>,
+) => {
   const { athleteId } = useApp();
   const db = useSQLiteContext();
 
@@ -50,7 +52,7 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
   };
 
   const appliedFilters = useMemo(() => {
-    const data = {
+    const appliedFilters = {
       distance: checkIfFilterApplied(distanceRange, extremeValues.distance),
       elevation: checkIfFilterApplied(
         elevationRange,
@@ -62,9 +64,8 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
       ),
     };
 
-    setIsFilterApplied(Object.values(data).some(Boolean));
-
-    return data;
+    setIsFilterApplied(Object.values(appliedFilters).some(Boolean));
+    return appliedFilters;
   }, [distanceRange, elevationRange, movingTimeRange, extremeValues]);
 
   const resetFilters = () => {
@@ -74,12 +75,18 @@ export const useRoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
   };
 
   return {
-    distanceRange,
-    onDistanceChange: (value: NumberRange) => setDistanceRange(value),
-    elevationRange,
-    onElevationChange: (value: NumberRange) => setElevationRange(value),
-    movingTimeRange,
-    onMovingTimeChange: (value: NumberRange) => setMovingTimeRange(value),
+    distance: {
+      range: distanceRange,
+      onChange: (value: NumberRange) => setDistanceRange(value),
+    },
+    elevation: {
+      range: elevationRange,
+      onChange: (value: NumberRange) => setElevationRange(value),
+    },
+    movingTime: {
+      range: movingTimeRange,
+      onChange: (value: NumberRange) => setMovingTimeRange(value),
+    },
     extremeValues,
     closeBottomSheet,
     appliedFilters,

@@ -1,33 +1,38 @@
 import { StyleSheet, View } from "react-native";
 import { Theme } from "@/library/theme";
 import { useTheme } from "@/hooks";
-import { useRoutesFilters } from "@/containers/RoutesFilters/RoutesFilters.hook";
 import { RangeWithValues } from "@/components/RangeWithValues/RangeWithValues";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
+import { NumberRange, RangeUpdateFn } from "@/library/types";
 
 export type RoutesFiltersProps = {
   bottomSheetRef: React.RefObject<BottomSheet>;
+  distance: { range: NumberRange; onChange: RangeUpdateFn };
+  elevation: { range: NumberRange; onChange: RangeUpdateFn };
+  movingTime: { range: NumberRange; onChange: RangeUpdateFn };
+  extremeValues: Record<string, NumberRange>;
+  closeBottomSheet: () => void;
+  appliedFilters: Record<string, boolean>;
+  isFilterApplied: boolean;
+  resetFilters: () => void;
 };
 
-export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
+export const RoutesFilters = ({
+  bottomSheetRef,
+  distance,
+  elevation,
+  movingTime,
+  extremeValues,
+  closeBottomSheet,
+  appliedFilters,
+  isFilterApplied,
+  resetFilters,
+}: RoutesFiltersProps) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const {
-    distanceRange,
-    onDistanceChange,
-    elevationRange,
-    onElevationChange,
-    movingTimeRange,
-    onMovingTimeChange,
-    extremeValues,
-    closeBottomSheet,
-    appliedFilters,
-    isFilterApplied,
-    resetFilters,
-  } = useRoutesFilters({ bottomSheetRef });
 
   return (
     <BottomSheet
@@ -45,11 +50,11 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
         <View style={styles.generalFilersContainer}>
           <View>
             <RangeWithValues
-              range={distanceRange}
+              range={distance.range}
               rangeTitle="Distance"
               unitLabel="km"
               iconLabel="bicycle"
-              onRangeChange={onDistanceChange}
+              onRangeChange={distance.onChange}
               extremeValues={extremeValues.distance}
               step={5}
             />
@@ -57,8 +62,8 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               rangeTitle="Elevation"
               unitLabel="m"
               iconLabel="trending-up-outline"
-              range={elevationRange}
-              onRangeChange={onElevationChange}
+              range={elevation.range}
+              onRangeChange={elevation.onChange}
               extremeValues={extremeValues.elevationGain}
             />
             <RangeWithValues
@@ -66,8 +71,8 @@ export const RoutesFilters = ({ bottomSheetRef }: RoutesFiltersProps) => {
               rangeTitle="Moving Time"
               unitLabel="min"
               iconLabel="time-outline"
-              range={movingTimeRange}
-              onRangeChange={onMovingTimeChange}
+              range={movingTime.range}
+              onRangeChange={movingTime.onChange}
               extremeValues={extremeValues.estimatedMovingTime}
             />
           </View>

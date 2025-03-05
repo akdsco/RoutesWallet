@@ -17,6 +17,7 @@ import { registerUser } from "@/library/analytics/register";
 import Fuse from "fuse.js";
 import { Keyboard } from "react-native";
 import BottomSheet from "@gorhom/bottom-sheet";
+import { useRoutesFilters } from "@/containers/RoutesFilters/RoutesFilters.hook";
 
 export const useRoutes = (filter: RouteFilters) => {
   const { loading: loadingApp } = useApp();
@@ -131,6 +132,8 @@ export const useRoutes = (filter: RouteFilters) => {
     }
   }, []);
 
+  const filters = useRoutesFilters(bottomSheetRef);
+
   return {
     refreshing,
     onRefresh,
@@ -142,7 +145,8 @@ export const useRoutes = (filter: RouteFilters) => {
     isInSearchMode,
     isKeyboardVisible,
     setIsInSearchMode: (value: boolean) => setIsInSearchMode(value),
-    bottomSheetRef,
     onBottomSheetOpen,
+    bottomSheetRef,
+    ...filters,
   };
 };
