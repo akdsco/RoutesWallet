@@ -7,7 +7,7 @@ import React from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { NumberRange, RangeUpdateFn } from "@/library/types";
-import { AppliedFilters } from "@/containers/StravaRoutes/useRoutesFilters.hook";
+import { FilterBy } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 
 type RangeFilter = { range: NumberRange; onChange: RangeUpdateFn };
 
@@ -19,7 +19,7 @@ export type RoutesFiltersProps = {
   onNumberRangeSubmit: () => void;
   extremeValues: Record<string, NumberRange>;
   onBottomSheetClose: () => void;
-  appliedFilters: AppliedFilters;
+  appliedFilters: FilterBy;
   isFilterApplied: boolean;
   resetAllFilters: () => void;
   routeCount: number;

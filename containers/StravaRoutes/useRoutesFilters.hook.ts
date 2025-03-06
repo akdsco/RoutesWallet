@@ -10,8 +10,8 @@ import { StravaRouteBase } from "@/integrations/strava";
 import { Keyboard } from "react-native";
 import { filterRoutes } from "@/library/routes/filter";
 
-type AppliedFilterKeys = "search" | "distance" | "elevation" | "movingTime";
-export type AppliedFilters = Record<AppliedFilterKeys, boolean>;
+type FilterKeys = "search" | "distance" | "elevation" | "movingTime";
+export type FilterBy = Record<FilterKeys, boolean>;
 
 export const useRoutesFilters = (
   bottomSheetRef: React.RefObject<BottomSheet>,
@@ -57,41 +57,34 @@ export const useRoutesFilters = (
     keys: ["name", "description"],
   });
 
-  const applyFilters = ({
-    search,
-    distance,
-    elevation,
-    movingTime,
-  }: AppliedFilters) => {
-    if (!search && !distance && !elevation && !movingTime) {
-      setFilteredRoutes([]);
-      return;
-    }
-
+  const applyFilters = (filterBy: FilterBy) => {
     log.info("useRoutes:applyFilters", "Applying filters", {
-      search,
-      distance,
-      elevation,
-      movingTime,
+      filterBy,
       searchTerm,
       distanceRange,
       elevationRange,
       movingTimeRange,
     });
 
-    const filteredRoutes = filterRoutes(routes, {
-      minDistance: distance ? distanceRange[0] : undefined,
-      maxDistance: distance ? distanceRange[1] : undefined,
-      minElevationGain: elevation ? elevationRange[0] : undefined,
-      maxElevationGain: elevation ? elevationRange[1] : undefined,
-      minEstimatedMovingTime: movingTime ? movingTimeRange[0] : undefined,
-      maxEstimatedMovingTime: movingTime ? movingTimeRange[1] : undefined,
+    const filteredRoutes = filterRoutes(routes, fuse, filterBy, {
+      searchTerm: filterBy.search ? searchTerm : undefined,
+      minDistance: filterBy.distance ? distanceRange[0] : undefined,
+      maxDistance: filterBy.distance ? distanceRange[1] : undefined,
+      minElevationGain: filterBy.elevation ? elevationRange[0] : undefined,
+      maxElevationGain: filterBy.elevation ? elevationRange[1] : undefined,
+      minEstimatedMovingTime: filterBy.movingTime
+        ? movingTimeRange[0]
+        : undefined,
+      maxEstimatedMovingTime: filterBy.movingTime
+        ? movingTimeRange[1]
+        : undefined,
     });
 
     log.info("useRoutes:applyFilters", "Filtering outcome", {
       showing: filteredRoutes.length,
       from: routes.length,
     });
+
     setFilteredRoutes(filteredRoutes);
   };
 
