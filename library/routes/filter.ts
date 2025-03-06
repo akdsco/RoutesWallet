@@ -5,6 +5,11 @@ import {
 import Fuse from "fuse.js";
 import { FilterBy } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 import { log } from "@/library/logger";
+import { ConvertNumFn } from "@/library/types";
+import {
+  metersToKilometers,
+  secondsToMinutes,
+} from "@/library/conversionFunctions";
 
 export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   routes: T[],
@@ -12,6 +17,7 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   filterBy: FilterBy,
   filters: RouteFilterValues,
 ): T[] => {
+  // TODO: fix tests
   if (
     !filterBy.search &&
     !filterBy.distance &&
@@ -32,16 +38,24 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
 
   if (filterBy.distance) {
     const filterByDistance = (route: T) =>
-      rangeFilter(route.distance, filters.minDistance, filters.maxDistance);
+      rangeFilter(
+        "distance",
+        route.distance,
+        filters.minDistance,
+        filters.maxDistance,
+        metersToKilometers,
+      );
     filtersToApply.push(filterByDistance);
   }
 
   if (filterBy.elevation) {
     const filterByElevation = (route: T) =>
       rangeFilter(
+        "elevation",
         route.elevation_gain,
         filters.minElevationGain,
         filters.maxElevationGain,
+        (val) => Math.round(val),
       );
     filtersToApply.push(filterByElevation);
   }
@@ -55,9 +69,11 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   if (filterBy.movingTime) {
     const filterByEstimatedMovingTime = (route: T) =>
       rangeFilter(
+        "movingTime",
         route.estimated_moving_time,
         filters.minEstimatedMovingTime,
         filters.maxEstimatedMovingTime,
+        secondsToMinutes,
       );
     filtersToApply.push(filterByEstimatedMovingTime);
   }
@@ -79,12 +95,30 @@ type RouteFilterValues = {
   endDate?: Date | string;
 };
 
-const rangeFilter = (value: number, min?: number, max?: number): boolean => {
-  if (min !== undefined && value < min) {
-    return false;
-  }
+const rangeFilter = (
+  type: "distance" | "elevation" | "movingTime",
+  value: number,
+  min?: number,
+  max?: number,
+  unitConverter: ConvertNumFn = (val) => val,
+): boolean => {
+  const convertedValue = unitConverter(value);
 
-  return !(max !== undefined && value > max);
+  const isAboveMin = min !== undefined ? convertedValue >= min : true;
+  const isBelowMax = max !== undefined ? convertedValue <= max : true;
+
+  const result = isAboveMin && isBelowMax;
+
+  // TODO: Can we make it log only on request?
+  console.debug(
+    "rangeFilter",
+    type,
+    `Value: ${convertedValue}\n`,
+    `Min: ${min}`,
+    `Max: ${max}`,
+    `Result: ${result ? "PASS" : "FAIL"}`,
+  );
+  return result;
 };
 
 const dateFilter = (

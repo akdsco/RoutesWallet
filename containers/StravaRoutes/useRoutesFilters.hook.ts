@@ -169,20 +169,20 @@ export const useRoutesFilters = (
     filteredRoutes: isFilterApplied ? filteredRoutes : routes,
     search: {
       term: searchTerm,
-      onChange: (searchText: string) => setSearchTerm(searchText),
+      onChange: (searchTerm: string) => setSearchTerm(searchTerm),
       onSubmit: onSearchSubmit,
     },
     distance: {
       range: distanceRange,
-      onChange: (value: NumberRange) => setDistanceRange(value),
+      onChange: (range: NumberRange) => setDistanceRange(range),
     },
     elevation: {
       range: elevationRange,
-      onChange: (value: NumberRange) => setElevationRange(value),
+      onChange: (range: NumberRange) => setElevationRange(range),
     },
     movingTime: {
       range: movingTimeRange,
-      onChange: (value: NumberRange) => setMovingTimeRange(value),
+      onChange: (range: NumberRange) => setMovingTimeRange(range),
     },
     onNumberRangeSubmit,
     extremeValues,

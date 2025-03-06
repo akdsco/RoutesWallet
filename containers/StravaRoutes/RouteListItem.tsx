@@ -12,6 +12,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { useRouter } from "expo-router";
 import { log } from "@/library/logger";
 import { StravaRouteBase, StravaThemeUrl } from "@/integrations/strava";
+import { metersToKilometers } from "@/library/conversionFunctions";
 
 export const RouteListItem = ({
   item,
@@ -26,8 +27,7 @@ export const RouteListItem = ({
   const { theme } = useTheme();
 
   const distanceInKms = (distanceInMeters: number) => {
-    const distanceInKm = distanceInMeters / 1000;
-    return `${distanceInKm.toFixed(1)} km`;
+    return `${metersToKilometers(distanceInMeters)} km`;
   };
 
   //TODO: later - improve this? (Better typing)

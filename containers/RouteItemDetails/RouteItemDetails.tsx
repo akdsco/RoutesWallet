@@ -14,6 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeContextType } from "@/library/theme";
 import { TagToggleItem } from "@/components/Tag/TagToggleItem";
 import { TagChip } from "@/components/Tag/TagChip";
+import { metersToKilometers } from "@/library/conversionFunctions";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
@@ -95,7 +96,7 @@ export const RouteItemDetails = () => {
               </View>
               <View className="mb-24 space-y-2">
                 <ThemedText>
-                  Distance: {(route.distance / 1000).toFixed(2)} km
+                  Distance: {metersToKilometers(route.distance)} km
                 </ThemedText>
                 <ThemedText>
                   Elevation Gain: {route.elevation_gain.toFixed(1)} m

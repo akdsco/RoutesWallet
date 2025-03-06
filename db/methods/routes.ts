@@ -11,6 +11,10 @@ import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
 import { NumberRange } from "@/library/types";
+import {
+  metersToKilometers,
+  secondsToMinutes,
+} from "@/library/conversionFunctions";
 
 export const insertStravaRoutesInDb =
   (db: SQLiteDatabase) =>
@@ -246,6 +250,7 @@ export const getStravaRoutesBaseFromDb =
         sr.distance AS distance,
         sr.elevation_gain AS elevation_gain,
         sr.id AS id,
+        sr.estimated_moving_time AS estimated_moving_time,
         smu.url AS map_urls_url,
         smu.retina_url AS map_urls_retina_url,
         smu.light_url AS map_urls_light_url,
@@ -445,8 +450,8 @@ const transformToStravaRouteFilterStats = (
 
   return {
     distance: extendRange(
-      flatStats.shortest_distance / 1000,
-      flatStats.longest_distance / 1000,
+      metersToKilometers(flatStats.shortest_distance),
+      metersToKilometers(flatStats.longest_distance),
       DISTANCE_MARGIN,
     ),
     elevationGain: extendRange(
@@ -455,8 +460,8 @@ const transformToStravaRouteFilterStats = (
       ELEVATION_GAIN_MARGIN,
     ),
     estimatedMovingTime: extendRange(
-      flatStats.shortest_estimated_moving_time / 60,
-      flatStats.longest_estimated_moving_time / 60,
+      secondsToMinutes(flatStats.shortest_estimated_moving_time),
+      secondsToMinutes(flatStats.longest_estimated_moving_time),
       ESTIMATED_MOVING_TIME_MARGIN,
     ),
   };

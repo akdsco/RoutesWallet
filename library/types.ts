@@ -3,6 +3,7 @@ import { StravaRouteBase } from "@/integrations/strava";
 export type FunctionCallPromise = () => Promise<void>;
 export type FunctionCall = () => void;
 export type UpdateFn<T> = (value: T) => void;
+export type ConvertNumFn = (val: number, toFixed?: number) => number;
 
 export type RawTag = {
   id: number;
