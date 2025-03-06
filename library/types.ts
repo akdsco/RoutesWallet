@@ -1,6 +1,7 @@
 import { StravaRouteBase } from "@/integrations/strava";
 
-export type FunctionCall = () => Promise<void>;
+export type FunctionCallPromise = () => Promise<void>;
+export type FunctionCall = () => void;
 export type UpdateFn<T> = (value: T) => void;
 
 export type RawTag = {
@@ -45,5 +46,6 @@ export type RangeProps = {
   range: NumberRange;
   extremeValues: NumberRange;
   onRangeChange: RangeUpdateFn;
+  onRangeSubmit: FunctionCall;
   step?: number;
 };

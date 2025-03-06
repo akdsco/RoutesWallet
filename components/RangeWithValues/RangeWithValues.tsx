@@ -20,6 +20,7 @@ export const RangeWithValues = ({
   range,
   extremeValues,
   onRangeChange,
+  onRangeSubmit,
   step,
 }: RangeWithLabelsProps) => {
   const { theme } = useTheme();
@@ -50,7 +51,9 @@ export const RangeWithValues = ({
         />
         <ThemedText type="defaultSemiBold">{rangeTitle}</ThemedText>
       </View>
-      <RangeSlider {...{ range, extremeValues, onRangeChange, step }} />
+      <RangeSlider
+        {...{ range, extremeValues, onRangeChange, onRangeSubmit, step }}
+      />
       {isTimeRange ? (
         <View style={styles.valuesAndUnitContainer}>
           <ThemedText>{formatMinutesToHoursMinutes(range[0])}</ThemedText>

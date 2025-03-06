@@ -1,11 +1,11 @@
 import { StyleSheet, View } from "react-native";
 import Container from "@/components/Container";
 import React from "react";
-import { FunctionCall } from "@/library/types";
+import { FunctionCallPromise } from "@/library/types";
 import { AddTag } from "@/components/Tag/AddTag/AddTag";
 
 type TagsEmptyProps = {
-  checkTags: FunctionCall;
+  checkTags: FunctionCallPromise;
 };
 
 export const TagListEmpty = ({ checkTags }: TagsEmptyProps) => {

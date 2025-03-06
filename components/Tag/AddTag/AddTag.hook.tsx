@@ -4,11 +4,11 @@ import { handleRouteTagInsert } from "@/db/methods";
 import { Keyboard } from "react-native";
 import { useSQLiteContext } from "expo-sqlite";
 import { useApp } from "@/hooks";
-import React from "react";
-import { FunctionCall } from "@/library/types";
+import { useState } from "react";
+import { FunctionCallPromise } from "@/library/types";
 
-export const useAddTag = (checkTags: FunctionCall) => {
-  const [tagName, setTagName] = React.useState("");
+export const useAddTag = (checkTags: FunctionCallPromise) => {
+  const [tagName, setTagName] = useState("");
   const db = useSQLiteContext();
   const { athleteId } = useApp();
 

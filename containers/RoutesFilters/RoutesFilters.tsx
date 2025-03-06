@@ -16,11 +16,13 @@ export type RoutesFiltersProps = {
   distance: RangeFilter;
   elevation: RangeFilter;
   movingTime: RangeFilter;
+  onNumberRangeSubmit: () => void;
   extremeValues: Record<string, NumberRange>;
   onBottomSheetClose: () => void;
   appliedFilters: AppliedFilters;
   isFilterApplied: boolean;
   resetAllFilters: () => void;
+  routeCount: number;
 };
 
 export const RoutesFilters = ({
@@ -28,11 +30,13 @@ export const RoutesFilters = ({
   distance,
   elevation,
   movingTime,
+  onNumberRangeSubmit,
   extremeValues,
   onBottomSheetClose,
   appliedFilters,
   isFilterApplied,
   resetAllFilters,
+  routeCount,
 }: RoutesFiltersProps) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
@@ -58,6 +62,7 @@ export const RoutesFilters = ({
               unitLabel="km"
               iconLabel="bicycle"
               onRangeChange={distance.onChange}
+              onRangeSubmit={onNumberRangeSubmit}
               extremeValues={extremeValues.distance}
               step={5}
             />
@@ -67,6 +72,7 @@ export const RoutesFilters = ({
               iconLabel="trending-up-outline"
               range={elevation.range}
               onRangeChange={elevation.onChange}
+              onRangeSubmit={onNumberRangeSubmit}
               extremeValues={extremeValues.elevationGain}
             />
             <RangeWithValues
@@ -76,6 +82,7 @@ export const RoutesFilters = ({
               iconLabel="time-outline"
               range={movingTime.range}
               onRangeChange={movingTime.onChange}
+              onRangeSubmit={onNumberRangeSubmit}
               extremeValues={extremeValues.estimatedMovingTime}
             />
           </View>
@@ -88,7 +95,7 @@ export const RoutesFilters = ({
               accessibilityLabel=""
             />
             <Button
-              title="Show X routes"
+              title={`Show ${routeCount} routes`}
               onPress={onBottomSheetClose}
               accessibilityLabel=""
             />

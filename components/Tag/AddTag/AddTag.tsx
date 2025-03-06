@@ -3,11 +3,11 @@ import { Button } from "@/components/Button/Buttons";
 import React from "react";
 import { ThemeContextType } from "@/library/theme";
 import { useTheme } from "@/hooks";
-import { FunctionCall } from "@/library/types";
+import { FunctionCallPromise } from "@/library/types";
 import { useAddTag } from "@/components/Tag/AddTag/AddTag.hook";
 
 type AddTagProps = {
-  checkTags: FunctionCall;
+  checkTags: FunctionCallPromise;
 };
 
 export const AddTag = ({ checkTags }: AddTagProps) => {

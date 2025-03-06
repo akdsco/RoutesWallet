@@ -8,6 +8,7 @@ import { log } from "@/library/logger";
 import Fuse from "fuse.js";
 import { StravaRouteBase } from "@/integrations/strava";
 import { Keyboard } from "react-native";
+import { filterRoutes } from "@/library/routes/filter";
 
 type AppliedFilterKeys = "search" | "distance" | "elevation" | "movingTime";
 export type AppliedFilters = Record<AppliedFilterKeys, boolean>;
@@ -56,57 +57,41 @@ export const useRoutesFilters = (
     keys: ["name", "description"],
   });
 
-  const applyFilters = (appliedFilters: AppliedFilters) => {
-    const { search, distance, elevation, movingTime } = appliedFilters;
-
+  const applyFilters = ({
+    search,
+    distance,
+    elevation,
+    movingTime,
+  }: AppliedFilters) => {
     if (!search && !distance && !elevation && !movingTime) {
       setFilteredRoutes([]);
       return;
     }
 
-    let filteredRoutes = routes;
+    log.info("useRoutes:applyFilters", "Applying filters", {
+      search,
+      distance,
+      elevation,
+      movingTime,
+      searchTerm,
+      distanceRange,
+      elevationRange,
+      movingTimeRange,
+    });
 
-    // String - search
-    if (search && searchTerm.trim().length > 0) {
-      const result = fuse.search(searchTerm);
-      filteredRoutes = result.map(({ item }) => item);
+    const filteredRoutes = filterRoutes(routes, {
+      minDistance: distance ? distanceRange[0] : undefined,
+      maxDistance: distance ? distanceRange[1] : undefined,
+      minElevationGain: elevation ? elevationRange[0] : undefined,
+      maxElevationGain: elevation ? elevationRange[1] : undefined,
+      minEstimatedMovingTime: movingTime ? movingTimeRange[0] : undefined,
+      maxEstimatedMovingTime: movingTime ? movingTimeRange[1] : undefined,
+    });
 
-      log.info("useRoutes: executeSearch", "Routes found", {
-        searchTerm,
-        result,
-      });
-    }
-
-    // Number - distance
-    if (distance && distanceRange) {
-      const [minDistance, maxDistance] = distanceRange;
-      filteredRoutes = filteredRoutes.filter(
-        (route) =>
-          route.distance >= minDistance && route.distance <= maxDistance,
-      );
-    }
-
-    // Number - elevation
-    if (elevation && elevationRange) {
-      const [minElevation, maxElevation] = elevationRange;
-      filteredRoutes = filteredRoutes.filter(
-        (route) =>
-          route.elevation_gain >= minElevation &&
-          route.elevation_gain <= maxElevation,
-      );
-    }
-
-    // Number - moving time
-    if (movingTime && movingTimeRange) {
-      const [minMovingTime, maxMovingTime] = movingTimeRange;
-      filteredRoutes = filteredRoutes.filter(
-        (route) =>
-          route.estimated_moving_time >= minMovingTime &&
-          route.estimated_moving_time <= maxMovingTime,
-      );
-    }
-
-    // Finally, update state with the filtered routes
+    log.info("useRoutes:applyFilters", "Filtering outcome", {
+      showing: filteredRoutes.length,
+      from: routes.length,
+    });
     setFilteredRoutes(filteredRoutes);
   };
 
@@ -119,8 +104,6 @@ export const useRoutesFilters = (
       elevation: isRangeEqual(elevationRange, elevationGain),
       movingTime: isRangeEqual(movingTimeRange, estimatedMovingTime),
     };
-
-    console.log("appliedFilters", appliedFilters);
 
     setIsFilterApplied(Object.values(appliedFilters).some(Boolean));
     return appliedFilters;
@@ -151,6 +134,10 @@ export const useRoutesFilters = (
     setSearchTerm((value) => value.trim());
   };
 
+  const onNumberRangeSubmit = () => {
+    applyFilters(appliedFilters);
+  };
+
   useEffect(() => {
     (async () => {
       const { distance, elevationGain, estimatedMovingTime } =
@@ -161,13 +148,6 @@ export const useRoutesFilters = (
       setExtremeValues({ distance, elevationGain, estimatedMovingTime });
     })();
   }, []);
-
-  useEffect(() => {
-    log.info("useRoutes:appliedFilters", "Applying filters", {
-      appliedFilters,
-    });
-    applyFilters(appliedFilters);
-  }, [appliedFilters]);
 
   const onBottomSheetOpen = () => {
     if (!bottomSheetRef.current) {
@@ -211,6 +191,7 @@ export const useRoutesFilters = (
       range: movingTimeRange,
       onChange: (value: NumberRange) => setMovingTimeRange(value),
     },
+    onNumberRangeSubmit,
     extremeValues,
     onBottomSheetOpen,
     onBottomSheetClose,

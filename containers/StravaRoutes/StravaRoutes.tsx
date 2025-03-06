@@ -129,7 +129,7 @@ export const StravaRoutes = ({
           numColumns={2}
         />
         <FiltersOpenButton onPress={onBottomSheetOpen} />
-        <RoutesFilters {...filters} />
+        <RoutesFilters {...{ ...filters, routeCount: routes.length }} />
       </GestureHandlerRootView>
     </Container>
   );
