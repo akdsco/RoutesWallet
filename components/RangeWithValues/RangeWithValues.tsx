@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as Haptics from "expo-haptics";
+import { formatMinutesToHoursAndMinutes } from "@/library/displayFormat";
 
 type RangeWithLabelsProps = RangeProps & {
   rangeTitle: string;
@@ -30,21 +31,6 @@ export const RangeWithValues = ({
   step,
 }: RangeWithLabelsProps) => {
   const { theme } = useTheme();
-
-  const formatMinutesToHoursAndMinutes = (totalMinutes: number): string => {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (hours === 0) {
-      return `${minutes} min`;
-    }
-
-    if (hours > 0 && minutes % 60 === 0) {
-      return `${hours}h`;
-    }
-
-    return `${hours}h ${minutes}min`;
-  };
 
   const handleReset = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);

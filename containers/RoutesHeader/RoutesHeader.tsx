@@ -3,6 +3,7 @@ import React from "react";
 import { FilterProps } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 import { View } from "react-native";
 import { FilterChip } from "@/components/FilterChip/FilterChip";
+import { formatMinutesToHoursAndMinutes } from "@/library/displayFormat";
 
 type RoutesHeaderProps = FilterProps & {
   routeCount: number;
@@ -57,7 +58,7 @@ export const RoutesHeader = ({
         {appliedFilters.movingTime && (
           <FilterChip
             iconLabel="time-outline"
-            title={`${movingTime.range[0]} - ${movingTime.range[1]} min`}
+            title={`${formatMinutesToHoursAndMinutes(movingTime.range[0])} - ${formatMinutesToHoursAndMinutes(movingTime.range[1])}`}
             onPress={movingTime.onReset}
           />
         )}
