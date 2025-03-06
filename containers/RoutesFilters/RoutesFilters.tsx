@@ -46,7 +46,7 @@ export const RoutesFilters = ({
       ref={bottomSheetRef}
       enablePanDownToClose
       enableDynamicSizing={false}
-      snapPoints={[1, "85%"]}
+      snapPoints={[1, "65%"]}
       handleStyle={styles.bottomSheetHandleStyle}
       enableContentPanningGesture={false}
       handleIndicatorStyle={styles.bottomSheetHandleIndicatorStyle}

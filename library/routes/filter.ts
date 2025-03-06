@@ -30,7 +30,9 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   if (filters.searchTerm) {
     const searchResult = fuse.search(filters.searchTerm);
     const matchingIds = new Set(searchResult.map(({ item }) => item.id));
-    filtersToApply.push((route: T) => matchingIds.has(route.id));
+    const filterBySearchTerm = (route: T) => matchingIds.has(route.id);
+
+    filtersToApply.push(filterBySearchTerm);
   }
 
   if (filterBy.distance) {
@@ -75,9 +77,17 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
     filtersToApply.push(filterByEstimatedMovingTime);
   }
 
-  return routes.filter((route) =>
-    filtersToApply.every((filterFunction) => filterFunction(route)),
-  );
+  const allFiltered = routes.filter((route) => {
+    const filterFunctionResults = filtersToApply.every((filterFunction) => {
+      const result = filterFunction(route);
+      log.debug("filterRoutes", "Each filter function result", { result });
+
+      return result;
+    });
+    return filterFunctionResults;
+  });
+
+  return allFiltered;
 };
 
 type RouteFilterValues = {

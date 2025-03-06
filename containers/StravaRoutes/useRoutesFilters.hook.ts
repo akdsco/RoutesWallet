@@ -91,15 +91,12 @@ export const useRoutesFilters = (
   const appliedFilters = useMemo(() => {
     const { distance, elevationGain, estimatedMovingTime } = extremeValues;
 
-    const appliedFilters = {
+    return {
       search: searchInProgress,
       distance: isRangeEqual(distanceRange, distance),
       elevation: isRangeEqual(elevationRange, elevationGain),
       movingTime: isRangeEqual(movingTimeRange, estimatedMovingTime),
     };
-
-    setIsFilterApplied(Object.values(appliedFilters).some(Boolean));
-    return appliedFilters;
   }, [
     extremeValues,
     searchInProgress,
@@ -109,12 +106,11 @@ export const useRoutesFilters = (
   ]);
 
   // TODO: misleading name, not only submit but also clear search - rename?
-  const onSearchSubmit = () => {
+  const onSearchChange = async () => {
     Keyboard.dismiss();
 
     if (appliedFilters.search) {
-      setSearchInProgress(false);
-      setSearchTerm("");
+      resetAllFilters();
       return;
     }
 
@@ -123,14 +119,21 @@ export const useRoutesFilters = (
     }
 
     setSearchInProgress(true);
+    setIsFilterApplied(true);
+
     // Below only removes empty spaces left behind
     setSearchTerm((value) => value.trim());
+
+    // TODO: hack to bypass react state update that isn't "fast" enough - fix needed
+    applyFilters({ ...appliedFilters, search: true });
   };
 
   const onNumberRangeSubmit = () => {
+    setIsFilterApplied(true);
     applyFilters(appliedFilters);
   };
 
+  // Updates state to reflect the min/max values from the database
   useEffect(() => {
     (async () => {
       const { distance, elevationGain, estimatedMovingTime } =
@@ -156,6 +159,8 @@ export const useRoutesFilters = (
   };
 
   const resetAllFilters = () => {
+    setIsFilterApplied(false);
+    setSearchInProgress(false);
     setFilteredRoutes([]);
 
     setSearchTerm("");
@@ -170,7 +175,7 @@ export const useRoutesFilters = (
     search: {
       term: searchTerm,
       onChange: (searchTerm: string) => setSearchTerm(searchTerm),
-      onSubmit: onSearchSubmit,
+      onSubmit: onSearchChange,
     },
     distance: {
       range: distanceRange,
