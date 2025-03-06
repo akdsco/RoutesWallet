@@ -7,21 +7,29 @@ import { Theme } from "@/library/theme";
 
 type FiltersButtonProps = {
   onPress: () => void;
+  isFiltered: boolean;
 };
 
-export const FiltersOpenButton = ({ onPress }: FiltersButtonProps) => {
+export const FiltersOpenButton = ({
+  isFiltered,
+  onPress,
+}: FiltersButtonProps) => {
   const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const styles = makeStyles(isFiltered, theme);
 
   return (
     <TouchableOpacity style={styles.floatingButton} onPress={onPress}>
-      <FontAwesome name="filter" size={20} color={theme.icon} />
+      <FontAwesome
+        name="filter"
+        size={20}
+        color={isFiltered ? theme.pop : theme.icon}
+      />
       <ThemedText style={styles.floatingButtonText}>Filters</ThemedText>
     </TouchableOpacity>
   );
 };
 
-const makeStyles = (theme: Theme) =>
+const makeStyles = (isFiltered: boolean, theme: Theme) =>
   StyleSheet.create({
     floatingButton: {
       position: "absolute",
@@ -33,8 +41,8 @@ const makeStyles = (theme: Theme) =>
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 25,
-      borderWidth: theme.borderWidth,
-      borderColor: theme.borderColor,
+      borderWidth: isFiltered ? 1 : theme.borderWidth,
+      borderColor: isFiltered ? theme.pop : theme.borderColor,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.3,
@@ -44,5 +52,6 @@ const makeStyles = (theme: Theme) =>
     floatingButtonText: {
       marginLeft: 8,
       fontWeight: 600,
+      color: isFiltered ? theme.pop : theme.icon,
     },
   });

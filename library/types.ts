@@ -50,3 +50,5 @@ export type RangeProps = {
   onRangeSubmit: FunctionCall;
   step?: number;
 };
+
+export type IconLabel = "bicycle" | "trending-up-outline" | "time-outline";

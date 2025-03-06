@@ -123,7 +123,10 @@ export const StravaRoutes = ({
           numColumns={2}
           contentContainerStyle={styles.flatListContent}
         />
-        <FiltersOpenButton onPress={onBottomSheetOpen} />
+        <FiltersOpenButton
+          onPress={onBottomSheetOpen}
+          isFiltered={filters.isFilterApplied}
+        />
         <RoutesFilters {...filtersWithRouteCount} />
       </GestureHandlerRootView>
     </Container>

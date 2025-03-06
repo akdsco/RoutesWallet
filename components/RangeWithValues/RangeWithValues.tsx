@@ -1,7 +1,7 @@
 import { RangeSlider } from "@/components/RangeSlider/RangeSlider";
 import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/ThemedText";
-import { FunctionCall, RangeProps } from "@/library/types";
+import { FunctionCall, IconLabel, RangeProps } from "@/library/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -10,7 +10,7 @@ import * as Haptics from "expo-haptics";
 type RangeWithLabelsProps = RangeProps & {
   rangeTitle: string;
   unitLabel: string;
-  iconLabel: "bicycle" | "trending-up-outline" | "time-outline";
+  iconLabel: IconLabel;
   onRangeReset: FunctionCall;
   isApplied?: boolean;
   isTimeRange?: boolean;

@@ -23,7 +23,7 @@ export const SearchInput = ({
   onSearchReset,
 }: SearchInputProps) => {
   const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const styles = makeStyles(isFiltered, theme);
 
   return (
     <View style={styles.container}>
@@ -48,19 +48,22 @@ export const SearchInput = ({
         <FontAwesome
           size={22}
           name={isFiltered ? "times" : "search"}
-          color={theme.icon}
+          color={isFiltered ? theme.pop : theme.icon}
         />
       </Pressable>
     </View>
   );
 };
 
-const makeStyles = ({ borderColor, borderWidth, text }: Theme) =>
+const makeStyles = (
+  isFiltered: boolean,
+  { borderColor, borderWidth, text, popContrast }: Theme,
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
       margin: 5,
-      borderColor,
+      borderColor: isFiltered ? popContrast : borderColor,
       borderWidth,
       borderRadius: 5,
       flexDirection: "row",
