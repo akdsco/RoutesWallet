@@ -18,9 +18,9 @@ import { FiltersOpenButton } from "@/components/FiltersOpenButton/FiltersOpenBut
 import { useTheme } from "@/hooks";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
-import { SearchInput } from "@/components/SearchInput/SearchInput";
 import { Theme } from "@/library/theme";
 import { RoutesFilters } from "@/containers/RoutesFilters/RoutesFilters";
+import { RoutesHeader } from "@/containers/RoutesHeader/RoutesHeader";
 
 type StravaRoutesProps = {
   route: string;
@@ -90,6 +90,8 @@ export const StravaRoutes = ({
       <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
     );
 
+  const filtersWithRouteCount = { ...filters, routeCount: routes.length };
+
   return (
     <Container noCenter>
       <GestureHandlerRootView style={styles.gestureContainer}>
@@ -108,16 +110,7 @@ export const StravaRoutes = ({
           renderItem={({ item }) => (
             <RouteListItem {...{ item, route, itemWidth }} />
           )}
-          ListHeaderComponent={
-            <SearchInput
-              isFiltered={filters.appliedFilters.search}
-              searchTerm={filters.search.term}
-              foundRoutes={routes.length}
-              onSearchTermChange={filters.search.onChange}
-              onSearchSubmit={filters.search.onSubmit}
-              onSearchReset={filters.search.onReset}
-            />
-          }
+          ListHeaderComponent={<RoutesHeader {...filtersWithRouteCount} />}
           ListEmptyComponent={
             <View>
               <ThemedText>
@@ -131,7 +124,7 @@ export const StravaRoutes = ({
           contentContainerStyle={styles.flatListContent}
         />
         <FiltersOpenButton onPress={onBottomSheetOpen} />
-        <RoutesFilters {...{ ...filters, routeCount: routes.length }} />
+        <RoutesFilters {...filtersWithRouteCount} />
       </GestureHandlerRootView>
     </Container>
   );

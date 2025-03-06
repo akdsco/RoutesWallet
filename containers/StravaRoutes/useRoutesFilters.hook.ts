@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { NumberRange } from "@/library/types";
+import { FunctionCall, NumberRange } from "@/library/types";
 import { useApp } from "@/hooks";
 import { useSQLiteContext } from "expo-sqlite";
 import { getStravaRoutesStatsFromDb } from "@/db/methods";
@@ -13,10 +13,46 @@ import { filterRoutes } from "@/library/routes/filter";
 type FilterKeys = "search" | "distance" | "elevation" | "movingTime";
 export type FilterBy = Record<FilterKeys, boolean>;
 
+export type FilterProps = {
+  filteredRoutes: StravaRouteBase[];
+  search: {
+    term: string;
+    onChange: (searchTerm: string) => void;
+    onSubmit: FunctionCall;
+    onReset: FunctionCall;
+  };
+  distance: {
+    range: NumberRange;
+    onChange: (range: NumberRange) => void;
+    onReset: FunctionCall;
+  };
+  elevation: {
+    range: NumberRange;
+    onChange: (range: NumberRange) => void;
+    onReset: FunctionCall;
+  };
+  movingTime: {
+    range: NumberRange;
+    onChange: (range: NumberRange) => void;
+    onReset: FunctionCall;
+  };
+  onNumberRangeSubmit: FunctionCall;
+  extremeValues: Record<string, NumberRange>;
+  isFilterApplied: boolean;
+  appliedFilters: FilterBy;
+  resetAllFilters: FunctionCall;
+};
+
+type UseRoutesFilters = FilterProps & {
+  noRoutesAvailable: boolean;
+  onBottomSheetOpen: FunctionCall;
+  onBottomSheetClose: FunctionCall;
+};
+
 export const useRoutesFilters = (
   bottomSheetRef: React.RefObject<BottomSheet>,
   routes: StravaRouteBase[],
-) => {
+): UseRoutesFilters => {
   const { athleteId } = useApp();
   const db = useSQLiteContext();
 
