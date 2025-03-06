@@ -1,7 +1,4 @@
-import {
-  StravaRouteBase,
-  StravaRouteCommonFilterable,
-} from "@/integrations/strava";
+import { StravaRouteCommonFilterable } from "@/integrations/strava";
 import Fuse from "fuse.js";
 import { FilterBy } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 import { log } from "@/library/logger";
@@ -13,7 +10,7 @@ import {
 
 export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   routes: T[],
-  fuse: Fuse<StravaRouteBase>,
+  fuse: Fuse<StravaRouteCommonFilterable>,
   filterBy: FilterBy,
   filters: RouteFilterValues,
 ): T[] => {
