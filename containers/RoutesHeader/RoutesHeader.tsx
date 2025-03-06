@@ -3,7 +3,10 @@ import React from "react";
 import { FilterProps } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 import { View } from "react-native";
 import { FilterChip } from "@/components/FilterChip/FilterChip";
-import { formatMinutesToHoursAndMinutes } from "@/library/displayFormat";
+import {
+  displayElevation,
+  formatMinutesToHoursAndMinutes,
+} from "@/library/displayFormat";
 
 type RoutesHeaderProps = FilterProps & {
   routeCount: number;
@@ -17,14 +20,6 @@ export const RoutesHeader = ({
   appliedFilters,
   routeCount,
 }: RoutesHeaderProps) => {
-  const displayElevation = (elevation: number) => {
-    if (elevation < 1000) {
-      return `${elevation}m`;
-    }
-
-    return `${(elevation / 1000).toFixed(1)}km`;
-  };
-
   return (
     <>
       <SearchInput

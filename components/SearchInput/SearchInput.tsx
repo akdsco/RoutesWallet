@@ -4,6 +4,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/library/theme";
 import { FunctionCall } from "@/library/types";
+import * as Haptics from "expo-haptics";
 
 export type SearchInputProps = {
   isFiltered: boolean;
@@ -25,6 +26,11 @@ export const SearchInput = ({
   const { theme } = useTheme();
   const styles = makeStyles(isFiltered, theme);
 
+  const handleReset = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onSearchReset();
+  };
+
   return (
     <View style={styles.container}>
       {isFiltered ? (
@@ -42,7 +48,7 @@ export const SearchInput = ({
         />
       )}
       <Pressable
-        onPress={isFiltered ? onSearchReset : onSearchSubmit}
+        onPress={isFiltered ? handleReset : onSearchSubmit}
         style={{ padding: 14 }}
       >
         <FontAwesome

@@ -3,6 +3,7 @@ import { useTheme } from "@/hooks";
 import { View } from "react-native";
 import { IconLabel } from "@/library/types";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
+import * as Haptics from "expo-haptics";
 
 type FilterChipProps = {
   title: string;
@@ -12,6 +13,11 @@ type FilterChipProps = {
 
 export const FilterChip = ({ title, iconLabel, onPress }: FilterChipProps) => {
   const { theme } = useTheme();
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onPress();
+  };
 
   return (
     <View>
@@ -31,7 +37,7 @@ export const FilterChip = ({ title, iconLabel, onPress }: FilterChipProps) => {
           borderWidth: 1.15,
         }}
         titleStyle={{ color: theme.text, fontSize: 12 }}
-        onPress={onPress}
+        onPress={handlePress}
         containerStyle={{ marginVertical: 3, marginRight: 5 }}
       />
       <FontAwesome
@@ -39,7 +45,7 @@ export const FilterChip = ({ title, iconLabel, onPress }: FilterChipProps) => {
         size={15}
         color={theme.pop}
         style={{ position: "absolute", right: -4, top: -8, padding: 5 }}
-        onPress={onPress}
+        onPress={handlePress}
       />
     </View>
   );

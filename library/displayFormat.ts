@@ -14,3 +14,11 @@ export const formatMinutesToHoursAndMinutes = (
 
   return `${hours}h ${minutes}m`;
 };
+
+export const displayElevation = (elevation: number) => {
+  if (elevation < 1000) {
+    return `${elevation}m`;
+  }
+
+  return `${(elevation / 1000).toFixed(1)}km`;
+};
