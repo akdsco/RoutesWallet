@@ -3,13 +3,15 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemedText } from "@/components/ThemedText";
 import { useTheme } from "@/hooks";
 import { Theme } from "@/library/theme";
+import { FunctionCall } from "@/library/types";
 
 export type SearchInputProps = {
   isFiltered: boolean;
   foundRoutes: number;
   searchTerm: string;
   onSearchTermChange: (text: string) => void;
-  onSearchSubmit: () => void;
+  onSearchSubmit: FunctionCall;
+  onSearchReset: FunctionCall;
 };
 
 export const SearchInput = ({
@@ -18,6 +20,7 @@ export const SearchInput = ({
   searchTerm,
   onSearchTermChange,
   onSearchSubmit,
+  onSearchReset,
 }: SearchInputProps) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
@@ -38,7 +41,10 @@ export const SearchInput = ({
           style={styles.textInput}
         />
       )}
-      <Pressable onPress={onSearchSubmit} style={{ padding: 14 }}>
+      <Pressable
+        onPress={isFiltered ? onSearchReset : onSearchSubmit}
+        style={{ padding: 14 }}
+      >
         <FontAwesome
           size={22}
           name={isFiltered ? "times" : "search"}

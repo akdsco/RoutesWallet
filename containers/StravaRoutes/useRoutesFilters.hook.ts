@@ -43,7 +43,6 @@ export const useRoutesFilters = (
   );
 
   const [isFilterApplied, setIsFilterApplied] = useState(false);
-
   const [filteredRoutes, setFilteredRoutes] = useState<StravaRouteBase[]>([]);
 
   const isRangeEqual = (current: NumberRange, extreme: NumberRange) => {
@@ -91,12 +90,23 @@ export const useRoutesFilters = (
   const appliedFilters = useMemo(() => {
     const { distance, elevationGain, estimatedMovingTime } = extremeValues;
 
-    return {
+    const filters = {
       search: searchInProgress,
       distance: isRangeEqual(distanceRange, distance),
       elevation: isRangeEqual(elevationRange, elevationGain),
       movingTime: isRangeEqual(movingTimeRange, estimatedMovingTime),
     };
+
+    if (
+      !filters.search &&
+      !filters.distance &&
+      !filters.elevation &&
+      !filters.movingTime
+    ) {
+      setIsFilterApplied(false);
+    }
+
+    return filters;
   }, [
     extremeValues,
     searchInProgress,
@@ -169,6 +179,28 @@ export const useRoutesFilters = (
     setMovingTimeRange(extremeValues.estimatedMovingTime);
   };
 
+  const checkFiltersAndReApplyAfterPartialReset = (filterKey: FilterKeys) => {
+    switch (filterKey) {
+      case "search":
+        setSearchInProgress(false);
+        setSearchTerm("");
+        applyFilters({ ...appliedFilters, search: false });
+        break;
+      case "distance":
+        setDistanceRange(extremeValues.distance);
+        applyFilters({ ...appliedFilters, distance: false });
+        break;
+      case "elevation":
+        setElevationRange(extremeValues.elevationGain);
+        applyFilters({ ...appliedFilters, elevation: false });
+        break;
+      case "movingTime":
+        setMovingTimeRange(extremeValues.estimatedMovingTime);
+        applyFilters({ ...appliedFilters, movingTime: false });
+        break;
+    }
+  };
+
   return {
     noRoutesAvailable: !isFilterApplied && routes.length === 0,
     filteredRoutes: isFilterApplied ? filteredRoutes : routes,
@@ -176,18 +208,22 @@ export const useRoutesFilters = (
       term: searchTerm,
       onChange: (searchTerm: string) => setSearchTerm(searchTerm),
       onSubmit: onSearchChange,
+      onReset: () => checkFiltersAndReApplyAfterPartialReset("search"),
     },
     distance: {
       range: distanceRange,
       onChange: (range: NumberRange) => setDistanceRange(range),
+      onReset: () => checkFiltersAndReApplyAfterPartialReset("distance"),
     },
     elevation: {
       range: elevationRange,
       onChange: (range: NumberRange) => setElevationRange(range),
+      onReset: () => checkFiltersAndReApplyAfterPartialReset("elevation"),
     },
     movingTime: {
       range: movingTimeRange,
       onChange: (range: NumberRange) => setMovingTimeRange(range),
+      onReset: () => checkFiltersAndReApplyAfterPartialReset("movingTime"),
     },
     onNumberRangeSubmit,
     extremeValues,

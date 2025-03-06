@@ -6,10 +6,14 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import React from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
-import { NumberRange, RangeUpdateFn } from "@/library/types";
+import { FunctionCall, NumberRange, RangeUpdateFn } from "@/library/types";
 import { FilterBy } from "@/containers/StravaRoutes/useRoutesFilters.hook";
 
-type RangeFilter = { range: NumberRange; onChange: RangeUpdateFn };
+type RangeFilter = {
+  range: NumberRange;
+  onChange: RangeUpdateFn;
+  onReset: FunctionCall;
+};
 
 export type RoutesFiltersProps = {
   bottomSheetRef: React.RefObject<BottomSheet>;
@@ -62,8 +66,10 @@ export const RoutesFilters = ({
               unitLabel="km"
               iconLabel="bicycle"
               onRangeChange={distance.onChange}
+              onRangeReset={distance.onReset}
               onRangeSubmit={onNumberRangeSubmit}
               extremeValues={extremeValues.distance}
+              isApplied={appliedFilters.distance}
               step={5}
             />
             <RangeWithValues
@@ -71,8 +77,10 @@ export const RoutesFilters = ({
               unitLabel="m"
               iconLabel="trending-up-outline"
               range={elevation.range}
+              onRangeReset={elevation.onReset}
               onRangeChange={elevation.onChange}
               onRangeSubmit={onNumberRangeSubmit}
+              isApplied={appliedFilters.elevation}
               extremeValues={extremeValues.elevationGain}
             />
             <RangeWithValues
@@ -81,8 +89,10 @@ export const RoutesFilters = ({
               unitLabel="min"
               iconLabel="time-outline"
               range={movingTime.range}
+              onRangeReset={movingTime.onReset}
               onRangeChange={movingTime.onChange}
               onRangeSubmit={onNumberRangeSubmit}
+              isApplied={appliedFilters.movingTime}
               extremeValues={extremeValues.estimatedMovingTime}
             />
           </View>

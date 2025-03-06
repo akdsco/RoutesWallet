@@ -115,6 +115,7 @@ export const StravaRoutes = ({
               foundRoutes={routes.length}
               onSearchTermChange={filters.search.onChange}
               onSearchSubmit={filters.search.onSubmit}
+              onSearchReset={filters.search.onReset}
             />
           }
           ListEmptyComponent={
@@ -127,6 +128,7 @@ export const StravaRoutes = ({
           }
           refreshControl={refreshControl}
           numColumns={2}
+          contentContainerStyle={styles.flatListContent}
         />
         <FiltersOpenButton onPress={onBottomSheetOpen} />
         <RoutesFilters {...{ ...filters, routeCount: routes.length }} />
@@ -154,5 +156,8 @@ const makeStyles = (theme: Theme) =>
       pointerEvents: "auto",
       zIndex: 10,
       backgroundColor: "transparent",
+    },
+    flatListContent: {
+      paddingBottom: 60,
     },
   });

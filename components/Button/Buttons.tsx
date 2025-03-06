@@ -34,7 +34,8 @@ export const Button = ({
           borderRadius: 10,
           borderColor: theme.tint,
           borderStyle: "solid",
-          borderWidth: 1,
+          borderWidth: disabled ? 0.2 : 1,
+          opacity: disabled ? 0.5 : 1,
         }}
       >
         <ReactNativeButton
