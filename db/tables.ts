@@ -1,4 +1,5 @@
-// TODO: implement below tables use across the whole app
+import { DEFAULT_TAG_COLOR } from "@/library/theme";
+
 export const tables = {
   stravaAuthResponse: "StravaAuthResponse",
   stravaAthlete: "StravaAthlete",
@@ -90,7 +91,7 @@ export const createRouteTagsTable = `
   CREATE TABLE IF NOT EXISTS ${tables.routeTags} (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL UNIQUE, -- Unique tag name
-    color TEXT NOT NULL DEFAULT '#687076', -- Default color is grey
+    color TEXT NOT NULL DEFAULT '${DEFAULT_TAG_COLOR}', -- Default color is grey
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );`;
@@ -99,7 +100,7 @@ export const loadDbWithInitialTags = `
   INSERT INTO ${tables.routeTags} (name, color) VALUES 
     ('Long routes', 'red'),
     ('Weekend getaways', '#FFB3B3'),
-    ('Short and punchy', '#687076'),
+    ('Short and punchy', '${DEFAULT_TAG_COLOR}'),
     ('Best climbs', 'blue');
   `;
 

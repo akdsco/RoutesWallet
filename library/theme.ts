@@ -81,3 +81,5 @@ export const theme: Themes = {
     popContrast: "rgba(64,114,127,0.95)",
   },
 };
+
+export const DEFAULT_TAG_COLOR = "#687076";

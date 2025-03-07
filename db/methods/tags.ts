@@ -9,6 +9,7 @@ import {
   TagWithAssignment,
   TagWithFunctions,
 } from "@/library/types";
+import { DEFAULT_TAG_COLOR } from "@/library/theme";
 
 export const insertDefaultTagOrderInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
@@ -47,16 +48,27 @@ export const insertDefaultTagOrderInDb =
 
 export const insertTag =
   (db: SQLiteDatabase) =>
-  async (tagName: string): DbOperationResult<void> => {
-    const query = `INSERT INTO ${tables.routeTags} (name) VALUES ('${tagName}')`;
+  async (
+    tagName: string,
+    tagColor?: string,
+  ): DbOperationResult<{ tagId: number }> => {
+    const colorValue = tagColor || DEFAULT_TAG_COLOR;
+    const query = `INSERT INTO ${tables.routeTags} (name, color) VALUES ('${tagName}', '${colorValue}')`;
 
     try {
-      logDb.debug(tables.routeTags, query, { tagName });
       await db.execAsync(query);
+      logDb.debug(tables.routeTags, query, { tagName });
+
+      const queryInsertId = `SELECT last_insert_rowid() as id`;
+      const result = await db.getFirstAsync<{ id: number }>(queryInsertId);
+
+      if (!result) {
+        return { success: false, error: "Tag not inserted" };
+      }
 
       return {
         success: true,
-        data: undefined,
+        data: { tagId: result.id },
       };
     } catch (error) {
       if (isSQLiteError(error)) {
@@ -68,7 +80,11 @@ export const insertTag =
           return { success: false, error: "Tag already exists" };
         }
       }
-      log.error("insertRouteTag", "Error inserting tag", { error });
+      // TODO: write function that can handle db errors with msg and reuse
+      log.error("insertTag", "Error inserting tag", {
+        error,
+        errorMsg: (error as Error).message,
+      });
       throw error;
     }
   };
@@ -92,6 +108,11 @@ export const handleRouteTagInsert =
 const updateAthleteTagOrderToTop =
   (db: SQLiteDatabase) => async (athleteId: number, tagName: string) => {
     const tagId = await getTagIdByName(db)(tagName);
+
+    if (!tagId) {
+      log.error("updateTagOrderToTop", "Tag ID not found", { tagName });
+      return;
+    }
 
     try {
       // Set the new tag as the first in the order
@@ -123,24 +144,25 @@ const updateAthleteTagOrderToTop =
     }
   };
 
-const getTagIdByName = (db: SQLiteDatabase) => async (tagName: string) => {
-  try {
-    const sql = `SELECT id FROM ${tables.routeTags} WHERE name = '${tagName}'`;
+export const getTagIdByName =
+  (db: SQLiteDatabase) => async (tagName: string) => {
+    try {
+      const sql = `SELECT id FROM ${tables.routeTags} WHERE name = '${tagName}'`;
 
-    logDb.debug(tables.routeTags, sql, { tagName });
-    const result = await db.getAllAsync<{ id: number }>(sql);
-    const tagId = result[0]?.id;
+      logDb.debug(tables.routeTags, sql, { tagName });
+      const result = await db.getAllAsync<{ id: number }>(sql);
+      const tagId = result[0]?.id;
 
-    if (!tagId) {
-      throw new Error("Failed to retrieve tag ID after insertion");
+      if (!tagId) {
+        return null;
+      }
+
+      return tagId;
+    } catch (error) {
+      log.error("getTagIdByName", "Error fetching tag ID", { error });
+      throw error;
     }
-
-    return tagId;
-  } catch (error) {
-    log.error("getTagIdByName", "Error fetching tag ID", { error });
-    throw error;
-  }
-};
+  };
 
 export const saveTagOrderInDb =
   (db: SQLiteDatabase) =>
@@ -291,6 +313,7 @@ export const getOrderedRawTagsFromDb =
 
 export const assignTagToRoute =
   (db: SQLiteDatabase) => async (tagId: number, routeId: string) => {
+    // TODO: should we also be saving athleteID in this table??
     const query = `INSERT INTO ${tables.routeTagAssignments} (route_id, tag_id) VALUES (?, ?) ON CONFLICT(route_id, tag_id) DO NOTHING`;
 
     try {

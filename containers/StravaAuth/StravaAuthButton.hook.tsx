@@ -16,6 +16,7 @@ import { log } from "@/library/logger";
 import { Toast } from "@/library/Toast";
 import { AppConfig } from "@/library/config";
 import { usePostHog } from "posthog-react-native";
+import { autoTagRoutes } from "@/db/methods";
 
 const redirectUri = makeRedirectUri({
   scheme: "routeswallet",
@@ -127,7 +128,11 @@ export const useStravaAuthButton = () => {
         athleteId,
       });
 
-      await getStravaRoutesAndSaveInDb(db)(athleteId);
+      const result = await getStravaRoutesAndSaveInDb(db)(athleteId);
+      if (result.success) {
+        const { routes } = result.data;
+        await autoTagRoutes(db)(routes);
+      }
 
       setIsStravaAuthed(true);
 

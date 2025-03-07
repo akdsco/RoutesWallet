@@ -15,6 +15,7 @@ import {
   metersToKilometers,
   secondsToMinutes,
 } from "@/library/conversionFunctions";
+import { assignTagToRoute, getTagIdByName, insertTag } from "@/db/methods/tags";
 
 export const insertStravaRoutesInDb =
   (db: SQLiteDatabase) =>
@@ -466,3 +467,63 @@ const transformToStravaRouteFilterStats = (
     ),
   };
 };
+
+export const autoTagRoutes =
+  (db: SQLiteDatabase) => async (routes: StravaRouteBase[]) => {
+    const autoTags = [
+      {
+        tagName: "Zone 2",
+        keywords: [
+          "zone 2",
+          "z2",
+          "Z2",
+          "Zone 2",
+          "Zone2",
+          "endurance",
+          "easy",
+          "recovery",
+        ],
+      },
+      {
+        tagName: "Hub Velo CC",
+        tagColor: "#f9cc33",
+        keywords: ["HVCC", "hvcc", "hv cc"],
+      },
+      {
+        tagName: "Monkey",
+        keywords: ["monkey"],
+      },
+    ];
+
+    for (const route of routes) {
+      for (const { tagName, tagColor, keywords } of autoTags) {
+        // Check if the route matches any of the keywords.
+        if (
+          keywords.some(
+            (keyword) =>
+              route.name.includes(keyword) ||
+              route.description?.includes(keyword),
+          )
+        ) {
+          let tagId = await getTagIdByName(db)(tagName);
+          if (!tagId) {
+            const insertResult = await insertTag(db)(tagName, tagColor);
+            if (insertResult.success) {
+              tagId = insertResult.data.tagId;
+            } else {
+              // Retry fetching the tag if insertion fails due to race conditions.
+              tagId = await getTagIdByName(db)(tagName);
+              if (!tagId) {
+                log.warn("autoTagRoutes", "Failed to ensure tag exists", {
+                  tagName,
+                });
+                continue;
+              }
+            }
+          }
+          // Assign the tag to the route.
+          await assignTagToRoute(db)(tagId, route.id);
+        }
+      }
+    }
+  };
