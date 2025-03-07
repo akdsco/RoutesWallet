@@ -97,7 +97,6 @@ export const RoutesFilters = ({
             />
           </View>
           <View style={styles.filterBottomBtnContainer}>
-            {/*TODO improve disabled btn style (dark mode only)?*/}
             <Button
               title="Reset all filters"
               disabled={!isFilterApplied}

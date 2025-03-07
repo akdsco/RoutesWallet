@@ -21,6 +21,7 @@ import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
 import { Theme } from "@/library/theme";
 import { RoutesFilters } from "@/containers/RoutesFilters/RoutesFilters";
 import { RoutesHeader } from "@/containers/RoutesHeader/RoutesHeader";
+import { EmptyRoutesMsg } from "@/components/EmptyRoutesMsg";
 
 type StravaRoutesProps = {
   route: string;
@@ -111,14 +112,7 @@ export const StravaRoutes = ({
             <RouteListItem {...{ item, route, itemWidth }} />
           )}
           ListHeaderComponent={<RoutesHeader {...filtersWithRouteCount} />}
-          ListEmptyComponent={
-            <View>
-              <ThemedText>
-                {/*TODO: make that look better*/}
-                No routes for such filter or search criteria
-              </ThemedText>
-            </View>
-          }
+          ListEmptyComponent={EmptyRoutesMsg}
           refreshControl={refreshControl}
           numColumns={2}
           contentContainerStyle={styles.flatListContent}
