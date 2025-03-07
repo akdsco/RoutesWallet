@@ -2,8 +2,16 @@ import Container from "@/components/Container";
 import { useRouteItemDetails } from "@/containers/RouteItemDetails/RouteItemDetails.hook";
 import { Loader } from "@/components/Loader";
 import { ThemedText } from "@/components/ThemedText";
-import { Dimensions, Image, ScrollView, StyleSheet, View } from "react-native";
-import { useTheme } from "@/hooks";
+import {
+  Dimensions,
+  Image,
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useApp, useTheme } from "@/hooks";
 import React, { useRef } from "react";
 import { StravaThemeUrl } from "@/integrations/strava";
 import BottomSheet, {
@@ -15,11 +23,14 @@ import { ThemeContextType } from "@/library/theme";
 import { TagToggleItem } from "@/components/Tag/TagToggleItem";
 import { TagChip } from "@/components/Tag/TagChip";
 import { metersToKilometers } from "@/library/conversionFunctions";
+import { log } from "@/library/logger";
+import { StravaIcon } from "@/components/Icon/StravaIcon";
 
 export const RouteItemDetails = () => {
   const { loading, route, assignedTags, handleSheetChanges, handleTagToggle } =
     useRouteItemDetails();
   const bottomSheetRef = useRef<BottomSheet>(null);
+  const { athleteId } = useApp();
   const themeContext = useTheme();
   const { theme } = themeContext;
   const styles = makeStyles(themeContext);
@@ -29,6 +40,23 @@ export const RouteItemDetails = () => {
   const { colorMode } = useTheme();
   const mapColor = `${colorMode}_url` as StravaThemeUrl;
   const ScreenWidth = Dimensions.get("window").width;
+
+  const openWithStrava = async () => {
+    const stravaAppUrl = `strava://routes/${route?.id}`;
+    const stravaWebUrl = `https://www.strava.com/routes/${route?.id}`;
+
+    try {
+      const isAppInstalled = await Linking.canOpenURL(stravaAppUrl);
+      await Linking.openURL(isAppInstalled ? stravaAppUrl : stravaWebUrl);
+    } catch (error) {
+      log.error("openWithStrava", "Error opening Strava routes", {
+        error,
+        stravaAppUrl,
+        stravaWebUrl,
+      });
+      throw error;
+    }
+  };
 
   if (loading) {
     return <Loader />;
@@ -78,6 +106,15 @@ export const RouteItemDetails = () => {
                   <ThemedText className="text-xl font-bold">
                     {route.name}
                   </ThemedText>
+                  <Pressable
+                    onPress={openWithStrava}
+                    style={{
+                      flexDirection: "row",
+                    }}
+                  >
+                    <StravaIcon />
+                    <ThemedText style={{ marginLeft: 3 }}>Open</ThemedText>
+                  </Pressable>
                 </View>
                 <View
                   style={{

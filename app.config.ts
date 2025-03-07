@@ -23,6 +23,7 @@ const config: ExpoConfig = {
     associatedDomains: ["applinks:routeswallet.app"],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      LSApplicationQueriesSchemes: ["strava"],
     },
   },
   android: {
