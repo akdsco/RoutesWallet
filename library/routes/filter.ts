@@ -14,7 +14,6 @@ export const filterRoutes = <T extends StravaRouteCommonFilterable>(
   filterBy: FilterBy,
   filters: RouteFilterValues,
 ): T[] => {
-  // TODO: fix tests
   if (
     !filterBy.search &&
     !filterBy.distance &&

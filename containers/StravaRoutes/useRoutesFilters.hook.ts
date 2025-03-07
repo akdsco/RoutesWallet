@@ -151,7 +151,6 @@ export const useRoutesFilters = (
     movingTimeRange,
   ]);
 
-  // TODO: misleading name, not only submit but also clear search - rename?
   const onSearchChange = async () => {
     Keyboard.dismiss();
 
@@ -170,7 +169,7 @@ export const useRoutesFilters = (
     // Below only removes empty spaces left behind
     setSearchTerm((value) => value.trim());
 
-    // TODO: hack to bypass react state update that isn't "fast" enough - fix needed
+    // TODO: hack to bypass react state update that isn't "fast" enough - fix needed?
     applyFilters({ ...appliedFilters, search: true });
   };
 
