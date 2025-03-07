@@ -39,21 +39,21 @@ export const RoutesHeader = ({
         {appliedFilters.distance && (
           <FilterChip
             iconLabel="bicycle"
-            title={`${distance.range[0]} - ${distance.range[1]} km`}
+            title={`${distance.range[0]} → ${distance.range[1]} km`}
             onPress={distance.onReset}
           />
         )}
         {appliedFilters.elevation && (
           <FilterChip
             iconLabel="trending-up-outline"
-            title={`${displayElevation(elevation.range[0])} - ${displayElevation(elevation.range[1])}`}
+            title={`${displayElevation(elevation.range[0])} → ${displayElevation(elevation.range[1])}`}
             onPress={elevation.onReset}
           />
         )}
         {appliedFilters.movingTime && (
           <FilterChip
             iconLabel="time-outline"
-            title={`${formatMinutesToHoursAndMinutes(movingTime.range[0])} - ${formatMinutesToHoursAndMinutes(movingTime.range[1])}`}
+            title={`${formatMinutesToHoursAndMinutes(movingTime.range[0])} → ${formatMinutesToHoursAndMinutes(movingTime.range[1])}`}
             onPress={movingTime.onReset}
           />
         )}
