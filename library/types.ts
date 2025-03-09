@@ -5,6 +5,8 @@ export type FunctionCall = () => void;
 export type UpdateFn<T> = (value: T) => void;
 export type ConvertNumFn = (val: number, toFixed?: number) => number;
 
+export type Identifiable = { id: string };
+
 export type RawTag = {
   id: number;
   name: string;

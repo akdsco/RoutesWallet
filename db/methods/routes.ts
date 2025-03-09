@@ -8,15 +8,15 @@ import {
   StravaRouteFilterStatsFlat,
 } from "@/integrations/strava";
 import { RouteFilters } from "@/containers/StravaRoutes/StravaRoutes";
-import { log, logDb } from "@/library/logger";
+import { log } from "@/library/logger";
 import { tables } from "@/db/tables";
-import { NumberRange } from "@/library/types";
+import { Identifiable, NumberRange } from "@/library/types";
 import {
   metersToKilometers,
   secondsToMinutes,
 } from "@/library/conversionFunctions";
 import { assignTagToRoute, getTagIdByName, insertTag } from "@/db/methods/tags";
-import { isError } from "@/db/error";
+import { runDbWithLogging } from "@/db/error";
 
 export const insertStravaRoutesInDb =
   (db: SQLiteDatabase) =>
@@ -84,7 +84,7 @@ export const getStravaRoutesDetailedFromDb =
     athleteId: number,
     filters?: RouteFilters,
   ): Promise<StravaRouteDetailed[]> => {
-    const fnName = "getStravaRoutesDetailedFromDb";
+    const { stravaRoute, stravaAthlete, stravaMap, stravaMapUrls } = tables;
     let query = `
       SELECT 
         sr.id AS id,
@@ -132,18 +132,18 @@ export const getStravaRoutesDetailedFromDb =
         smu.light_url AS map_urls_light_url,
         smu.dark_url AS map_urls_dark_url
       FROM 
-          ${tables.stravaRoute} sr
+          ${stravaRoute} sr
       JOIN 
-          ${tables.stravaAthlete} sa ON sr.athlete_id = sa.id
+          ${stravaAthlete} sa ON sr.athlete_id = sa.id
       JOIN 
-          ${tables.stravaMap} sm ON sr.map_id = sm.id
+          ${stravaMap} sm ON sr.map_id = sm.id
       JOIN 
-          ${tables.stravaMapUrls} smu ON sr.map_urls_id = smu.url
+          ${stravaMapUrls} smu ON sr.map_urls_id = smu.url
       WHERE 
           sr.athlete_id = ?
       `;
 
-    const params: any[] = [athleteId];
+    const data: any[] = [athleteId];
 
     if (filters) {
       const { routeIds } = filters;
@@ -153,34 +153,25 @@ export const getStravaRoutesDetailedFromDb =
         const placeholders = routeIds.map(() => "?").join(", ");
         query += ` AND sr.id IN (${placeholders})`;
 
-        params.push(...routeIds.map((id) => id.toString()));
+        data.push(...routeIds.map((id) => id.toString()));
       }
     }
 
-    try {
-      const flatDetailedRoutes = await db.getAllAsync<StravaRouteDetailedFlat>(
+    const routesFlat = await runDbWithLogging(
+      () => db.getAllAsync<StravaRouteDetailedFlat>(query, data),
+      {
+        table: stravaRoute,
+        fnName: "getStravaRoutesDetailedFromDb",
         query,
-        params,
-      );
+        data: { athleteId },
+      },
+    );
 
-      log.debug(fnName, "Routes found in db", {
-        routeCount: flatDetailedRoutes.length,
-      });
-
-      if (flatDetailedRoutes.length === 0) {
-        return [];
-      }
-
-      return flatDetailedRoutes.map(toDetailedStravaRoutes);
-    } catch (error) {
-      log.error(fnName, "Route composition error", {
-        error,
-        query,
-        params,
-        athleteId,
-      });
-      throw error;
+    if (routesFlat.length === 0) {
+      return [];
     }
+
+    return routesFlat.map(toDetailedStravaRoutes);
   };
 
 const toDetailedStravaRoutes = (
@@ -244,6 +235,7 @@ export const getStravaRoutesBaseFromDb =
     athleteId: number,
     filters?: RouteFilters,
   ): Promise<StravaRouteBase[]> => {
+    const { stravaRoute, stravaAthlete, stravaMapUrls } = tables;
     let query = `
       SELECT 
         sr.athlete_id AS athlete_id,
@@ -263,46 +255,33 @@ export const getStravaRoutesBaseFromDb =
         sr.timestamp AS timestamp,
         sr.type AS type
       FROM 
-        ${tables.stravaRoute} sr
+        ${stravaRoute} sr
       JOIN 
-        ${tables.stravaAthlete} sa ON sr.athlete_id = sa.id
+        ${stravaAthlete} sa ON sr.athlete_id = sa.id
       JOIN 
-        ${tables.stravaMapUrls} smu ON sr.map_urls_id = smu.url
+        ${stravaMapUrls} smu ON sr.map_urls_id = smu.url
       WHERE 
         sr.athlete_id = ?
     `;
-    const params: any[] = [athleteId];
+    const data: any[] = [athleteId];
 
     if (filters?.routeIds && filters.routeIds.length > 0) {
       const placeholders = filters.routeIds.map(() => "?").join(", ");
       query += ` AND sr.id IN (${placeholders})`;
-      params.push(...filters.routeIds);
+      data.push(...filters.routeIds);
     }
 
-    try {
-      const flatBaseRoutes = await db.getAllAsync<StravaRouteBaseFlat>(
+    const routesFlat = await runDbWithLogging(
+      () => db.getAllAsync<StravaRouteBaseFlat>(query, data),
+      {
+        table: stravaRoute,
+        fnName: "getStravaRoutesBaseFromDb",
         query,
-        params,
-      );
+        data,
+      },
+    );
 
-      const routes = flatBaseRoutes.map(toBaseStravaRoutes);
-      logDb.debug(tables.stravaRoute, query, {
-        athleteId,
-        params,
-        filters,
-        flatBaseRoutes,
-        routes,
-      });
-
-      return routes;
-    } catch (error) {
-      // TODO: error like this should be better logged, figure out way to extract error message/stack etc and reuse it in each log?
-      if (isError(error)) {
-        logDb.error(tables.stravaRoute, error, query, { athleteId });
-      }
-
-      throw error;
-    }
+    return routesFlat.map(toBaseStravaRoutes);
   };
 
 const toBaseStravaRoutes = (
@@ -339,24 +318,28 @@ const toBaseStravaRoutes = (
 };
 
 export const getStravaRouteIdsFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `SELECT id FROM ${tables.stravaRoute} WHERE athlete_id = ?`;
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<string[]> => {
+    const { stravaRoute } = tables;
+    const query = `SELECT id FROM ${stravaRoute} WHERE athlete_id = ?`;
+    const data = [athleteId];
 
-    try {
-      const result = await db.getAllAsync<{ id: string }>(query, [athleteId]);
-      logDb.debug(tables.stravaRoute, query, { result, athleteId });
+    const routeId = await runDbWithLogging(
+      () => db.getAllAsync<Identifiable>(query, data),
+      {
+        table: stravaRoute,
+        fnName: "getStravaRouteIdsFromDb",
+        query,
+        data,
+      },
+    );
 
-      return result.map(({ id }) => id);
-    } catch (error) {
-      if (isError(error)) {
-        logDb.error(tables.stravaRoute, error, query, { error, athleteId });
-      }
-      throw error;
-    }
+    return routeId.map(({ id }) => id);
   };
 
 export const removeStravaRoutesFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number, routeIds: string[]) => {
+  (db: SQLiteDatabase) =>
+  async (athleteId: number, routeIds: string[]): Promise<void> => {
     if (routeIds.length === 0) {
       log.debug("removeStravaRoutesFromDb", "No routes to remove", {
         athleteId,
@@ -365,24 +348,18 @@ export const removeStravaRoutesFromDb =
       return;
     }
 
-    const placeholders = routeIds.map(() => "?").join(", ");
+    const data = routeIds.map(() => "?").join(", ");
+    const { stravaRoute } = tables;
+    const query = `DELETE FROM ${stravaRoute} WHERE athlete_id = ? AND id IN (${data})`;
 
-    const query = `DELETE FROM ${tables.stravaRoute} WHERE athlete_id = ? AND id IN (${placeholders})`;
+    await runDbWithLogging(() => db.runAsync(query, [athleteId, ...routeIds]), {
+      table: stravaRoute,
+      fnName: "removeStravaRoutesFromDb",
+      query,
+      data: { athleteId, routeIds },
+    });
 
-    try {
-      await db.runAsync(query, [athleteId, ...routeIds]);
-      logDb.debug(tables.stravaRoute, query, { athleteId, routeIds });
-    } catch (error) {
-      if (isError(error)) {
-        logDb.error(tables.stravaRoute, error, query, {
-          error,
-          athleteId,
-          routeIds,
-          placeholders,
-        });
-      }
-      throw error;
-    }
+    // TODO: Potentially return the number of routes removed / handle better?
   };
 
 export const fromDetailedToBaseRoute = (
@@ -414,7 +391,9 @@ export const fromDetailedToBaseRoute = (
 };
 
 export const getStravaRoutesStatsFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<StravaRouteFilterStats> => {
+    const { stravaRoute } = tables;
     const query = `
       SELECT 
         MIN(distance) AS shortest_distance,
@@ -424,27 +403,32 @@ export const getStravaRoutesStatsFromDb =
         MIN(estimated_moving_time) AS shortest_estimated_moving_time,
         MAX(estimated_moving_time) AS longest_estimated_moving_time
       FROM 
-        ${tables.stravaRoute}
+        ${stravaRoute}
       WHERE 
         athlete_id = ?
     `;
+    const data = [athleteId];
 
-    try {
-      const result = await db.getFirstAsync<StravaRouteFilterStatsFlat>(query, [
-        athleteId,
-      ]);
-      if (!result) {
-        throw new Error("No stats found for athlete");
-      }
-      logDb.debug(tables.stravaRoute, query, { result, athleteId });
+    const filterExtremesFlat = await runDbWithLogging(
+      () => db.getFirstAsync<StravaRouteFilterStatsFlat>(query, data),
+      {
+        table: stravaRoute,
+        fnName: "getStravaRoutesStatsFromDb",
+        query,
+        data: { athleteId },
+      },
+    );
 
-      return transformToStravaRouteFilterStats(result);
-    } catch (error) {
-      if (isError(error)) {
-        logDb.error(tables.stravaRoute, error, query, { error, athleteId });
-      }
-      throw error;
+    if (!filterExtremesFlat) {
+      log.error(
+        "getStravaRoutesStatsFromDb",
+        "No route stats found for athlete",
+        { query, data, filterExtremesFlat },
+      );
+      throw new Error("No route stats found for athlete");
     }
+
+    return transformToStravaRouteFilterStats(filterExtremesFlat);
   };
 
 const extendRange = (min: number, max: number, margin: number): NumberRange => {

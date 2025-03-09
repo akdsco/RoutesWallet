@@ -41,6 +41,12 @@ export const runDbWithLogging = async <T>(
       result,
     });
 
+    // TODO: could we implement a check here to ensure that the result is not undefined
+    //  but in some cases when we need it to be null/undefined we allow that?
+    // if (!result) {
+    //   throw new Error("No result from DB operation");
+    // }
+
     return result;
   } catch (error) {
     const { query, table, ...rest } = context;

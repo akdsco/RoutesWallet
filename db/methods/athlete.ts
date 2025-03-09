@@ -1,13 +1,13 @@
 import { SQLiteDatabase } from "expo-sqlite";
 import { StravaAthlete, StravaAthleteBasic } from "@/integrations/strava";
-import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
-import { isError, runDbWithLogging } from "@/db/error";
+import { runDbWithLogging } from "@/db/error";
 
 export const insertStravaAthleteInDb =
   (db: SQLiteDatabase) => async (athlete: StravaAthlete) => {
+    const { stravaAthlete } = tables;
     const query = `
-      INSERT INTO ${tables.stravaAthlete} (
+      INSERT INTO ${stravaAthlete} (
         id, username, resource_state, firstname, lastname, bio, city, state, country, sex, premium, summit, created_at, updated_at, badge_type_id, profile_medium, profile, friend, follower, weight
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -32,7 +32,7 @@ export const insertStravaAthleteInDb =
         weight=excluded.weight;
     `;
 
-    const athleteData = [
+    const data = [
       athlete.id,
       athlete.username,
       athlete.resource_state,
@@ -55,40 +55,28 @@ export const insertStravaAthleteInDb =
       athlete.weight ?? null,
     ];
 
-    await runDbWithLogging(() => db.runAsync(query, athleteData), {
-      table: tables.stravaAthlete,
+    await runDbWithLogging(() => db.runAsync(query, data), {
+      table: stravaAthlete,
       fnName: "insertStravaAthleteInDb",
       query,
-      data: { athlete },
+      data,
     });
   };
 
 export const getStravaAthleteBasicProfile =
   (db: SQLiteDatabase) =>
   async (athleteId: number): Promise<StravaAthleteBasic> => {
-    const fnName = "getStravaAthleteProfileData";
+    const { stravaAthlete } = tables;
+    const query = `SELECT id, username, firstname, lastname, profile_medium FROM ${stravaAthlete} WHERE id = ?`;
+    const data = [athleteId];
 
-    const query = `SELECT id, username, firstname, lastname, profile_medium FROM ${tables.stravaAthlete} WHERE id = ?`;
-    logDb.debug(tables.stravaAthlete, query, { athleteId, fnName });
-
-    try {
-      const userData = await db.getFirstAsync<StravaAthleteBasic>(query, [
-        athleteId,
-      ]);
-      if (!userData || !userData.id) {
-        log.error(fnName, `User with id ${athleteId} not found`, { userData });
-        throw new Error(`Problem with data for user with id ${athleteId}`);
-      }
-
-      return userData;
-    } catch (error) {
-      if (isError(error)) {
-        logDb.error(tables.stravaAthlete, error, query, {
-          error,
-          athleteId,
-          fnName,
-        });
-      }
-      throw error;
-    }
+    return await runDbWithLogging(
+      () => db.getFirstAsync<StravaAthleteBasic>(query, data),
+      {
+        table: stravaAthlete,
+        fnName: "getStravaAthleteProfileData",
+        query,
+        data,
+      },
+    );
   };

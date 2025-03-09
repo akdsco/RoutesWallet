@@ -3,9 +3,8 @@ import {
   StravaAuthResponseRaw,
 } from "@/integrations/strava";
 import { SQLiteDatabase } from "expo-sqlite";
-import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
-import { isError } from "@/db/error";
+import { runDbWithLogging } from "@/db/error";
 
 export const insertStravaAuthResponseInDb =
   (db: SQLiteDatabase) =>
@@ -26,12 +25,7 @@ export const insertStravaAuthResponseInDb =
         access_token=excluded.access_token;
     `;
 
-    logDb.debug(tables.stravaAuthResponse, query, {
-      athleteId,
-      auth,
-    });
-
-    const insertData = [
+    const data = [
       auth.scope ? auth.scope : null,
       auth.token_type,
       auth.expires_at,
@@ -41,47 +35,42 @@ export const insertStravaAuthResponseInDb =
       athleteId,
     ];
 
-    try {
-      await db.runAsync(query, insertData);
-    } catch (error) {
-      if (isError(error))
-        logDb.error(tables.stravaAuthResponse, error, query, {
-          error,
-          athleteId,
-          query,
-          insertData,
-        });
-      throw error;
-    }
+    await runDbWithLogging(() => db.runAsync(query, data), {
+      table: tables.stravaAuthResponse,
+      query,
+      fnName: "insertStravaAuthResponseInDb",
+      data,
+    });
   };
 
 export const getStravaAuthFromDb =
-  (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `SELECT * FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<StravaAuthResponse | null> => {
+    const { stravaAuthResponse } = tables;
+    const query = `SELECT * FROM ${stravaAuthResponse} WHERE athlete_id = ?;`;
+    const data = [athleteId];
 
-    try {
-      return await db.getFirstAsync<StravaAuthResponse>(query, [athleteId]);
-    } catch (error) {
-      if (isError(error))
-        logDb.error(tables.stravaAuthResponse, error, query, {
-          athleteId,
-        });
-      throw error;
-    }
+    return await runDbWithLogging(
+      () => db.getFirstAsync<StravaAuthResponse>(query, data),
+      {
+        table: stravaAuthResponse,
+        query,
+        fnName: "getStravaAuthFromDb",
+        data,
+      },
+    );
   };
 
 export const deleteStravaAuthResponseFromDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const query = `DELETE FROM ${tables.stravaAuthResponse} WHERE athlete_id = ?;`;
+    const { stravaAuthResponse } = tables;
+    const query = `DELETE FROM ${stravaAuthResponse} WHERE athlete_id = ?;`;
+    const data = [athleteId];
 
-    try {
-      log.info(tables.stravaAuthResponse, query, { athleteId });
-      await db.runAsync(query, [athleteId]);
-    } catch (error) {
-      if (isError(error))
-        logDb.error(tables.stravaAuthResponse, error, query, {
-          athleteId,
-          error,
-        });
-    }
+    await runDbWithLogging(() => db.runAsync(query, data), {
+      table: stravaAuthResponse,
+      query,
+      fnName: "deleteStravaAuthResponseFromDb",
+      data,
+    });
   };

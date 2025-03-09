@@ -5,7 +5,11 @@ import { isProduction } from "@/library/config";
 import * as Sentry from "@sentry/browser";
 
 export const registerUser =
-  (postHog: PostHog) => async (athlete: StravaAthleteBasic) => {
+  (postHog: PostHog) => async (athlete?: StravaAthleteBasic) => {
+    if (!athlete) {
+      return;
+    }
+
     if (isProduction) {
       log.info("registerUser", "Registering user", { athlete });
     }

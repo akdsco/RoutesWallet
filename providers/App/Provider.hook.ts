@@ -29,6 +29,10 @@ export const useAppProvider = (): AppContextType => {
 
   useEffect(() => {
     const run = async () => {
+      if (athleteId === -1) {
+        router.navigate("/sign-in");
+      }
+
       const isStravaAuthed = await checkStravaConnection(db)(athleteId);
 
       log.debug("useApp", `useEffect`, {
@@ -40,10 +44,6 @@ export const useAppProvider = (): AppContextType => {
       });
 
       setIsStravaAuthed(isStravaAuthed);
-
-      if (athleteId === -1) {
-        router.navigate("/sign-in");
-      }
 
       if (
         !loading &&

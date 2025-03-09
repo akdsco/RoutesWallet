@@ -1,4 +1,9 @@
-import { isError, isSqlConstraintError, isSQLiteError } from "@/db/error";
+import {
+  isError,
+  isSqlConstraintError,
+  isSQLiteError,
+  runDbWithLogging,
+} from "@/db/error";
 import { log, logDb } from "@/library/logger";
 import { SQLiteDatabase } from "expo-sqlite";
 import { tables } from "@/db/tables";
@@ -317,19 +322,18 @@ export const getOrderedRawTagsFromDb =
 export const assignTagToRoute =
   (db: SQLiteDatabase) => async (tagId: number, routeId: string) => {
     // TODO: should we also be saving athleteID in this table??
-    const query = `INSERT INTO ${tables.routeTagAssignments} (route_id, tag_id) VALUES (?, ?) ON CONFLICT(route_id, tag_id) DO NOTHING`;
+    const { routeTagAssignments } = tables;
+    const query = `INSERT INTO ${routeTagAssignments} (route_id, tag_id) VALUES (?, ?) ON CONFLICT(route_id, tag_id) DO NOTHING`;
+    const data = [routeId, tagId];
 
-    try {
-      await db.runAsync(query, [routeId, tagId]);
-      logDb.debug(tables.routeTagAssignments, query, { routeId, tagId });
-    } catch (error) {
-      if (isError(error))
-        logDb.error(tables.routeTagAssignments, error, query, {
-          routeId,
-          tagId,
-          error,
-        });
-    }
+    const result = await runDbWithLogging(() => db.runAsync(query, data), {
+      table: routeTagAssignments,
+      query,
+      fnName: "assignTagToRoute",
+      data,
+    });
+
+    return result;
   };
 
 export const getAssignedTagsForRoute =
