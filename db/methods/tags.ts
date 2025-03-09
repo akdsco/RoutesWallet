@@ -5,53 +5,66 @@ import {
   runDbWithLogging,
 } from "@/db/error";
 import { log, logDb } from "@/library/logger";
-import { SQLiteDatabase } from "expo-sqlite";
+import { SQLiteDatabase, SQLiteRunResult } from "expo-sqlite";
 import { tables } from "@/db/tables";
 import {
   AthleteTagOrder,
-  DbOperationResult,
+  DbOpPromiseResult,
+  DbOpResult,
   RawTag,
   TagWithAssignment,
   TagWithFunctions,
 } from "@/library/types";
 import { DEFAULT_TAG_COLOR } from "@/library/theme";
 
-export const insertDefaultTagOrderInDb =
+export const getTagOrderCount =
   (db: SQLiteDatabase) => async (athleteId: number) => {
-    const checkQuery = `SELECT COUNT(*) as count FROM ${tables.athleteTagOrder} WHERE athlete_id = ?;`;
+    const { athleteTagOrder } = tables;
+    const query = `SELECT COUNT(*) as count FROM ${athleteTagOrder} WHERE athlete_id = ?;`;
+    const data = [athleteId];
 
-    const insertQuery = `
-        INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
+    const result = await runDbWithLogging(
+      () => db.getFirstAsync<{ count: number }>(query, data),
+      {
+        table: athleteTagOrder,
+        query,
+        fnName: "getTagOrderCount",
+        data,
+      },
+    );
+
+    if (!result) {
+      return 0 as number;
+    }
+
+    return result.count;
+  };
+
+export const insertDefaultTagOrderInDb =
+  (db: SQLiteDatabase) =>
+  async (athleteId: number): Promise<void> => {
+    const tagsOrderCount = await getTagOrderCount(db)(athleteId);
+
+    if (tagsOrderCount > 0) {
+      return;
+    }
+
+    const { athleteTagOrder } = tables;
+    const query = `
+        INSERT INTO ${athleteTagOrder} (athlete_id, tag_id, order_position)
         SELECT ? AS athlete_id,
           id AS tag_id,
           ROW_NUMBER() OVER (ORDER BY id) AS order_position
         FROM RouteTags;
       `;
+    const data = [athleteId];
 
-    try {
-      const result = await db.getFirstAsync<{ count: number }>(checkQuery, [
-        athleteId,
-      ]);
-
-      if (result && result.count > 0) {
-        logDb.info(tables.athleteTagOrder, `Order already exists`, {
-          athleteId,
-        });
-        return;
-      }
-
-      logDb.debug(tables.athleteTagOrder, insertQuery, { athleteId });
-      await db.runAsync(insertQuery, [athleteId]);
-    } catch (error) {
-      if (isError(error))
-        if (isError(error)) {
-          logDb.error(tables.athleteTagOrder, error, insertQuery, {
-            athleteId,
-            error,
-          });
-        }
-      throw error;
-    }
+    await runDbWithLogging(() => db.runAsync(query, data), {
+      table: athleteTagOrder,
+      fnName: "insertDefaultTagOrderInDb",
+      query,
+      data,
+    });
   };
 
 export const insertTag =
@@ -59,47 +72,55 @@ export const insertTag =
   async (
     tagName: string,
     tagColor?: string,
-  ): DbOperationResult<{ tagId: number }> => {
-    const colorValue = tagColor || DEFAULT_TAG_COLOR;
-    const query = `INSERT INTO ${tables.routeTags} (name, color) VALUES ('${tagName}', '${colorValue}')`;
+  ): DbOpPromiseResult<{ tagId: number }> => {
+    const tagColour = tagColor || DEFAULT_TAG_COLOR;
+    const { routeTags } = tables;
+    const query = `INSERT INTO ${routeTags} (name, color) VALUES (?, ?)`;
+    const data = [tagName, tagColour];
 
-    try {
-      await db.execAsync(query);
-      logDb.debug(tables.routeTags, query, { tagName });
-
-      const queryInsertId = `SELECT last_insert_rowid() as id`;
-      const result = await db.getFirstAsync<{ id: number }>(queryInsertId);
-
-      if (!result) {
-        return { success: false, error: "Tag not inserted" };
-      }
-
-      return {
-        success: true,
-        data: { tagId: result.id },
-      };
-    } catch (error) {
-      if (isSQLiteError(error)) {
-        if (isSqlConstraintError(error)) {
+    const result = await runDbWithLogging<
+      SQLiteRunResult | DbOpResult<{ tagId: number }>
+    >(
+      () => db.runAsync(query, data),
+      {
+        table: routeTags,
+        query,
+        fnName: "insertTag",
+        data,
+      },
+      (error) => {
+        if (isSQLiteError(error) && isSqlConstraintError(error)) {
           log.warn("addRouteTag", "Tag most likely already exists", {
             error: error.message,
             query,
           });
-          return { success: false, error: "Tag already exists" };
+          return {
+            success: false,
+            error: "Tag with this name already exists, choose different name",
+          };
         }
-      }
-      // TODO: write function that can handle db errors with msg and reuse
-      log.error("insertTag", "Error inserting tag", {
-        error,
-        errorMsg: (error as Error).message,
-      });
-      throw error;
+        if (isError(error)) {
+          log.error("insertTag", "Error inserting tag", {
+            eMsg: error.message,
+            eStack: error.stack,
+            query,
+          });
+        }
+
+        return { success: false, error: "Unknown error when inserting tag" };
+      },
+    );
+
+    if ("lastInsertRowId" in result) {
+      return { success: true, data: { tagId: result.lastInsertRowId } };
     }
+
+    return result;
   };
 
 export const handleRouteTagInsert =
   (db: SQLiteDatabase) =>
-  async (athleteId: number, tagName: string): DbOperationResult<void> => {
+  async (athleteId: number, tagName: string): DbOpPromiseResult<void> => {
     const insertResult = await insertTag(db)(tagName);
     if (!insertResult.success) {
       return insertResult;
@@ -270,12 +291,15 @@ export const removeTagFromDb =
 
 export const updateTagInDb =
   (db: SQLiteDatabase) =>
-  async (tag: RawTag, athleteId: number): DbOperationResult<void> => {
+  async (tag: RawTag, athleteId: number): DbOpPromiseResult<void> => {
     const listOfCurrentTags = await getOrderedRawTagsFromDb(db)(athleteId);
     const tagExists = listOfCurrentTags.find(({ name }) => name === tag.name);
 
     if (tagExists && tagExists.id !== tag.id) {
-      return { success: false, error: "Tag already exists" };
+      return {
+        success: false,
+        error: "You already have a tag named this way",
+      };
     }
 
     const fnName = "updateTagInDb";

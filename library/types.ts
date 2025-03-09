@@ -23,7 +23,7 @@ export type TagWithAssignment = RawTag & {
 };
 
 export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (tag: RawTag) => DbOperationResult<void>;
+export type UpdateTag = (tag: RawTag) => DbOpPromiseResult<void>;
 
 export type AthleteTagOrder = {
   athlete_id: number;
@@ -40,7 +40,9 @@ export type ExpectedError = { success: false; error: string };
 
 export type SuccessResult<T> = { success: true; data: T };
 
-export type DbOperationResult<T> = Promise<SuccessResult<T> | ExpectedError>;
+export type DbOpResult<T> = SuccessResult<T> | ExpectedError;
+
+export type DbOpPromiseResult<T> = Promise<SuccessResult<T> | ExpectedError>;
 
 export type NumberRange = [number, number];
 export type RangeUpdateFn = (value: NumberRange) => void;

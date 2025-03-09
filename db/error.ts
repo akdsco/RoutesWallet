@@ -32,6 +32,7 @@ type DbCallContext = {
 export const runDbWithLogging = async <T>(
   operation: () => Promise<T>,
   context: DbCallContext,
+  customErrorHandler?: (error: unknown) => T,
 ): Promise<T> => {
   try {
     const result = await operation();
@@ -49,6 +50,10 @@ export const runDbWithLogging = async <T>(
 
     return result;
   } catch (error) {
+    if (customErrorHandler) {
+      return customErrorHandler(error);
+    }
+
     const { query, table, ...rest } = context;
     if (isSQLiteError(error)) {
       logDb.error(table, error, query, rest);

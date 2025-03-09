@@ -21,7 +21,7 @@ import {
 } from "@/db/methods";
 import { AppConfig } from "@/library/config";
 import {
-  DbOperationResult,
+  DbOpPromiseResult,
   RouteInsertStats,
   SuccessResult,
 } from "@/library/types";
@@ -135,7 +135,7 @@ export const fetchAllStravaRoutes =
 
 export const getStravaRoutesAndSaveInDb =
   (db: SQLiteDatabase) =>
-  async (athleteId: number): DbOperationResult<RouteInsertStats> => {
+  async (athleteId: number): DbOpPromiseResult<RouteInsertStats> => {
     const fnName = "getStravaRoutesAndSaveInDb";
 
     try {
