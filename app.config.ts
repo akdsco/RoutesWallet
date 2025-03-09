@@ -79,6 +79,12 @@ const config: ExpoConfig = {
         organization: "routes-wallet",
       },
     ],
+    [
+      "expo-asset",
+      {
+        assets: ["./assets/images/default-user.png"],
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

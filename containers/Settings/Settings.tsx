@@ -32,7 +32,9 @@ export const Settings = () => {
               <Avatar
                 size={54}
                 rounded
-                source={{ uri: userData?.profile_medium }}
+                source={{
+                  uri: userData?.profile_medium ?? "default-user",
+                }}
                 containerStyle={{ marginBottom: 16 }}
               />
               <View style={{ display: "flex", flexDirection: "row" }}>
