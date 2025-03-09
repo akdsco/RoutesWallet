@@ -1,5 +1,6 @@
 import { AppConfig } from "@/library/config";
 import { postHog } from "@/library/analytics/posthog";
+import { isError, isSQLiteError, SQLiteError } from "@/db/error";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -14,6 +15,7 @@ type LogDbParams = {
   level: LogLevel;
   tableName: string;
   query: string;
+  error?: Error;
   context?: object;
 };
 
@@ -47,30 +49,58 @@ export const logDb = {
     loggerDb({ level: "info", tableName, query, context }),
   warn: (tableName: string, query: string, context?: object) =>
     loggerDb({ level: "warn", tableName, query, context }),
-  error: (tableName: string, query: string, context?: object) =>
-    loggerDb({ level: "error", tableName, query, context }),
+  error: (
+    tableName: string,
+    error: SQLiteError | Error,
+    query: string,
+    context?: object,
+  ) => loggerDb({ level: "error", tableName, error, query, context }),
 };
 
-const loggerDb = ({ level, tableName, query, context }: LogDbParams) => {
-  const logMessage = `DB:TABLE:${tableName}:${query.replace(/\s+/g, " ").trim()}`;
+const loggerDb = ({ level, tableName, error, query, context }: LogDbParams) => {
+  let message = `DB:${tableName}`;
+  const flatQuery = query.replace(/\s+/g, " ").trim();
+
+  if (isSQLiteError(error)) {
+    message = `${message}:eMSG:${error.message}:eCODE:${error.code}`;
+    return logBasedOnType(
+      level,
+      message,
+      getContext({ ...context, eStack: error.stack }),
+      flatQuery,
+    );
+  }
+
+  if (isError(error)) {
+    message = `${message}:eMSG:${error.message}:eSTACK:${error.stack}`;
+    return logBasedOnType(level, message, getContext(context), flatQuery);
+  }
+
+  const logMessage = `DB:${tableName}:${query.replace(/\s+/g, " ").trim()}`;
   const ctx = getContext(context);
 
-  return logBasedOnType(level, logMessage, ctx);
+  return logBasedOnType(level, logMessage, ctx, flatQuery);
 };
 
-const logBasedOnType = (type: LogLevel, logMessage: string, ctx: string) => {
+const logBasedOnType = (
+  type: LogLevel,
+  logMessage: string,
+  ctx: string,
+  lessRelevantMsg?: string,
+) => {
+  const less = lessRelevantMsg ? lessRelevantMsg : "";
   switch (type) {
     case "info":
-      console.info(logMessage, ctx);
+      console.info(logMessage, ctx, less);
       break;
     case "warn":
-      console.warn(logMessage, ctx);
+      console.warn(logMessage, ctx, less);
       break;
     case "error":
-      console.error(logMessage, ctx);
+      console.error(logMessage, ctx, less);
       break;
     case "debug":
-      console.debug(logMessage, ctx);
+      console.debug(logMessage, ctx, less);
       break;
   }
 };

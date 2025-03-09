@@ -2,11 +2,10 @@ import { SQLiteDatabase } from "expo-sqlite";
 import { StravaAthlete, StravaAthleteBasic } from "@/integrations/strava";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
+import { isError, runDbWithLogging } from "@/db/error";
 
 export const insertStravaAthleteInDb =
   (db: SQLiteDatabase) => async (athlete: StravaAthlete) => {
-    const fnName = "insertStravaAthleteInDb";
-
     const query = `
       INSERT INTO ${tables.stravaAthlete} (
         id, username, resource_state, firstname, lastname, bio, city, state, country, sex, premium, summit, created_at, updated_at, badge_type_id, profile_medium, profile, friend, follower, weight
@@ -32,39 +31,36 @@ export const insertStravaAthleteInDb =
         follower=excluded.follower,
         weight=excluded.weight;
     `;
-    logDb.debug(tables.stravaAthlete, query, { athlete, fnName });
 
-    try {
-      await db.runAsync(query, [
-        athlete.id,
-        athlete.username,
-        athlete.resource_state,
-        athlete.firstname,
-        athlete.lastname,
-        athlete.bio,
-        athlete.city,
-        athlete.state,
-        athlete.country,
-        athlete.sex,
-        athlete.premium,
-        athlete.summit,
-        athlete.created_at,
-        athlete.updated_at,
-        athlete.badge_type_id,
-        athlete.profile_medium,
-        athlete.profile,
-        athlete.friend,
-        athlete.follower,
-        athlete.weight ?? null,
-      ]);
-    } catch (error) {
-      logDb.error(tables.stravaAthlete, query, {
-        error,
-        athlete,
-        fnName,
-      });
-      throw error;
-    }
+    const athleteData = [
+      athlete.id,
+      athlete.username,
+      athlete.resource_state,
+      athlete.firstname,
+      athlete.lastname,
+      athlete.bio,
+      athlete.city,
+      athlete.state,
+      athlete.country,
+      athlete.sex,
+      athlete.premium,
+      athlete.summit,
+      athlete.created_at,
+      athlete.updated_at,
+      athlete.badge_type_id,
+      athlete.profile_medium,
+      athlete.profile,
+      athlete.friend,
+      athlete.follower,
+      athlete.weight ?? null,
+    ];
+
+    await runDbWithLogging(() => db.runAsync(query, athleteData), {
+      table: tables.stravaAthlete,
+      fnName: "insertStravaAthleteInDb",
+      query,
+      data: { athlete },
+    });
   };
 
 export const getStravaAthleteBasicProfile =
@@ -86,7 +82,13 @@ export const getStravaAthleteBasicProfile =
 
       return userData;
     } catch (error) {
-      logDb.error(tables.stravaAthlete, query, { error, athleteId, fnName });
+      if (isError(error)) {
+        logDb.error(tables.stravaAthlete, error, query, {
+          error,
+          athleteId,
+          fnName,
+        });
+      }
       throw error;
     }
   };

@@ -5,6 +5,7 @@ import {
 import { SQLiteDatabase } from "expo-sqlite";
 import { log, logDb } from "@/library/logger";
 import { tables } from "@/db/tables";
+import { isError } from "@/db/error";
 
 export const insertStravaAuthResponseInDb =
   (db: SQLiteDatabase) =>
@@ -43,16 +44,13 @@ export const insertStravaAuthResponseInDb =
     try {
       await db.runAsync(query, insertData);
     } catch (error) {
-      logDb.error(
-        tables.stravaAuthResponse,
-        "Error when INSERTING strava auth response",
-        {
+      if (isError(error))
+        logDb.error(tables.stravaAuthResponse, error, query, {
           error,
           athleteId,
           query,
           insertData,
-        },
-      );
+        });
       throw error;
     }
   };
@@ -64,9 +62,10 @@ export const getStravaAuthFromDb =
     try {
       return await db.getFirstAsync<StravaAuthResponse>(query, [athleteId]);
     } catch (error) {
-      logDb.error(tables.stravaAuthResponse, query, {
-        athleteId,
-      });
+      if (isError(error))
+        logDb.error(tables.stravaAuthResponse, error, query, {
+          athleteId,
+        });
       throw error;
     }
   };
@@ -79,9 +78,10 @@ export const deleteStravaAuthResponseFromDb =
       log.info(tables.stravaAuthResponse, query, { athleteId });
       await db.runAsync(query, [athleteId]);
     } catch (error) {
-      logDb.error(tables.stravaAuthResponse, query, {
-        athleteId,
-        error,
-      });
+      if (isError(error))
+        logDb.error(tables.stravaAuthResponse, error, query, {
+          athleteId,
+          error,
+        });
     }
   };

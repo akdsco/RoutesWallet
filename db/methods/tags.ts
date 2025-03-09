@@ -1,4 +1,4 @@
-import { isConstraintError, isSQLiteError } from "@/db/error";
+import { isError, isSqlConstraintError, isSQLiteError } from "@/db/error";
 import { log, logDb } from "@/library/logger";
 import { SQLiteDatabase } from "expo-sqlite";
 import { tables } from "@/db/tables";
@@ -15,6 +15,14 @@ export const insertDefaultTagOrderInDb =
   (db: SQLiteDatabase) => async (athleteId: number) => {
     const checkQuery = `SELECT COUNT(*) as count FROM ${tables.athleteTagOrder} WHERE athlete_id = ?;`;
 
+    const insertQuery = `
+        INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
+        SELECT ? AS athlete_id,
+          id AS tag_id,
+          ROW_NUMBER() OVER (ORDER BY id) AS order_position
+        FROM RouteTags;
+      `;
+
     try {
       const result = await db.getFirstAsync<{ count: number }>(checkQuery, [
         athleteId,
@@ -27,21 +35,16 @@ export const insertDefaultTagOrderInDb =
         return;
       }
 
-      const insertQuery = `
-        INSERT INTO ${tables.athleteTagOrder} (athlete_id, tag_id, order_position)
-        SELECT ? AS athlete_id,
-          id AS tag_id,
-          ROW_NUMBER() OVER (ORDER BY id) AS order_position
-        FROM RouteTags;
-      `;
-
       logDb.debug(tables.athleteTagOrder, insertQuery, { athleteId });
       await db.runAsync(insertQuery, [athleteId]);
     } catch (error) {
-      logDb.error(tables.athleteTagOrder, "Error inserting default tag order", {
-        athleteId,
-        error,
-      });
+      if (isError(error))
+        if (isError(error)) {
+          logDb.error(tables.athleteTagOrder, error, insertQuery, {
+            athleteId,
+            error,
+          });
+        }
       throw error;
     }
   };
@@ -72,7 +75,7 @@ export const insertTag =
       };
     } catch (error) {
       if (isSQLiteError(error)) {
-        if (isConstraintError(error)) {
+        if (isSqlConstraintError(error)) {
           log.warn("addRouteTag", "Tag most likely already exists", {
             error: error.message,
             query,
@@ -320,7 +323,12 @@ export const assignTagToRoute =
       await db.runAsync(query, [routeId, tagId]);
       logDb.debug(tables.routeTagAssignments, query, { routeId, tagId });
     } catch (error) {
-      logDb.error(tables.routeTagAssignments, query, { routeId, tagId, error });
+      if (isError(error))
+        logDb.error(tables.routeTagAssignments, error, query, {
+          routeId,
+          tagId,
+          error,
+        });
     }
   };
 
@@ -344,7 +352,8 @@ export const getAssignedTagsForRoute =
       logDb.debug(tables.routeTags, query, { routeId });
       return await db.getAllAsync<TagWithAssignment>(query, [routeId]);
     } catch (error) {
-      logDb.error(tables.routeTags, query, { routeId, error });
+      if (isError(error))
+        logDb.error(tables.routeTags, error, query, { routeId, error });
       throw error;
     }
   };
@@ -357,7 +366,12 @@ export const removeTagFromRoute =
       await db.runAsync(query, [tagId, routeId]);
       logDb.debug(tables.routeTagAssignments, query, { tagId, routeId });
     } catch (error) {
-      logDb.error(tables.routeTagAssignments, query, { tagId, routeId, error });
+      if (isError(error))
+        logDb.error(tables.routeTagAssignments, error, query, {
+          tagId,
+          routeId,
+          error,
+        });
     }
   };
 

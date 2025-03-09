@@ -16,6 +16,7 @@ import {
   secondsToMinutes,
 } from "@/library/conversionFunctions";
 import { assignTagToRoute, getTagIdByName, insertTag } from "@/db/methods/tags";
+import { isError } from "@/db/error";
 
 export const insertStravaRoutesInDb =
   (db: SQLiteDatabase) =>
@@ -296,7 +297,10 @@ export const getStravaRoutesBaseFromDb =
       return routes;
     } catch (error) {
       // TODO: error like this should be better logged, figure out way to extract error message/stack etc and reuse it in each log?
-      logDb.error(tables.stravaRoute, query, { athleteId });
+      if (isError(error)) {
+        logDb.error(tables.stravaRoute, error, query, { athleteId });
+      }
+
       throw error;
     }
   };
@@ -344,7 +348,9 @@ export const getStravaRouteIdsFromDb =
 
       return result.map(({ id }) => id);
     } catch (error) {
-      logDb.error(tables.stravaRoute, query, { error, athleteId });
+      if (isError(error)) {
+        logDb.error(tables.stravaRoute, error, query, { error, athleteId });
+      }
       throw error;
     }
   };
@@ -367,12 +373,14 @@ export const removeStravaRoutesFromDb =
       await db.runAsync(query, [athleteId, ...routeIds]);
       logDb.debug(tables.stravaRoute, query, { athleteId, routeIds });
     } catch (error) {
-      logDb.error(tables.stravaRoute, query, {
-        error,
-        athleteId,
-        routeIds,
-        placeholders,
-      });
+      if (isError(error)) {
+        logDb.error(tables.stravaRoute, error, query, {
+          error,
+          athleteId,
+          routeIds,
+          placeholders,
+        });
+      }
       throw error;
     }
   };
@@ -432,7 +440,9 @@ export const getStravaRoutesStatsFromDb =
 
       return transformToStravaRouteFilterStats(result);
     } catch (error) {
-      logDb.error(tables.stravaRoute, query, { error, athleteId });
+      if (isError(error)) {
+        logDb.error(tables.stravaRoute, error, query, { error, athleteId });
+      }
       throw error;
     }
   };

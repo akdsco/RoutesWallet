@@ -5,22 +5,22 @@ export type StravaAthleteBasic = {
   username: string | null;
   firstname: string;
   lastname: string;
-  profile_medium: string;
+  profile_medium: string | null;
 };
 
 export type StravaAthlete = StravaAthleteBasic & {
   resource_state: number;
   bio: string | null;
-  city: string;
+  city: string | null;
   state: string | null;
   country: string | null;
-  sex: string;
+  sex: string | null;
   premium: boolean;
   summit: boolean;
   created_at: string;
   updated_at: string;
   badge_type_id: number;
-  profile: string;
+  profile: string | null;
   friend: null;
   follower: null;
   weight?: number;
