@@ -23,15 +23,15 @@ export const useAddTag = (checkTags: FunctionCallPromise) => {
       return;
     }
 
-    const tagInsetResult = await handleRouteTagInsert(db)(athleteId, tagName);
+    const tagInsertResult = await handleRouteTagInsert(db)(athleteId, tagName);
 
-    if (!tagInsetResult.success) {
-      Toast("error", "Error adding tag", tagInsetResult.error);
+    if (!tagInsertResult.success) {
+      Toast("error", "Error adding tag", tagInsertResult.error);
       return;
     }
 
-    await checkTags();
     log.info("useTags: addTag", `Route tag "${tagName}" added successfully`);
+    await checkTags();
     setTagName("");
     Keyboard.dismiss();
   };

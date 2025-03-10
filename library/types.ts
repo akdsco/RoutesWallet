@@ -1,4 +1,5 @@
 import { StravaRouteBase } from "@/integrations/strava";
+import { SQLiteRunResult } from "expo-sqlite";
 
 export type FunctionCallPromise = () => Promise<void>;
 export type FunctionCall = () => void;
@@ -6,6 +7,7 @@ export type UpdateFn<T> = (value: T) => void;
 export type ConvertNumFn = (val: number, toFixed?: number) => number;
 
 export type Identifiable = { id: string };
+export type IdentifiableNumber = { id: number };
 
 export type RawTag = {
   id: number;
@@ -23,7 +25,7 @@ export type TagWithAssignment = RawTag & {
 };
 
 export type RemoveTag = (tagId: number) => Promise<void>;
-export type UpdateTag = (tag: RawTag) => DbOpPromiseResult<void>;
+export type UpdateTag = (tag: RawTag) => DbOpPromiseResult<SQLiteRunResult>;
 
 export type AthleteTagOrder = {
   athlete_id: number;

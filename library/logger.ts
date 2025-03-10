@@ -25,6 +25,7 @@ export const log = {
   debug: (fnName: string, action: string, context?: object) =>
     isDebugModeOn ? logger({ level: "debug", fnName, action, context }) : {},
   info: (fnName: string, action: string, context?: object) => {
+    logger({ level: "info", fnName, action, context });
     postHog.capture(action, { fnName, ...context }, { timestamp: new Date() });
   },
   warn: (fnName: string, action: string, context?: object) =>
@@ -76,7 +77,7 @@ const loggerDb = ({ level, tableName, error, query, context }: LogDbParams) => {
     return logBasedOnType(level, message, getContext(context), flatQuery);
   }
 
-  const logMessage = `DB:${tableName}:${query.replace(/\s+/g, " ").trim()}`;
+  const logMessage = `DB:${tableName}`;
   const ctx = getContext(context);
 
   return logBasedOnType(level, logMessage, ctx, flatQuery);
@@ -110,7 +111,16 @@ const getContext = (context?: object) => {
     return "";
   }
 
-  const stringifiedObject = JSON.stringify(context);
+  const replacer = (_key: string, value: any) => {
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        typeof item === "number" ? `${item} (num)` : item,
+      );
+    }
+    return value;
+  };
+
+  const stringifiedObject = JSON.stringify(context, replacer);
 
   return AppConfig.DEBUG_MODE_VERBOSE === "true"
     ? stringifiedObject

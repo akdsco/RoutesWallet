@@ -36,8 +36,9 @@ export const runDbWithLogging = async <T>(
 ): Promise<T> => {
   try {
     const result = await operation();
+
     logDb.debug(context.table, context.query, {
-      ...context.data,
+      data: context.data,
       functionName: context.fnName,
       result,
     });
