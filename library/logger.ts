@@ -111,16 +111,7 @@ const getContext = (context?: object) => {
     return "";
   }
 
-  const replacer = (_key: string, value: any) => {
-    if (Array.isArray(value)) {
-      return value.map((item) =>
-        typeof item === "number" ? `${item} (num)` : item,
-      );
-    }
-    return value;
-  };
-
-  const stringifiedObject = JSON.stringify(context, replacer);
+  const stringifiedObject = JSON.stringify(context);
 
   return AppConfig.DEBUG_MODE_VERBOSE === "true"
     ? stringifiedObject

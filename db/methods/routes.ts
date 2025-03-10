@@ -503,7 +503,7 @@ export const autoTagRoutes =
           if (!tagId) {
             const insertResult = await insertTag(db)(tagName, tagColor);
             if (insertResult.success) {
-              tagId = insertResult.data.tagId;
+              tagId = insertResult.data.id;
             } else {
               // Retry fetching the tag if insertion fails due to race conditions.
               tagId = await getTagIdByName(db)(tagName);
