@@ -70,7 +70,7 @@ export const getStravaAthleteBasicProfile =
     const query = `SELECT id, username, firstname, lastname, profile_medium FROM ${stravaAthlete} WHERE id = ?`;
     const data = [athleteId];
 
-    return await runDbWithLogging(
+    const athlete = await runDbWithLogging(
       () => db.getFirstAsync<StravaAthleteBasic>(query, data),
       {
         table: stravaAthlete,
@@ -79,4 +79,10 @@ export const getStravaAthleteBasicProfile =
         data,
       },
     );
+
+    if (!athlete) {
+      throw new Error(`No athlete found for id ${athleteId}`);
+    }
+
+    return athlete;
   };
