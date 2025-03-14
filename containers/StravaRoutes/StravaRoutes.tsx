@@ -14,14 +14,16 @@ import { Button } from "@/components/Button/Buttons";
 import { Loader } from "@/components/Loader";
 import { useStravaRoutes } from "@/containers/StravaRoutes/useStravaRoutes.hook";
 import React, { ReactElement } from "react";
-import { FiltersOpenButton } from "@/components/FiltersOpenButton/FiltersOpenButton";
 import { useTheme } from "@/hooks";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { RouteListItem } from "@/containers/StravaRoutes/RouteListItem";
 import { Theme } from "@/library/theme";
-import { RoutesFilters } from "@/containers/RoutesFilters/RoutesFilters";
 import { RoutesHeader } from "@/containers/RoutesHeader/RoutesHeader";
 import { EmptyRoutesMsg } from "@/components/EmptyRoutesMsg";
+import {
+  RoutesBottomSheet,
+  RoutesBsOpenButton,
+} from "@/containers/RoutesBottomSheet";
 
 type StravaRoutesProps = {
   route: string;
@@ -111,17 +113,21 @@ export const StravaRoutes = ({
           renderItem={({ item }) => (
             <RouteListItem {...{ item, route, itemWidth }} />
           )}
-          ListHeaderComponent={<RoutesHeader {...filtersWithRouteCount} />}
+          ListHeaderComponent={
+            <RoutesHeader
+              {...{ ...filtersWithRouteCount, onBottomSheetOpen }}
+            />
+          }
           ListEmptyComponent={EmptyRoutesMsg}
           refreshControl={refreshControl}
           numColumns={2}
           contentContainerStyle={styles.flatListContent}
         />
-        <FiltersOpenButton
+        <RoutesBsOpenButton
           onPress={onBottomSheetOpen}
           isFiltered={filters.isFilterApplied}
         />
-        <RoutesFilters {...filtersWithRouteCount} />
+        <RoutesBottomSheet {...filtersWithRouteCount} />
       </GestureHandlerRootView>
     </Container>
   );

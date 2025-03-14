@@ -58,3 +58,5 @@ export type RangeProps = {
 };
 
 export type IconLabel = "bicycle" | "trending-up-outline" | "time-outline";
+export type SortKeys = "distance" | "elevation" | "movingTime";
+export type FilterKeys = "search" | SortKeys;
