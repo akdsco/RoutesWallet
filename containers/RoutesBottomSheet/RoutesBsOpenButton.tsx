@@ -10,7 +10,7 @@ type FiltersButtonProps = {
   isFiltered: boolean;
 };
 
-export const FiltersOpenButton = ({
+export const RoutesBsOpenButton = ({
   isFiltered,
   onPress,
 }: FiltersButtonProps) => {

@@ -27,18 +27,18 @@ SplashScreen.preventAutoHideAsync().then();
 export default function Root() {
   return (
     <SQLiteProvider databaseName="routeswalletdb" onInit={migrateDbIfNeeded}>
-      <AppProvider>
-        <AppThemeProvider>
-          <PostHogProvider client={postHog} autocapture={isProduction}>
+      <PostHogProvider client={postHog} autocapture={isProduction}>
+        <AppProvider>
+          <AppThemeProvider>
             <ElementsProvider>
               <MenuProvider>
                 <Slot />
                 <Toast config={toastConfig} />
               </MenuProvider>
             </ElementsProvider>
-          </PostHogProvider>
-        </AppThemeProvider>
-      </AppProvider>
+          </AppThemeProvider>
+        </AppProvider>
+      </PostHogProvider>
     </SQLiteProvider>
   );
 }

@@ -1,15 +1,22 @@
 import { SearchInput } from "@/components/SearchInput/SearchInput";
 import React from "react";
-import { FilterProps } from "@/containers/StravaRoutes/useRoutesFilters.hook";
+import {
+  FilterProps,
+  SortBy,
+} from "@/containers/StravaRoutes/useRoutesFilters.hook";
 import { View } from "react-native";
 import { FilterChip } from "@/components/FilterChip/FilterChip";
 import {
   displayElevation,
   formatMinutesToHoursAndMinutes,
 } from "@/library/displayFormat";
+import { SortSelectionButton } from "@/components/SortSelectionButton";
+import { FunctionCall } from "@/library/types";
 
 type RoutesHeaderProps = FilterProps & {
   routeCount: number;
+  sortBy: SortBy;
+  onBottomSheetOpen: FunctionCall;
 };
 
 export const RoutesHeader = ({
@@ -18,21 +25,34 @@ export const RoutesHeader = ({
   elevation,
   movingTime,
   appliedFilters,
+  sortBy,
+  onBottomSheetOpen,
   routeCount,
 }: RoutesHeaderProps) => {
   return (
     <>
-      <SearchInput
-        isFiltered={appliedFilters.search}
-        searchTerm={search.term}
-        foundRoutes={routeCount}
-        onSearchTermChange={search.onChange}
-        onSearchSubmit={search.onSubmit}
-        onSearchReset={search.onReset}
-      />
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ paddingRight: 6, marginTop: 9 }}>
+          <SortSelectionButton
+            name={sortBy.name}
+            isSelected={true}
+            sortDescending={sortBy.type === "dsc"}
+            updateSort={onBottomSheetOpen}
+          />
+        </View>
+        <SearchInput
+          isFiltered={appliedFilters.search}
+          searchTerm={search.term}
+          foundRoutes={routeCount}
+          onSearchTermChange={search.onChange}
+          onSearchSubmit={search.onSubmit}
+          onSearchReset={search.onReset}
+        />
+      </View>
       <View
         style={{
           flexDirection: "row",
+          flexWrap: "wrap",
           marginHorizontal: 5,
         }}
       >

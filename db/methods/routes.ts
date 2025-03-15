@@ -157,6 +157,9 @@ export const getStravaRoutesDetailedFromDb =
       }
     }
 
+    // Default ordering
+    query += " ORDER BY sr.distance DESC";
+
     const routesFlat = await runDbWithLogging(
       () => db.getAllAsync<StravaRouteDetailedFlat>(query, data),
       {
@@ -270,6 +273,9 @@ export const getStravaRoutesBaseFromDb =
       query += ` AND sr.id IN (${placeholders})`;
       data.push(...filters.routeIds);
     }
+
+    // Default ordering
+    query += " ORDER BY sr.distance DESC";
 
     const routesFlat = await runDbWithLogging(
       () => db.getAllAsync<StravaRouteBaseFlat>(query, data),

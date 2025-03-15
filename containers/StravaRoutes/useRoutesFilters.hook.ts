@@ -1,5 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FunctionCall, NumberRange } from "@/library/types";
+import {
+  FilterKeys,
+  FunctionCall,
+  NumberRange,
+  SortKeys,
+} from "@/library/types";
 import { useApp } from "@/hooks";
 import { useSQLiteContext } from "expo-sqlite";
 import { getStravaRoutesStatsFromDb } from "@/db/methods";
@@ -9,8 +14,17 @@ import Fuse from "fuse.js";
 import { StravaRouteBase } from "@/integrations/strava";
 import { Keyboard } from "react-native";
 import { filterRoutes } from "@/library/routes/filter";
+import { sortRoutes } from "@/library/routes/sort";
 
-type FilterKeys = "search" | "distance" | "elevation" | "movingTime";
+type Sort = "dsc" | "asc";
+export type UpdateSort = (object: SortBy) => void;
+export type SortBy = { name: SortKeys; type: Sort };
+
+const sortInit: SortBy = {
+  name: "distance",
+  type: "dsc",
+};
+
 export type FilterBy = Record<FilterKeys, boolean>;
 
 export type FilterProps = {
@@ -36,6 +50,8 @@ export type FilterProps = {
     onChange: (range: NumberRange) => void;
     onReset: FunctionCall;
   };
+  sortBy: SortBy;
+  updateSort: UpdateSort;
   onNumberRangeSubmit: FunctionCall;
   extremeValues: Record<string, NumberRange>;
   isFilterApplied: boolean;
@@ -77,6 +93,18 @@ export const useRoutesFilters = (
   const [movingTimeRange, setMovingTimeRange] = useState<NumberRange>(
     extremeValuesInit.estimatedMovingTime,
   );
+
+  const [sortBy, setSortBy] = useState<SortBy>(sortInit);
+
+  const updateSort: UpdateSort = (object: SortBy) => {
+    setSortBy((prev) =>
+      prev.name !== object.name ? { name: object.name, type: "dsc" } : object,
+    );
+  };
+
+  useEffect(() => {
+    log.info("useRoutesFilter", "Sort change", { sortBy });
+  }, [sortBy]);
 
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [filteredRoutes, setFilteredRoutes] = useState<StravaRouteBase[]>([]);
@@ -238,7 +266,9 @@ export const useRoutesFilters = (
 
   return {
     noRoutesAvailable: !isFilterApplied && routes.length === 0,
-    filteredRoutes: isFilterApplied ? filteredRoutes : routes,
+    filteredRoutes: isFilterApplied
+      ? sortRoutes(filteredRoutes, sortBy)
+      : sortRoutes(routes, sortBy),
     search: {
       term: searchTerm,
       onChange: (searchTerm: string) => setSearchTerm(searchTerm),
@@ -260,6 +290,8 @@ export const useRoutesFilters = (
       onChange: (range: NumberRange) => setMovingTimeRange(range),
       onReset: () => checkFiltersAndReApplyAfterPartialReset("movingTime"),
     },
+    sortBy,
+    updateSort,
     onNumberRangeSubmit,
     extremeValues,
     onBottomSheetOpen,

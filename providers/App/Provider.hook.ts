@@ -7,6 +7,9 @@ import { log } from "@/library/logger";
 import { router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { AppContextType } from "@/providers/App/index";
+import { usePostHog } from "posthog-react-native";
+import { registerUser } from "@/library/analytics/register";
+import { getStravaAthleteBasicProfile } from "@/db/methods";
 
 export const useAppProvider = (): AppContextType => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +18,7 @@ export const useAppProvider = (): AppContextType => {
   const [fontLoaded, fontError] = useFonts({
     SpaceMono: require("../../assets/fonts/SpaceMono-Regular.ttf"),
   });
+  const postHog = usePostHog();
 
   const [athleteId, setAthleteId] = useState<number>(-1);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
@@ -60,6 +64,10 @@ export const useAppProvider = (): AppContextType => {
             isStravaAuthed,
           },
         );
+        await registerUser(postHog)(
+          await getStravaAthleteBasicProfile(db)(athleteId),
+        );
+
         router.navigate("/(tabs)/routes/");
       }
     };

@@ -7,7 +7,12 @@ import React from "react";
 import { ThemedText } from "@/components/ThemedText";
 import { Button } from "@/components/Button/Buttons";
 import { FunctionCall, NumberRange, RangeUpdateFn } from "@/library/types";
-import { FilterBy } from "@/containers/StravaRoutes/useRoutesFilters.hook";
+import {
+  FilterBy,
+  SortBy,
+  UpdateSort,
+} from "@/containers/StravaRoutes/useRoutesFilters.hook";
+import { SortSelectionButton } from "@/components/SortSelectionButton";
 
 type RangeFilter = {
   range: NumberRange;
@@ -20,6 +25,8 @@ export type RoutesFiltersProps = {
   distance: RangeFilter;
   elevation: RangeFilter;
   movingTime: RangeFilter;
+  sortBy: SortBy;
+  updateSort: UpdateSort;
   onNumberRangeSubmit: () => void;
   extremeValues: Record<string, NumberRange>;
   onBottomSheetClose: () => void;
@@ -29,11 +36,13 @@ export type RoutesFiltersProps = {
   routeCount: number;
 };
 
-export const RoutesFilters = ({
+export const RoutesBottomSheet = ({
   bottomSheetRef,
   distance,
   elevation,
   movingTime,
+  sortBy,
+  updateSort,
   onNumberRangeSubmit,
   extremeValues,
   onBottomSheetClose,
@@ -50,7 +59,7 @@ export const RoutesFilters = ({
       ref={bottomSheetRef}
       enablePanDownToClose
       enableDynamicSizing={false}
-      snapPoints={[1, "65%"]}
+      snapPoints={[1, "75%"]}
       handleStyle={styles.bottomSheetHandleStyle}
       enableContentPanningGesture={false}
       handleIndicatorStyle={styles.bottomSheetHandleIndicatorStyle}
@@ -95,6 +104,35 @@ export const RoutesFilters = ({
               isApplied={appliedFilters.movingTime}
               extremeValues={extremeValues.estimatedMovingTime}
             />
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <ThemedText>Sort by</ThemedText>
+            <View
+              style={{
+                width: "100%",
+                flexDirection: "row",
+                paddingVertical: 10,
+              }}
+            >
+              <SortSelectionButton
+                name="distance"
+                isSelected={sortBy.name === "distance"}
+                sortDescending={sortBy.type === "dsc"}
+                updateSort={updateSort}
+              />
+              <SortSelectionButton
+                name="elevation"
+                isSelected={sortBy.name === "elevation"}
+                sortDescending={sortBy.type === "dsc"}
+                updateSort={updateSort}
+              />
+              <SortSelectionButton
+                name="movingTime"
+                isSelected={sortBy.name === "movingTime"}
+                sortDescending={sortBy.type === "dsc"}
+                updateSort={updateSort}
+              />
+            </View>
           </View>
           <View style={styles.filterBottomBtnContainer}>
             <Button
