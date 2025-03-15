@@ -14,6 +14,7 @@ import Fuse from "fuse.js";
 import { StravaRouteBase } from "@/integrations/strava";
 import { Keyboard } from "react-native";
 import { filterRoutes } from "@/library/routes/filter";
+import { sortRoutes } from "@/library/routes/sort";
 
 type Sort = "dsc" | "asc";
 export type UpdateSort = (object: SortBy) => void;
@@ -265,7 +266,9 @@ export const useRoutesFilters = (
 
   return {
     noRoutesAvailable: !isFilterApplied && routes.length === 0,
-    filteredRoutes: isFilterApplied ? filteredRoutes : routes,
+    filteredRoutes: isFilterApplied
+      ? sortRoutes(filteredRoutes, sortBy)
+      : sortRoutes(routes, sortBy),
     search: {
       term: searchTerm,
       onChange: (searchTerm: string) => setSearchTerm(searchTerm),
