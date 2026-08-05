@@ -1,0 +1,105 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "girona-els-angels",
+        "name": "Girona – Els Àngels loop",
+        "link": "https://www.strava.com/routes/3209589800981216792",
+        "distance_km": 64,
+        "source": "HV-signed"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.8214, 41.9794],
+          [2.8615, 41.9512],
+          [2.8998, 41.9223],
+          [2.8503, 41.9008],
+          [2.8102, 41.9401],
+          [2.8214, 41.9794]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "girona-banyoles",
+        "name": "Girona – Banyoles out & back",
+        "link": "https://www.komoot.com/smarttour/e123456",
+        "distance_km": 42,
+        "source": "3rd-party"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.8214, 41.9794],
+          [2.79, 42.03],
+          [2.762, 42.081],
+          [2.7503, 42.1201]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "london-cambridge-direct",
+        "name": "London → Cambridge (direct-ish)",
+        "link": "https://www.strava.com/routes/3350198114604924192",
+        "distance_km": 98,
+        "source": "HV-signed"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-0.0602, 51.5203],
+          [0.0201, 51.6502],
+          [0.0705, 51.8004],
+          [0.1002, 51.9805],
+          [0.1218, 52.2053]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "regents-park-laps",
+        "name": "Regent's Park early laps",
+        "link": "https://www.strava.com/routes/3294368693114638772",
+        "distance_km": 22,
+        "source": "HV-signed"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [-0.1565, 51.5275],
+          [-0.1502, 51.5325],
+          [-0.1481, 51.5288],
+          [-0.1543, 51.5239],
+          [-0.1602, 51.5271],
+          [-0.1565, 51.5275]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "alcudia-formentor",
+        "name": "Port d'Alcúdia – Cap de Formentor",
+        "link": "https://www.strava.com/routes/3350198024428549456",
+        "distance_km": 55,
+        "source": "3rd-party"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [3.1201, 39.8503],
+          [3.1605, 39.9012],
+          [3.1902, 39.9351],
+          [3.2101, 39.9603]
+        ]
+      }
+    }
+  ]
+}

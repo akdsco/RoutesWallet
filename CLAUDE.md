@@ -37,11 +37,11 @@ Every route is exactly this shape. Do not mutate it without the user's say-so:
 type Route = {
   id: string;
   name: string;
-  link: string;                            // opens in Strava/RWGPS or a GPX download
+  link: string; // opens in Strava/RWGPS or a GPX download
   distance_km: number;
-  source: 'HV-signed' | '3rd-party';       // trust badge; HV = vetted by the club
-  geometry: GeoJSON.LineString;            // [lng, lat] pairs
-  centroid: [number, number];              // [lng, lat], for cheap proximity pre-filter
+  source: 'HV-signed' | '3rd-party'; // trust badge; HV = vetted by the club
+  geometry: GeoJSON.LineString; // [lng, lat] pairs
+  centroid: [number, number]; // [lng, lat], for cheap proximity pre-filter
 };
 ```
 

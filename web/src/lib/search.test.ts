@@ -57,7 +57,9 @@ describe('routesNear', () => {
   });
 
   it('returns an empty array when nothing is in range', () => {
-    expect(routesNear([-0.09, 51.51], all, 5).filter((r) => r.id !== 'london')).toEqual([]);
+    expect(
+      routesNear([-0.09, 51.51], all, 5).filter((r) => r.id !== 'london')
+    ).toEqual([]);
     expect(routesNear([10, 10], all, 25)).toEqual([]);
   });
 });

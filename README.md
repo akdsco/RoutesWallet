@@ -8,10 +8,10 @@ and `node_modules`.
 
 ## Layout
 
-| Folder | What it is | Status |
-|--------|-----------|--------|
-| [`web/`](web/) | The current focus. A static web map of a club's routes with **"routes near a place"** search. Vite + React + TS + Leaflet + Turf. £0 to host. | Active |
-| [`mobile/`](mobile/) | The original Expo / React Native app (Strava sync, tagging, encrypted SQLite). | Parked |
+| Folder               | What it is                                                                                                                                    | Status |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| [`web/`](web/)       | The current focus. A static web map of a club's routes with **"routes near a place"** search. Vite + React + TS + Leaflet + Turf. £0 to host. | Active |
+| [`mobile/`](mobile/) | The original Expo / React Native app (Strava sync, tagging, encrypted SQLite).                                                                | Parked |
 
 ## Why this shape
 

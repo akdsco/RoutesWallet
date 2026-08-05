@@ -4,9 +4,13 @@ import type { Route } from '../types.ts';
 
 /** Shortest distance in km from a [lng, lat] point to a route's line. */
 export function distanceToRouteKm(pt: [number, number], route: Route): number {
-  return pointToLineDistance(point(pt), lineString(route.geometry.coordinates), {
-    units: 'kilometers',
-  });
+  return pointToLineDistance(
+    point(pt),
+    lineString(route.geometry.coordinates),
+    {
+      units: 'kilometers',
+    }
+  );
 }
 
 /**
