@@ -4,6 +4,7 @@ import { SearchBar } from './components/SearchBar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
+import { openLabel } from './lib/links.ts';
 import type { Route } from './types.ts';
 
 const RADIUS_KM = 25;
@@ -91,6 +92,7 @@ export function App() {
             </span>
             <strong>{r.name}</strong>
             <span className="dist">{r.distance_km} km</span>
+            <span className="open">{openLabel(r.link)}</span>
           </a>
         ))}
       </aside>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Route } from '../types.ts';
+import { openLabel } from '../lib/links.ts';
 
 type Props = {
   routes: Route[];
@@ -55,7 +56,7 @@ export function RouteMap({ routes, highlightIds, searchPoint }: Props) {
       })
         .bindPopup(
           `<strong>${escapeHtml(r.name)}</strong><br>${r.distance_km} km · ${r.source}` +
-            `<br><a href="${escapeHtml(r.link)}" target="_blank" rel="noopener">Open route ↗</a>`
+            `<br><a href="${escapeHtml(r.link)}" target="_blank" rel="noopener">${openLabel(r.link)}</a>`
         )
         .addTo(layer);
       if (on) focus.push(...latlngs);
