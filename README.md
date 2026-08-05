@@ -1,50 +1,31 @@
-# Welcome to your Expo app 👋
+# RoutesWallet
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A trusted, searchable home for cycling routes → [routeswallet.app](https://routeswallet.app)
 
-## Get started
+This repo is a **loose monorepo** — two independent apps that share a brand, not
+code. There are deliberately **no workspaces**: each app has its own `package.json`
+and `node_modules`.
 
-1. Install dependencies
+## Layout
 
-   ```bash
-   npm install
-   ```
+| Folder | What it is | Status |
+|--------|-----------|--------|
+| [`web/`](web/) | The current focus. A static web map of a club's routes with **"routes near a place"** search. Vite + React + TS + Leaflet + Turf. £0 to host. | Active |
+| [`mobile/`](mobile/) | The original Expo / React Native app (Strava sync, tagging, encrypted SQLite). | Parked |
 
-2. Start the app
+## Why this shape
 
-   ```bash
-    npx expo start
-   ```
+The web map validates the one behaviour a club's members actually repeat — "has
+anyone got a route near X?" — as a plain link, with no App Store, no backend, and
+no $99 Apple fee. See [`docs/plans/`](docs/plans/) for the reasoning and
+[`CLAUDE.md`](CLAUDE.md) for the scope guardrails.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Working in each app
 
 ```bash
-npm run reset-project
+# web map (the thing shipping)
+cd web && npm install && npm run dev
+
+# parked RN app
+cd mobile && npm install && npx expo start
 ```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
