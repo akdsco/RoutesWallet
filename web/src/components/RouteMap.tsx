@@ -1,8 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Route } from '../types.ts';
-import { heatSegments, heatStyle, type HeatSegment } from '../lib/heat.ts';
+import {
+  buildHeatIndex,
+  heatStyle,
+  cellSizeForZoom,
+  FLAT_HEAT,
+  type HeatSegment,
+} from '../lib/heat.ts';
 
 type Props = {
   routes: Route[];
@@ -63,10 +69,13 @@ export function RouteMap({
   const tileRef = useRef<L.TileLayer | null>(null);
   const heatCanvasRef = useRef<L.Canvas | null>(null);
   const panesRef = useRef<Panes | null>(null);
-  const heatCacheRef = useRef<{ routes: Route[]; segs: HeatSegment[] } | null>(
-    null
-  );
+  const heatCacheRef = useRef<{
+    routes: Route[];
+    cell: number;
+    segs: HeatSegment[];
+  } | null>(null);
   const didInitialFit = useRef(false);
+  const [zoom, setZoom] = useState(6);
 
   // Initialise the map once.
   useEffect(() => {
@@ -93,11 +102,11 @@ export function RouteMap({
     for (const [name, z] of order) {
       const pane = map.createPane(name);
       pane.style.zIndex = String(z);
-      if (name === 'hit') pane.style.pointerEvents = 'auto';
       panes[name] = L.layerGroup().addTo(map);
     }
     panesRef.current = panes;
     heatCanvasRef.current = L.canvas({ pane: 'heat' });
+    map.on('zoomend', () => setZoom(map.getZoom()));
     mapRef.current = map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -107,40 +116,46 @@ export function RouteMap({
     tileRef.current?.setUrl(TILES[theme]);
   }, [theme]);
 
-  // Redraw all route layers on any state change.
+  // Heat layer: rebuilt when routes, the grid resolution (zoom band), the search
+  // state, or the theme changes. Idle = six tiers (thin drawn first so hot
+  // corridors sit on top); searching = flat uniform faint layer so matches read.
   useEffect(() => {
     const map = mapRef.current;
     const P = panesRef.current;
-    const heatCanvas = heatCanvasRef.current;
-    if (!map || !P || !heatCanvas) return;
+    const canvas = heatCanvasRef.current;
+    if (!map || !P || !canvas) return;
 
-    const c = {
-      heat: token('--heat'),
-      match: token('--match'),
-      text: token('--text'),
-      sel: token('--sel'),
-      marker: token('--marker'),
-      halo: token('--bg'),
-    };
+    const cell = cellSizeForZoom(zoom);
+    if (
+      heatCacheRef.current?.routes !== routes ||
+      heatCacheRef.current.cell !== cell
+    ) {
+      heatCacheRef.current = {
+        routes,
+        cell,
+        segs: buildHeatIndex(routes, cell),
+      };
+    }
+    const segs = heatCacheRef.current.segs;
+    const cHeat = token('--heat');
+    const cMatch = token('--match');
+    const cText = token('--text');
     const resolve = (v: string): string =>
       v === 'var(--heat)'
-        ? c.heat
+        ? cHeat
         : v === 'var(--match)'
-          ? c.match
+          ? cMatch
           : v === 'var(--text)'
-            ? c.text
+            ? cText
             : v;
 
-    const searching = matchedIds !== null;
-    const activeId = hoverId ?? selectedId;
-
-    // Heat (scenery): each shared segment drawn once, weighted by overlap count.
-    if (heatCacheRef.current?.routes !== routes) {
-      heatCacheRef.current = { routes, segs: heatSegments(routes) };
-    }
     P.heat.clearLayers();
-    for (const s of heatCacheRef.current.segs) {
-      const st = heatStyle(s.count);
+    const line = (
+      s: HeatSegment,
+      color: string,
+      weight: number,
+      opacity: number
+    ) =>
       L.polyline(
         [
           [s.a[1], s.a[0]],
@@ -148,14 +163,38 @@ export function RouteMap({
         ],
         {
           pane: 'heat',
-          renderer: heatCanvas,
-          color: resolve(st.color),
-          weight: st.weight,
-          opacity: searching ? st.opacity * 0.5 : st.opacity,
+          renderer: canvas,
+          color,
+          weight,
+          opacity,
           interactive: false,
         }
       ).addTo(P.heat);
+
+    if (matchedIds !== null) {
+      for (const s of segs) line(s, cHeat, FLAT_HEAT.weight, FLAT_HEAT.opacity);
+    } else {
+      const styled = segs
+        .map((s) => ({ s, st: heatStyle(s.count) }))
+        .sort((a, b) => a.st.weight - b.st.weight); // thin first, hot on top
+      for (const { s, st } of styled)
+        line(s, resolve(st.color), st.weight, st.opacity);
     }
+  }, [routes, matchedIds, theme, zoom]);
+
+  // Matched / selected / marker / hit overlays.
+  useEffect(() => {
+    const map = mapRef.current;
+    const P = panesRef.current;
+    if (!map || !P) return;
+
+    const c = {
+      match: token('--match'),
+      sel: token('--sel'),
+      marker: token('--marker'),
+      halo: token('--bg'),
+    };
+    const activeId = hoverId ?? selectedId;
 
     // Matched: ink line + basemap-coloured halo so it reads over heat.
     P.matched.clearLayers();
