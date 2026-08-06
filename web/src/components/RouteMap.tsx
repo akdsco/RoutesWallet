@@ -250,6 +250,10 @@ export function RouteMap({
             : v;
 
     P.heat.clearLayers();
+    // Heat is a corridor-overview tool; its grid-snapped segments look blocky at
+    // street level. Fade it out as you zoom in — gone by z16, full by z13.
+    const fade = Math.max(0, Math.min(1, (16 - zoom) / 3));
+    if (fade <= 0) return;
     const line = (
       s: HeatSegment,
       color: string,
@@ -266,7 +270,7 @@ export function RouteMap({
           renderer: canvas,
           color,
           weight,
-          opacity,
+          opacity: opacity * fade,
           interactive: false,
         }
       ).addTo(P.heat);
