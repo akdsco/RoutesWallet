@@ -125,6 +125,14 @@ export function RouteMap({
     cell: number;
     segs: HeatSegment[];
   } | null>(null);
+  // What the heat canvas last actually drew — so a zoom that changes nothing
+  // visible (same grid band + fade) skips the clear/redraw flash and just lets
+  // Leaflet re-project the existing canvas.
+  const heatDrawRef = useRef<{
+    key: string;
+    routes: Route[];
+    matchedIds: Set<string> | null;
+  } | null>(null);
   const didInitialFit = useRef(false);
   const [zoom, setZoom] = useState(6);
   const [viewTick, setViewTick] = useState(0);
@@ -132,15 +140,20 @@ export function RouteMap({
   // Initialise the map once.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const map = L.map(elRef.current, { zoomControl: false }).setView(
-      [51.5072, -0.1276],
-      6
-    );
+    const map = L.map(elRef.current, {
+      zoomControl: false,
+      // Continuous fractional zoom (default snaps to whole levels, which feels
+      // steppy on a trackpad); retina tiles stay crisp between levels. Wheel
+      // sensitivity stays at Leaflet's default so it doesn't feel sluggish.
+      zoomSnap: 0,
+      zoomDelta: 1, // +/- buttons & keyboard still step by a whole level
+    }).setView([51.5072, -0.1276], 6);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     tileRef.current = L.tileLayer(TILES[theme], {
       attribution: ATTRIBUTION,
       subdomains: 'abcd',
       maxZoom: 20,
+      keepBuffer: 4, // hold more off-screen tiles so panning shows fewer gaps
     }).addTo(map);
 
     const order: [keyof Panes, number][] = [
@@ -186,39 +199,36 @@ export function RouteMap({
     };
   }, []);
 
-  // Draw the greenspace fills + dashed boundaries (below the heat).
+  // Draw the greenspace fills + dashed boundaries (below the heat). Colour and
+  // per-theme opacity live in CSS (.aonb-shape), so a theme flip restyles them
+  // instantly through the cascade — no getComputedStyle (which races the
+  // data-theme swap and baked in the wrong colour) and no redraw on toggle.
   useEffect(() => {
     const P = panesRef.current;
     if (!P) return;
     P.greenspace.clearLayers();
     if (!greenspace) return;
-    const fill = token('--aonb');
-    const stroke = token('--aonb-line');
-    // On dark, Dark Matter's land is near-black so the AONB fill reads as a pale
-    // patch — dial the fill right down (the dashed boundary still marks the area).
-    const dark = theme === 'dark';
     L.geoJSON(greenspace, {
       pane: 'greenspace',
       interactive: false,
+      // className is a Path option applied at creation (CSS then styles the
+      // shapes); it's valid at runtime but missing from Leaflet's geoJSON types.
+      className: 'aonb-shape',
       attribution:
         'Contains <a href="https://www.gov.uk/government/organisations/natural-england">Natural England</a> data © OGL',
-      style: () => ({
-        fillColor: fill,
-        fillOpacity: dark ? 0.18 : 0.45,
-        color: stroke,
-        weight: 1,
-        dashArray: '4 3',
-        opacity: dark ? 0.5 : 0.7,
-      }),
-    }).addTo(P.greenspace);
-  }, [greenspace, theme]);
+      style: () => ({ weight: 1, dashArray: '4 3' }),
+    } as L.GeoJSONOptions & { className: string }).addTo(P.greenspace);
+  }, [greenspace]);
 
-  // Designated-area labels, only from z >= 10 (brief §4).
+  // Designated-area labels, only from z >= 10 (brief §4). Keyed on the on/off
+  // threshold, not raw zoom — the labels sit at fixed latlngs and track the map
+  // on their own, so rebuilding them every zoom step is just churn.
+  const showLabels = zoom >= 10;
   useEffect(() => {
     const P = panesRef.current;
     if (!P) return;
     P.greenLabels.clearLayers();
-    if (!greenspace || zoom < 10) return;
+    if (!greenspace || !showLabels) return;
     for (const f of greenspace.features) {
       const name: unknown = f.properties?.['name'];
       if (typeof name !== 'string') continue;
@@ -233,7 +243,7 @@ export function RouteMap({
         keyboard: false,
       }).addTo(P.greenLabels);
     }
-  }, [greenspace, zoom, theme]);
+  }, [greenspace, showLabels]);
 
   // Load the curated POIs once (cafes / toilets / water / stations).
   useEffect(() => {
@@ -293,6 +303,23 @@ export function RouteMap({
     if (!map || !P || !canvas) return;
 
     const cell = cellSizeForZoom(zoom);
+    // Heat is a corridor-overview tool; its grid-snapped segments look blocky at
+    // street level, so fade it out as you zoom in — gone by z16, full by z13.
+    const fade = Math.max(0, Math.min(1, (16 - zoom) / 3));
+    // Only the grid band, the (bucketed) fade and the search state change what's
+    // drawn. If none moved, skip the redraw — the existing canvas re-projects
+    // itself smoothly with the zoom animation instead of flashing.
+    const key = `${cell}|${Math.round(fade * 8)}|${matchedIds !== null}|${theme}`;
+    if (
+      heatDrawRef.current &&
+      heatDrawRef.current.key === key &&
+      heatDrawRef.current.routes === routes &&
+      heatDrawRef.current.matchedIds === matchedIds
+    ) {
+      return;
+    }
+    heatDrawRef.current = { key, routes, matchedIds };
+
     if (
       heatCacheRef.current?.routes !== routes ||
       heatCacheRef.current.cell !== cell
@@ -317,9 +344,6 @@ export function RouteMap({
             : v;
 
     P.heat.clearLayers();
-    // Heat is a corridor-overview tool; its grid-snapped segments look blocky at
-    // street level. Fade it out as you zoom in — gone by z16, full by z13.
-    const fade = Math.max(0, Math.min(1, (16 - zoom) / 3));
     if (fade <= 0) return;
     const line = (
       s: HeatSegment,
