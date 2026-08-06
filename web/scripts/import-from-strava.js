@@ -39,7 +39,9 @@ async function importRoutes(meta) {
         continue;
       }
       const text = await res.text();
-      const pts = [...text.matchAll(/<trkpt\s+lat="([-0-9.]+)"\s+lon="([-0-9.]+)"/g)].map(
+      const pts = [
+        ...text.matchAll(/<trkpt\s+lat="([-0-9.]+)"\s+lon="([-0-9.]+)"/g),
+      ].map(
         (x) => [parseFloat(x[2]), parseFloat(x[1])] // [lng, lat]
       );
       const step = Math.max(1, Math.ceil(pts.length / MAX_POINTS));
@@ -62,7 +64,9 @@ async function importRoutes(meta) {
         },
         geometry: { type: 'LineString', coordinates: coords },
       });
-      console.log(`ok ${i + 1}/${meta.length}: ${m.name} (${coords.length} pts)`);
+      console.log(
+        `ok ${i + 1}/${meta.length}: ${m.name} (${coords.length} pts)`
+      );
     } catch (e) {
       console.warn(`error ${m.id}:`, e);
     }
@@ -73,6 +77,8 @@ async function importRoutes(meta) {
 
 // eslint-disable-next-line no-unused-expressions
 importRoutes(META).then((fc) => {
-  console.log('DONE — copy(JSON.stringify(fc)) then save as web/public/routes.geojson');
+  console.log(
+    'DONE — copy(JSON.stringify(fc)) then save as web/public/routes.geojson'
+  );
   window.__routesGeojson = fc;
 });
