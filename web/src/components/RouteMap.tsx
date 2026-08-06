@@ -22,8 +22,17 @@ type Props = {
   searchPoint: [number, number] | null;
   radiusKm: number;
   theme: 'light' | 'dark';
+  /** Which POI types (cafe/toilet/water/station) are toggled on. */
+  poiTypes: ReadonlySet<string>;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
+};
+
+const POI_ICON: Record<string, string> = {
+  cafe: '☕',
+  toilet: '🚻',
+  water: '💧',
+  station: '🚉',
 };
 
 const TILES = {
@@ -89,6 +98,7 @@ type Panes = {
   active: L.LayerGroup;
   marker: L.LayerGroup;
   hit: L.LayerGroup;
+  pois: L.LayerGroup;
 };
 
 export function RouteMap({
@@ -99,6 +109,7 @@ export function RouteMap({
   searchPoint,
   radiusKm,
   theme,
+  poiTypes,
   onHover,
   onSelect,
 }: Props) {
@@ -108,6 +119,7 @@ export function RouteMap({
   const heatCanvasRef = useRef<L.Canvas | null>(null);
   const panesRef = useRef<Panes | null>(null);
   const [greenspace, setGreenspace] = useState<FeatureCollection | null>(null);
+  const [pois, setPois] = useState<FeatureCollection | null>(null);
   const heatCacheRef = useRef<{
     routes: Route[];
     cell: number;
@@ -138,6 +150,7 @@ export function RouteMap({
       ['marker', 470],
       ['active', 500],
       ['hit', 550],
+      ['pois', 560],
     ];
     const panes = {} as Panes;
     for (const [name, z] of order) {
@@ -216,6 +229,49 @@ export function RouteMap({
       }).addTo(P.greenLabels);
     }
   }, [greenspace, zoom, theme]);
+
+  // Load the curated POIs once (cafes / toilets / water / stations).
+  useEffect(() => {
+    let alive = true;
+    fetch('/pois.geojson')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: FeatureCollection | null) => {
+        if (alive && data) setPois(data);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Draw POI markers for the enabled types, from z >= 9 (so they don't swamp
+  // the country-wide view). Each is a small emoji pin with a name tooltip.
+  useEffect(() => {
+    const P = panesRef.current;
+    if (!P) return;
+    P.pois.clearLayers();
+    if (!pois || zoom < 9) return;
+    for (const f of pois.features) {
+      const t: unknown = f.properties?.['type'];
+      if (typeof t !== 'string' || !poiTypes.has(t)) continue;
+      const g = f.geometry;
+      if (g.type !== 'Point') continue;
+      const lng = g.coordinates[0] ?? 0;
+      const lat = g.coordinates[1] ?? 0;
+      const name: unknown = f.properties?.['name'];
+      const icon = L.divIcon({
+        className: '',
+        html: `<span class="poi-pin">${POI_ICON[t] ?? '📍'}</span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+      const m = L.marker([lat, lng], { pane: 'pois', icon, keyboard: false });
+      if (typeof name === 'string') {
+        m.bindTooltip(name, { direction: 'top', offset: [0, -10] });
+      }
+      m.addTo(P.pois);
+    }
+  }, [pois, poiTypes, zoom]);
 
   // Heat layer: rebuilt when routes, the grid resolution (zoom band), the search
   // state, or the theme changes. Idle = six tiers (thin drawn first so hot
