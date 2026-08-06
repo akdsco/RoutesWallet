@@ -27,10 +27,16 @@ export function RouteMap({ routes, highlightIds, searchPoint }: Props) {
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
     const map = L.map(elRef.current).setView([51.5072, -0.1276], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map);
+    // CARTO Positron — muted greyscale raster, free + keyless (fits no-secrets).
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+      }
+    ).addTo(map);
     mapRef.current = map;
     layerRef.current = L.layerGroup().addTo(map);
   }, []);
