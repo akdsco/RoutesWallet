@@ -23,7 +23,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
 
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
@@ -124,13 +124,11 @@ export function App() {
         placeLabel={place?.name ?? ''}
         groups={groups}
         selectedId={selectedId}
-        theme={theme}
         onQueryChange={setQuery}
         onSubmit={(v) => void runSearch(v)}
         onClear={clearSearch}
         onSelect={onSelect}
         onHover={onHover}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
       <div className="relative flex-1">

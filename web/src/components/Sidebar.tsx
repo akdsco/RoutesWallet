@@ -15,13 +15,11 @@ type Props = {
   placeLabel: string;
   groups: GroupVM[];
   selectedId: string | null;
-  theme: 'light' | 'dark';
   onQueryChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
-  onToggleTheme: () => void;
 };
 
 const badgeBase =
@@ -36,13 +34,11 @@ export function Sidebar(props: Props) {
     placeLabel,
     groups,
     selectedId,
-    theme,
     onQueryChange,
     onSubmit,
     onClear,
     onSelect,
     onHover,
-    onToggleTheme,
   } = props;
 
   function submit(e: FormEvent) {
@@ -60,20 +56,9 @@ export function Sidebar(props: Props) {
             </span>
             <span className="text-[13px] text-muted">routes</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[11px] text-muted">
-              {totalCount} routes
-            </span>
-            <button
-              type="button"
-              aria-pressed={theme === 'dark'}
-              onClick={onToggleTheme}
-              title="Toggle dark theme"
-              className="rounded-full border border-line px-3 py-1 text-[12px] font-medium text-text-2 hover:bg-surface-2"
-            >
-              {theme === 'dark' ? 'Light' : 'Dark'}
-            </button>
-          </div>
+          <span className="font-mono text-[11px] text-muted">
+            {totalCount} routes
+          </span>
         </div>
 
         <form className="flex flex-col gap-2" onSubmit={submit}>

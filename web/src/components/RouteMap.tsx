@@ -26,7 +26,11 @@ type Props = {
 };
 
 const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  // Voyager has landcover (parks/woods) baked in — the scalable way to show
+  // greenspace everywhere without a custom dataset. No dark variant yet; dark
+  // theme is dropped for the prototype (future: a basemap toggle incl. CyclOSM).
+  light:
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
 } as const;
 
@@ -181,11 +185,11 @@ export function RouteMap({
         'Contains <a href="https://www.gov.uk/government/organisations/natural-england">Natural England</a> data © OGL',
       style: () => ({
         fillColor: fill,
-        fillOpacity: 0.7,
+        fillOpacity: 0.45,
         color: stroke,
         weight: 1,
         dashArray: '4 3',
-        opacity: 0.9,
+        opacity: 0.7,
       }),
     }).addTo(P.greenspace);
   }, [greenspace, theme]);
