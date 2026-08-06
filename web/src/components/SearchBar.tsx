@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 
 type Props = {
-  onSearch: (query: string) => void;
+  /** May be async; the caller fires it and deliberately ignores the result. */
+  onSearch: (query: string) => void | Promise<void>;
   onClear: () => void;
   status: string;
   busy: boolean;
@@ -13,7 +14,7 @@ export function SearchBar({ onSearch, onClear, status, busy }: Props) {
   function submit(e: FormEvent) {
     e.preventDefault();
     const trimmed = q.trim();
-    if (trimmed) onSearch(trimmed);
+    if (trimmed) void onSearch(trimmed);
   }
 
   return (
