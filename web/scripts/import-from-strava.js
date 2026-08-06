@@ -22,7 +22,13 @@ const META = [
   //   region: 'Hub Velo trips', type: 'Road', cafe: '', notes: '' },
 ];
 
-const MAX_POINTS = 200; // downsample cap per route, to keep the file light
+// QUALITY RULE: keep FULL resolution. Do NOT decimate to a fixed point cap —
+// that cuts corners and makes routes look jumpy at zoom (a 150-pt cap gave ~669 m
+// between vertices; full res is ~47 m). We only normalise coordinate precision to
+// 6 decimals (~0.11 m, well below GPS accuracy). If a route ever needs thinning,
+// use geometry-preserving Douglas–Peucker at a tight (<=2 m) tolerance, never
+// every-Nth-point decimation.
+const COORD_DP = 6; // decimal places; precision normalisation, not point-dropping
 const SLEEP_MS = 2000; // be a good citizen between requests
 
 async function importRoutes(meta) {
@@ -44,11 +50,11 @@ async function importRoutes(meta) {
       ].map(
         (x) => [parseFloat(x[2]), parseFloat(x[1])] // [lng, lat]
       );
-      const step = Math.max(1, Math.ceil(pts.length / MAX_POINTS));
-      const coords = pts.filter((_, idx) => idx % step === 0);
-      if (coords.length && coords[coords.length - 1] !== pts[pts.length - 1]) {
-        coords.push(pts[pts.length - 1]);
-      }
+      // Keep every trackpoint; only normalise precision. No decimation.
+      const coords = pts.map(([lng, lat]) => [
+        Number(lng.toFixed(COORD_DP)),
+        Number(lat.toFixed(COORD_DP)),
+      ]);
       features.push({
         type: 'Feature',
         properties: {

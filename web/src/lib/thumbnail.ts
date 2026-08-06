@@ -26,7 +26,15 @@ export function routeThumbnail(
   const scale = Math.min((width - 2 * inset) / bw, (height - 2 * inset) / bh);
   const ox = (width - bw * scale) / 2;
   const oy = (height - bh * scale) / 2;
-  return coords
+  // A 52×36 preview can't show more than ~100 vertices; sample down so full-
+  // resolution routes don't bloat the sidebar DOM. Bounds still use every point.
+  const MAX = 100;
+  const step = Math.max(1, Math.ceil(coords.length / MAX));
+  const sampled =
+    step === 1
+      ? coords
+      : coords.filter((_, i) => i % step === 0 || i === coords.length - 1);
+  return sampled
     .map((p) => {
       const x = ox + ((p[0] ?? 0) - minX) * scale;
       const y = oy + (maxY - (p[1] ?? 0)) * scale; // flip: north up
