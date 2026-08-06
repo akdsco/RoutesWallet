@@ -127,6 +127,7 @@ export function RouteMap({
   } | null>(null);
   const didInitialFit = useRef(false);
   const [zoom, setZoom] = useState(6);
+  const [viewTick, setViewTick] = useState(0);
 
   // Initialise the map once.
   useEffect(() => {
@@ -161,6 +162,7 @@ export function RouteMap({
     panesRef.current = panes;
     heatCanvasRef.current = L.canvas({ pane: 'heat' });
     map.on('zoomend', () => setZoom(map.getZoom()));
+    map.on('moveend', () => setViewTick((v) => v + 1));
     mapRef.current = map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -192,6 +194,9 @@ export function RouteMap({
     if (!greenspace) return;
     const fill = token('--aonb');
     const stroke = token('--aonb-line');
+    // On dark, Dark Matter's land is near-black so the AONB fill reads as a pale
+    // patch — dial the fill right down (the dashed boundary still marks the area).
+    const dark = theme === 'dark';
     L.geoJSON(greenspace, {
       pane: 'greenspace',
       interactive: false,
@@ -199,11 +204,11 @@ export function RouteMap({
         'Contains <a href="https://www.gov.uk/government/organisations/natural-england">Natural England</a> data © OGL',
       style: () => ({
         fillColor: fill,
-        fillOpacity: 0.45,
+        fillOpacity: dark ? 0.18 : 0.45,
         color: stroke,
         weight: 1,
         dashArray: '4 3',
-        opacity: 0.7,
+        opacity: dark ? 0.5 : 0.7,
       }),
     }).addTo(P.greenspace);
   }, [greenspace, theme]);
@@ -245,12 +250,16 @@ export function RouteMap({
   }, []);
 
   // Draw POI markers for the enabled types, from z >= 9 (so they don't swamp
-  // the country-wide view). Each is a small emoji pin with a name tooltip.
+  // the country-wide view) and only within the current viewport (thousands of
+  // real OSM POIs — viewport culling keeps the DOM small and panning smooth).
+  // viewTick re-runs this on pan/zoom.
   useEffect(() => {
+    const map = mapRef.current;
     const P = panesRef.current;
-    if (!P) return;
+    if (!map || !P) return;
     P.pois.clearLayers();
-    if (!pois || zoom < 9) return;
+    if (!pois || map.getZoom() < 12) return; // local zoom only — thousands of POIs
+    const bounds = map.getBounds().pad(0.25);
     for (const f of pois.features) {
       const t: unknown = f.properties?.['type'];
       if (typeof t !== 'string' || !poiTypes.has(t)) continue;
@@ -258,6 +267,7 @@ export function RouteMap({
       if (g.type !== 'Point') continue;
       const lng = g.coordinates[0] ?? 0;
       const lat = g.coordinates[1] ?? 0;
+      if (!bounds.contains([lat, lng])) continue;
       const name: unknown = f.properties?.['name'];
       const icon = L.divIcon({
         className: '',
@@ -271,7 +281,7 @@ export function RouteMap({
       }
       m.addTo(P.pois);
     }
-  }, [pois, poiTypes, zoom]);
+  }, [pois, poiTypes, viewTick]);
 
   // Heat layer: rebuilt when routes, the grid resolution (zoom band), the search
   // state, or the theme changes. Idle = six tiers (thin drawn first so hot

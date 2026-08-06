@@ -23,8 +23,11 @@ export function App() {
   const [banner, setBanner] = useState<Banner>('none');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  // Cafés default OFF: OSM has ~2,900 near the routes (every town café), so they'd
+  // swamp the map. Toilets/water/stations are the useful facility layer; toggle
+  // cafés on to browse an area's real cafés.
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
-    () => new Set(['cafe', 'toilet', 'water', 'station'])
+    () => new Set(['toilet', 'water', 'station'])
   );
 
   const togglePoi = useCallback(
@@ -38,7 +41,7 @@ export function App() {
     []
   );
 
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
@@ -139,11 +142,13 @@ export function App() {
         placeLabel={place?.name ?? ''}
         groups={groups}
         selectedId={selectedId}
+        theme={theme}
         onQueryChange={setQuery}
         onSubmit={(v) => void runSearch(v)}
         onClear={clearSearch}
         onSelect={onSelect}
         onHover={onHover}
+        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
 
       <div className="relative flex-1">

@@ -9,9 +9,9 @@ if (!root) throw new Error('#root not found');
 
 createRoot(root).render(
   <StrictMode>
-    {/* Light only for the prototype — Voyager has no dark basemap yet. The dark
-        tokens stay in the CSS so re-enabling dark later is a one-line change. */}
-    <ThemeProvider attribute="data-theme" forcedTheme="light">
+    {/* Light = Voyager basemap, dark = CARTO Dark Matter. Follows the OS by
+        default; the sidebar toggle overrides it (persisted by next-themes). */}
+    <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
       <App />
     </ThemeProvider>
   </StrictMode>
