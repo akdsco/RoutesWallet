@@ -149,12 +149,8 @@ export function RouteMap({
       zoomDelta: 1, // +/- buttons & keyboard still step by a whole level
     }).setView([51.5072, -0.1276], 6);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
-    tileRef.current = L.tileLayer(TILES[theme], {
-      attribution: ATTRIBUTION,
-      subdomains: 'abcd',
-      maxZoom: 20,
-      keepBuffer: 4, // hold more off-screen tiles so panning shows fewer gaps
-    }).addTo(map);
+    // The tile layer is created + swapped by the theme effect below (it owns the
+    // basemap so a theme flip can replace the layer cleanly).
 
     const order: [keyof Panes, number][] = [
       ['greenspace', 350],
@@ -177,12 +173,25 @@ export function RouteMap({
     map.on('zoomend', () => setZoom(map.getZoom()));
     map.on('moveend', () => setViewTick((v) => v + 1));
     mapRef.current = map;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Swap tiles when the theme flips.
+  // Own + swap the basemap when the theme flips. We REPLACE the whole tile layer
+  // rather than calling setUrl(): at a fractional zoom (zoomSnap:0) setUrl
+  // mis-positions the reloaded tiles so they render far from the real view
+  // ("UK over Africa"). A fresh layer recomputes tile positions from the current
+  // view; drop the old layer once the new one has painted to avoid a flash.
   useEffect(() => {
-    tileRef.current?.setUrl(TILES[theme]);
+    const map = mapRef.current;
+    if (!map) return;
+    const prev = tileRef.current;
+    const next = L.tileLayer(TILES[theme], {
+      attribution: ATTRIBUTION,
+      subdomains: 'abcd',
+      maxZoom: 20,
+      keepBuffer: 4, // hold more off-screen tiles so panning shows fewer gaps
+    }).addTo(map);
+    tileRef.current = next;
+    if (prev) next.once('load', () => map.removeLayer(prev));
   }, [theme]);
 
   // Load the designated-areas scenery once (AONBs + National Parks).
