@@ -9,9 +9,16 @@ on:
   pull_request:
     paths: ['web/**', '.github/workflows/web-ci.yml']
 
+# Rapid pushes queued a pile-up of PR runs and GitHub cancelled the older ones
+# during "Set up job". Only keep the latest run per ref; cancel superseded ones.
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # checks take ~1 min; fail fast if a runner ever hangs
     defaults:
       run:
         working-directory: web
