@@ -10,6 +10,7 @@ import {
   FLAT_HEAT,
   type HeatSegment,
 } from '../lib/heat.ts';
+import { isDashed } from '../lib/source.ts';
 
 type Props = {
   routes: Route[];
@@ -318,7 +319,7 @@ export function RouteMap({
           color: c.match,
           weight: 2.4,
           opacity: 1,
-          dashArray: r.source === '3rd-party' ? '7 5' : undefined,
+          dashArray: isDashed(r.source) ? '7 5' : undefined,
           interactive: false,
         }).addTo(P.matched);
       }
@@ -341,7 +342,7 @@ export function RouteMap({
         color: c.sel,
         weight: 3.6,
         opacity: 1,
-        dashArray: active.source === '3rd-party' ? '9 6' : undefined,
+        dashArray: isDashed(active.source) ? '9 6' : undefined,
         interactive: false,
       }).addTo(P.active);
       const start = ll[0];

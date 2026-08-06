@@ -4,7 +4,14 @@ import type { LineString } from 'geojson';
  * The route data contract. Backed by one static `routes.geojson` — no database,
  * no server. The map, the search, and routes.geojson all depend on this shape.
  */
-export type RouteSource = 'HV-signed' | '3rd-party';
+
+/**
+ * Trust tier — deliberately club-agnostic so this ports to any club instance:
+ * - club-verified: vetted/signed by the club (highest trust)
+ * - club-member:   shared by a club member, not formally verified
+ * - third-party:   sourced from outside the club
+ */
+export type RouteSource = 'club-verified' | 'club-member' | 'third-party';
 
 export type Route = {
   id: string;

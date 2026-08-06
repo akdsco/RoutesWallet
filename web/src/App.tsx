@@ -6,6 +6,7 @@ import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { distanceToRouteKm } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
+import { SOURCE_META } from './lib/source.ts';
 import type { Route } from './types.ts';
 
 const RADIUS_KM = 25;
@@ -216,9 +217,7 @@ export function App() {
               {hovered.distance_km} km · {hovered.region}
             </span>
             <span className="text-[12px] text-muted">
-              {hovered.source === 'HV-signed'
-                ? 'HV-signed — club-vetted'
-                : '3rd-party route'}
+              {SOURCE_META[hovered.source].blurb}
             </span>
           </div>
         )}

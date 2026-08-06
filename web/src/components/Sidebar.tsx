@@ -2,6 +2,7 @@ import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { openLabel } from '../lib/links.ts';
+import { SOURCE_META } from '../lib/source.ts';
 
 export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
@@ -222,7 +223,12 @@ function RouteCard({
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
-  const isHv = r.source === 'HV-signed';
+  const badge =
+    r.source === 'club-verified'
+      ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
+      : r.source === 'club-member'
+        ? { cls: 'border border-trust text-trust', glyph: '' }
+        : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
   const select = () => onSelect(r.id);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -276,19 +282,10 @@ function RouteCard({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isHv ? (
-            <span
-              className={`${badgeBase} border border-trust bg-trust-soft text-trust`}
-            >
-              ✓ HV-signed
-            </span>
-          ) : (
-            <span
-              className={`${badgeBase} border border-dashed border-muted text-muted`}
-            >
-              3rd-party
-            </span>
-          )}
+          <span className={`${badgeBase} ${badge.cls}`}>
+            {badge.glyph}
+            {SOURCE_META[r.source].label}
+          </span>
           <span className="text-[12px] text-muted">{r.region}</span>
           {nearKm != null && (
             <span className="text-[12px] text-muted">

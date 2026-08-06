@@ -8,7 +8,7 @@ function route(id: string, region: string): Route {
     name: id,
     link: `https://example.com/${id}`,
     distance_km: 10,
-    source: 'HV-signed',
+    source: 'club-verified',
     region,
     notes: '',
     cafe: '',

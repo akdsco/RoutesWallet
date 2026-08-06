@@ -62,7 +62,7 @@ async function importRoutes(meta) {
           name: m.name,
           link: `https://www.strava.com/routes/${m.id}`,
           distance_km: m.distance_km,
-          source: 'HV-signed',
+          source: 'club-verified',
           region: m.region,
           route_type: m.type,
           cafe: m.cafe ?? '',

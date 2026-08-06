@@ -12,7 +12,7 @@ const fc: FeatureCollection = {
         name: 'Route A',
         link: 'https://example.com/a',
         distance_km: 30,
-        source: 'HV-signed',
+        source: 'club-verified',
       },
       geometry: {
         type: 'LineString',
@@ -40,7 +40,7 @@ describe('featuresToRoutes', () => {
       name: 'Route A',
       link: 'https://example.com/a',
       distance_km: 30,
-      source: 'HV-signed',
+      source: 'club-verified',
     });
     expect(routes[0]!.geometry.coordinates).toEqual([
       [0, 0],
