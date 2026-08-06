@@ -1,56 +1,72 @@
-/* Design tokens — from the Claude Design spec (RoutesWallet Web v1).
-   Emphasis is carried by value + weight (grey -> ink -> blue), trust by badge +
-   dash pattern, never by line hue — so all states survive greyscale and CVD. */
+@import 'tailwindcss';
+
+/* Manual theming: drive `dark:` off our data-theme attribute (set by next-themes)
+   rather than the OS media query, so the toggle can override the system. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Design tokens (Claude Design spec). Emphasis = value + weight, trust = badge +
+   dash — never hue — so states survive greyscale and CVD. Light + dark. */
 :root {
   --bg: #f2f4f5;
   --surface: #ffffff;
-  --surface2: #f1f3f5;
+  --surface-2: #f1f3f5;
   --line: #e1e5e8;
-  --line2: #edf0f2;
+  --line-2: #edf0f2;
   --text: #12171a;
-  --text2: #4b5660;
+  --text-2: #4b5660;
   --muted: #78848c;
   --sel: #1f6feb;
-  --selSoft: #e7f0fe;
+  --sel-soft: #e7f0fe;
   --match: #33414d;
   --heat: #5d6e7b;
   --trust: #0e6b60;
-  --trustSoft: #e2f1ef;
+  --trust-soft: #e2f1ef;
   --marker: #b4451f;
   --thumb: #8c979f;
-
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Helvetica,
-    sans-serif;
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
 }
 
 [data-theme='dark'] {
   --bg: #0b0e10;
   --surface: #14191c;
-  --surface2: #1b2225;
+  --surface-2: #1b2225;
   --line: #262e33;
-  --line2: #1f272b;
+  --line-2: #1f272b;
   --text: #e9eef1;
-  --text2: #b3bfc6;
+  --text-2: #b3bfc6;
   --muted: #7e8b93;
   --sel: #4d9bff;
-  --selSoft: #12263f;
+  --sel-soft: #12263f;
   --match: #c6d1d8;
   --heat: #8fa3b0;
   --trust: #4fbfae;
-  --trustSoft: #102a28;
+  --trust-soft: #102a28;
   --marker: #e8794e;
   --thumb: #7c8992;
 }
 
-* {
-  box-sizing: border-box;
+/* Register tokens as Tailwind theme values -> bg-surface, text-muted, etc.
+   `inline` keeps them referencing the vars, so the theme swap is live. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-sel: var(--sel);
+  --color-sel-soft: var(--sel-soft);
+  --color-match: var(--match);
+  --color-heat: var(--heat);
+  --color-trust: var(--trust);
+  --color-trust-soft: var(--trust-soft);
+  --color-marker: var(--marker);
+  --color-thumb: var(--thumb);
+
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 html,
@@ -60,113 +76,23 @@ body,
   height: 100%;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid #dee2e6;
+/* Leaflet: inherit our font, match the basemap backdrop during tile load. */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--bg);
 }
 
-header h1 {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
+::-webkit-scrollbar {
+  width: 10px;
 }
-
-.searchbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.searchbar input {
-  flex: 1 1 220px;
-  padding: 8px 10px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.searchbar button {
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
-  background: #f8f9fa;
-  cursor: pointer;
-}
-
-.searchbar button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.searchbar .status {
-  flex-basis: 100%;
-  color: #495057;
-  font-size: 0.9rem;
-}
-
-.map {
-  flex: 1 1 auto;
-  min-height: 300px;
-}
-
-.list {
-  display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  overflow-x: auto;
-  border-top: 1px solid #dee2e6;
-}
-
-.card {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 170px;
-  padding: 10px 12px;
-  border: 1px solid #dee2e6;
+::-webkit-scrollbar-thumb {
+  background: var(--line);
   border-radius: 8px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.card:hover {
-  border-color: #adb5bd;
-}
-
-.badge {
-  align-self: flex-start;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  padding: 2px 6px;
-  border-radius: 999px;
-}
-
-.badge.hv {
-  background: #ffe8cc;
-  color: #d9480f;
-}
-
-.badge.third {
-  background: #d0ebff;
-  color: #1971c2;
-}
-
-.card .dist {
-  color: #868e96;
-  font-size: 0.85rem;
-}
-
-.card .open {
-  margin-top: 2px;
-  color: #e8590c;
-  font-size: 0.8rem;
-  font-weight: 600;
 }

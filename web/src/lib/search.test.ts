@@ -9,6 +9,9 @@ function route(id: string, coords: [number, number][]): Route {
     link: `https://example.com/${id}`,
     distance_km: 10,
     source: 'HV-signed',
+    region: 'Test',
+    notes: '',
+    cafe: '',
     geometry: { type: 'LineString', coordinates: coords },
     centroid: coords[0]!,
   };

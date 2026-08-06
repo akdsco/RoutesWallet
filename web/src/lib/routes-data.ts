@@ -7,6 +7,10 @@ type RouteProps = {
   link: string;
   distance_km: number;
   source: RouteSource;
+  region?: string;
+  notes?: string;
+  cafe?: string;
+  route_type?: string;
 };
 
 function centroidOf(coords: number[][]): [number, number] {
@@ -36,6 +40,10 @@ export function featuresToRoutes(fc: FeatureCollection): Route[] {
       link: f.properties.link,
       distance_km: f.properties.distance_km,
       source: f.properties.source,
+      region: f.properties.region ?? 'Other',
+      notes: f.properties.notes ?? '',
+      cafe: f.properties.cafe ?? '',
+      route_type: f.properties.route_type,
       geometry: f.geometry,
       centroid: centroidOf(f.geometry.coordinates),
     }));

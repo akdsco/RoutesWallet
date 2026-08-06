@@ -1,9 +1,8 @@
 import type { LineString } from 'geojson';
 
 /**
- * The frozen route data contract (see root CLAUDE.md). Do not change this shape
- * without the user's say-so — the map, the search, and routes.geojson all depend
- * on it.
+ * The route data contract. Backed by one static `routes.geojson` — no database,
+ * no server. The map, the search, and routes.geojson all depend on this shape.
  */
 export type RouteSource = 'HV-signed' | '3rd-party';
 
@@ -15,6 +14,14 @@ export type Route = {
   distance_km: number;
   /** Trust badge. 'HV-signed' = vetted by the club; '3rd-party' = seeded/public. */
   source: RouteSource;
+  /** Grouping + card meta, e.g. "Kent", "Essex", "Hub Velo trips". */
+  region: string;
+  /** Free-text ride notes shown on the selected card. May be empty. */
+  notes: string;
+  /** Café stop, shown on the selected card when present. May be empty. */
+  cafe: string;
+  /** Optional, from the GPX import (e.g. "Road"). Not surfaced yet. */
+  route_type?: string;
   /** [lng, lat] pairs. */
   geometry: LineString;
   /** [lng, lat], for a cheap proximity pre-filter before the exact line distance. */

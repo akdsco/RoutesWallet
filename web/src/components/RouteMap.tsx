@@ -2,87 +2,312 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Route } from '../types.ts';
-import { openLabel } from '../lib/links.ts';
+import { heatSegments, heatStyle, type HeatSegment } from '../lib/heat.ts';
 
 type Props = {
   routes: Route[];
-  /** When non-empty, only these ids are drawn bold; the rest are greyed. */
-  highlightIds: Set<string>;
+  /** null = idle (not searching). A set (possibly empty) = search is active. */
+  matchedIds: Set<string> | null;
+  selectedId: string | null;
+  hoverId: string | null;
+  /** [lng, lat] of the search place, or null. */
   searchPoint: [number, number] | null;
+  radiusKm: number;
+  theme: 'light' | 'dark';
+  onHover: (id: string | null) => void;
+  onSelect: (id: string) => void;
 };
 
-function escapeHtml(s: string): string {
-  return s.replace(
-    /[&<>"]/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!
+const TILES = {
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+} as const;
+
+const ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+/** Resolve a CSS token to a concrete colour (canvas can't read var()). */
+function token(name: string): string {
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
+    '#000000'
   );
 }
 
-export function RouteMap({ routes, highlightIds, searchPoint }: Props) {
+/** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
+function toLatLngs(coords: number[][]): [number, number][] {
+  return coords.map((p) => [p[1] ?? 0, p[0] ?? 0]);
+}
+
+type Panes = {
+  heat: L.LayerGroup;
+  matched: L.LayerGroup;
+  active: L.LayerGroup;
+  marker: L.LayerGroup;
+  hit: L.LayerGroup;
+};
+
+export function RouteMap({
+  routes,
+  matchedIds,
+  selectedId,
+  hoverId,
+  searchPoint,
+  radiusKm,
+  theme,
+  onHover,
+  onSelect,
+}: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
+  const heatCanvasRef = useRef<L.Canvas | null>(null);
+  const panesRef = useRef<Panes | null>(null);
+  const heatCacheRef = useRef<{ routes: Route[]; segs: HeatSegment[] } | null>(
+    null
+  );
+  const didInitialFit = useRef(false);
 
-  // Initialise the Leaflet map once.
+  // Initialise the map once.
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
-    const map = L.map(elRef.current).setView([51.5072, -0.1276], 6);
-    // CARTO Positron — muted greyscale raster, free + keyless (fits no-secrets).
-    L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20,
-      }
-    ).addTo(map);
+    const map = L.map(elRef.current, { zoomControl: false }).setView(
+      [51.5072, -0.1276],
+      6
+    );
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    tileRef.current = L.tileLayer(TILES[theme], {
+      attribution: ATTRIBUTION,
+      subdomains: 'abcd',
+      maxZoom: 20,
+    }).addTo(map);
+
+    const order: [keyof Panes, number][] = [
+      ['heat', 400],
+      ['matched', 450],
+      ['marker', 470],
+      ['active', 500],
+      ['hit', 550],
+    ];
+    const panes = {} as Panes;
+    for (const [name, z] of order) {
+      const pane = map.createPane(name);
+      pane.style.zIndex = String(z);
+      if (name === 'hit') pane.style.pointerEvents = 'auto';
+      panes[name] = L.layerGroup().addTo(map);
+    }
+    panesRef.current = panes;
+    heatCanvasRef.current = L.canvas({ pane: 'heat' });
     mapRef.current = map;
-    layerRef.current = L.layerGroup().addTo(map);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Redraw routes whenever data / highlight / search point changes.
+  // Swap tiles when the theme flips.
+  useEffect(() => {
+    tileRef.current?.setUrl(TILES[theme]);
+  }, [theme]);
+
+  // Redraw all route layers on any state change.
   useEffect(() => {
     const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!map || !layer) return;
-    layer.clearLayers();
+    const P = panesRef.current;
+    const heatCanvas = heatCanvasRef.current;
+    if (!map || !P || !heatCanvas) return;
 
-    const focus: L.LatLngExpression[] = [];
-    for (const r of routes) {
-      const latlngs = r.geometry.coordinates.map(
-        ([lng, lat]) => [lat, lng] as [number, number]
-      );
-      const on = highlightIds.size === 0 || highlightIds.has(r.id);
-      const color = r.source === 'HV-signed' ? '#e8590c' : '#1c7ed6';
-      L.polyline(latlngs, {
-        color: on ? color : '#adb5bd',
-        weight: on ? 4 : 2,
-        opacity: on ? 1 : 0.4,
-      })
-        .bindPopup(
-          `<strong>${escapeHtml(r.name)}</strong><br>${r.distance_km} km · ${r.source}` +
-            `<br><a href="${escapeHtml(r.link)}" target="_blank" rel="noopener">${openLabel(r.link)}</a>`
-        )
-        .addTo(layer);
-      if (on) focus.push(...latlngs);
+    const c = {
+      heat: token('--heat'),
+      match: token('--match'),
+      text: token('--text'),
+      sel: token('--sel'),
+      marker: token('--marker'),
+      halo: token('--bg'),
+    };
+    const resolve = (v: string): string =>
+      v === 'var(--heat)'
+        ? c.heat
+        : v === 'var(--match)'
+          ? c.match
+          : v === 'var(--text)'
+            ? c.text
+            : v;
+
+    const searching = matchedIds !== null;
+    const activeId = hoverId ?? selectedId;
+
+    // Heat (scenery): each shared segment drawn once, weighted by overlap count.
+    if (heatCacheRef.current?.routes !== routes) {
+      heatCacheRef.current = { routes, segs: heatSegments(routes) };
+    }
+    P.heat.clearLayers();
+    for (const s of heatCacheRef.current.segs) {
+      const st = heatStyle(s.count);
+      L.polyline(
+        [
+          [s.a[1], s.a[0]],
+          [s.b[1], s.b[0]],
+        ],
+        {
+          pane: 'heat',
+          renderer: heatCanvas,
+          color: resolve(st.color),
+          weight: st.weight,
+          opacity: searching ? st.opacity * 0.5 : st.opacity,
+          interactive: false,
+        }
+      ).addTo(P.heat);
     }
 
+    // Matched: ink line + basemap-coloured halo so it reads over heat.
+    P.matched.clearLayers();
+    if (matchedIds) {
+      for (const r of routes) {
+        if (!matchedIds.has(r.id) || r.id === activeId) continue;
+        const ll = toLatLngs(r.geometry.coordinates);
+        L.polyline(ll, {
+          pane: 'matched',
+          color: c.halo,
+          weight: 6,
+          opacity: 0.8,
+          interactive: false,
+        }).addTo(P.matched);
+        L.polyline(ll, {
+          pane: 'matched',
+          color: c.match,
+          weight: 2.4,
+          opacity: 1,
+          dashArray: r.source === '3rd-party' ? '7 5' : undefined,
+          interactive: false,
+        }).addTo(P.matched);
+      }
+    }
+
+    // Active (hover or selected): blue, on top, with a start dot.
+    P.active.clearLayers();
+    const active = routes.find((r) => r.id === activeId);
+    if (active) {
+      const ll = toLatLngs(active.geometry.coordinates);
+      L.polyline(ll, {
+        pane: 'active',
+        color: c.halo,
+        weight: 9,
+        opacity: 0.9,
+        interactive: false,
+      }).addTo(P.active);
+      L.polyline(ll, {
+        pane: 'active',
+        color: c.sel,
+        weight: 3.6,
+        opacity: 1,
+        dashArray: active.source === '3rd-party' ? '9 6' : undefined,
+        interactive: false,
+      }).addTo(P.active);
+      const start = ll[0];
+      if (start) {
+        L.circleMarker(start, {
+          pane: 'active',
+          radius: 5,
+          color: c.halo,
+          weight: 2,
+          fillColor: c.sel,
+          fillOpacity: 1,
+          interactive: false,
+        }).addTo(P.active);
+      }
+    }
+
+    // Search marker + 25 km radius.
+    P.marker.clearLayers();
     if (searchPoint) {
       const [lng, lat] = searchPoint;
+      L.circle([lat, lng], {
+        pane: 'marker',
+        radius: radiusKm * 1000,
+        color: c.marker,
+        weight: 1.4,
+        dashArray: '6 7',
+        opacity: 0.75,
+        fillColor: c.marker,
+        fillOpacity: 0.05,
+        interactive: false,
+      }).addTo(P.marker);
       L.circleMarker([lat, lng], {
-        radius: 8,
-        color: '#212529',
-        fillColor: '#ffd43b',
+        pane: 'marker',
+        radius: 6,
+        color: c.halo,
+        weight: 2.5,
+        fillColor: c.marker,
         fillOpacity: 1,
-      })
-        .bindPopup('Search location')
-        .addTo(layer);
-      focus.push([lat, lng]);
+        interactive: false,
+      }).addTo(P.marker);
     }
 
-    if (focus.length) map.fitBounds(L.latLngBounds(focus).pad(0.25));
-  }, [routes, highlightIds, searchPoint]);
+    // Transparent hit lines. Only matched routes are interactive while searching.
+    P.hit.clearLayers();
+    const interactive = matchedIds
+      ? routes.filter((r) => matchedIds.has(r.id))
+      : routes;
+    for (const r of interactive) {
+      const hit = L.polyline(toLatLngs(r.geometry.coordinates), {
+        pane: 'hit',
+        color: '#000000',
+        weight: 14,
+        opacity: 0,
+        interactive: true,
+      });
+      hit.on('mouseover', () => onHover(r.id));
+      hit.on('mouseout', () => onHover(null));
+      hit.on('click', () => onSelect(r.id));
+      hit.addTo(P.hit);
+    }
+  }, [
+    routes,
+    matchedIds,
+    selectedId,
+    hoverId,
+    searchPoint,
+    radiusKm,
+    theme,
+    onHover,
+    onSelect,
+  ]);
 
-  return <div ref={elRef} className="map" />;
+  // Fit to everything once, when routes first load.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || didInitialFit.current || routes.length === 0) return;
+    const pts = routes.flatMap((r) => toLatLngs(r.geometry.coordinates));
+    if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2));
+    didInitialFit.current = true;
+  }, [routes]);
+
+  // Fit to the matches (+ marker) when a search runs; back to all when cleared.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (searchPoint && matchedIds) {
+      const pts: [number, number][] = [];
+      for (const r of routes) {
+        if (matchedIds.has(r.id))
+          pts.push(...toLatLngs(r.geometry.coordinates));
+      }
+      pts.push([searchPoint[1], searchPoint[0]]);
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.25));
+    } else if (!searchPoint && routes.length) {
+      const pts = routes.flatMap((r) => toLatLngs(r.geometry.coordinates));
+      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchPoint]);
+
+  // Fit to a route when it's explicitly selected (not on hover).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !selectedId) return;
+    const r = routes.find((x) => x.id === selectedId);
+    if (r)
+      map.fitBounds(L.latLngBounds(toLatLngs(r.geometry.coordinates)).pad(0.3));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  return <div ref={elRef} className="absolute inset-0" />;
 }
