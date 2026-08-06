@@ -11,8 +11,13 @@ type RouteProps = {
 
 function centroidOf(coords: number[][]): [number, number] {
   const n = coords.length;
-  const sum = coords.reduce(([ax, ay], [x, y]) => [ax + x, ay + y], [0, 0]);
-  return [sum[0] / n, sum[1] / n];
+  let sx = 0;
+  let sy = 0;
+  for (const [x, y] of coords) {
+    sx += x ?? 0;
+    sy += y ?? 0;
+  }
+  return [sx / n, sy / n];
 }
 
 /**

@@ -42,14 +42,14 @@ describe('featuresToRoutes', () => {
       distance_km: 30,
       source: 'HV-signed',
     });
-    expect(routes[0].geometry.coordinates).toEqual([
+    expect(routes[0]!.geometry.coordinates).toEqual([
       [0, 0],
       [2, 2],
     ]);
   });
 
   it('computes the centroid as the mean of the coordinates', () => {
-    expect(featuresToRoutes(fc)[0].centroid).toEqual([1, 1]);
+    expect(featuresToRoutes(fc)[0]!.centroid).toEqual([1, 1]);
   });
 
   it('ignores non-LineString features', () => {

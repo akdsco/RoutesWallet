@@ -28,6 +28,7 @@ export async function geocode(query: string): Promise<[number, number] | null> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) return null;
   const hits = (await res.json()) as NominatimHit[];
-  if (!hits.length) return null;
-  return [parseFloat(hits[0].lon), parseFloat(hits[0].lat)];
+  const [hit] = hits;
+  if (!hit) return null;
+  return [parseFloat(hit.lon), parseFloat(hit.lat)];
 }

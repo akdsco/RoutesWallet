@@ -10,7 +10,7 @@ function route(id: string, coords: [number, number][]): Route {
     distance_km: 10,
     source: 'HV-signed',
     geometry: { type: 'LineString', coordinates: coords },
-    centroid: coords[0],
+    centroid: coords[0]!,
   };
 }
 
