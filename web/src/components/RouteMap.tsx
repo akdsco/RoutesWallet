@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { Feature, FeatureCollection } from 'geojson';
 import type { Route } from '../types.ts';
 import {
   buildHeatIndex,
@@ -45,7 +46,39 @@ function toLatLngs(coords: number[][]): [number, number][] {
   return coords.map((p) => [p[1] ?? 0, p[0] ?? 0]);
 }
 
+/** Walk every [x, y] position in an arbitrarily-nested coordinate array. */
+function eachCoord(coords: unknown, cb: (x: number, y: number) => void): void {
+  if (!Array.isArray(coords)) return;
+  const arr: unknown[] = coords;
+  const x = arr[0];
+  const y = arr[1];
+  if (typeof x === 'number' && typeof y === 'number') {
+    cb(x, y);
+    return;
+  }
+  for (const c of arr) eachCoord(c, cb);
+}
+
+/** Bounds-centre of a polygon feature, as Leaflet [lat, lng] — for label placement. */
+function featureCenter(f: Feature): [number, number] {
+  const g = f.geometry;
+  if (g.type === 'GeometryCollection') return [0, 0];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  eachCoord(g.coordinates, (x, y) => {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  });
+  return [(minY + maxY) / 2, (minX + maxX) / 2];
+}
+
 type Panes = {
+  greenspace: L.LayerGroup;
+  greenLabels: L.LayerGroup;
   heat: L.LayerGroup;
   matched: L.LayerGroup;
   active: L.LayerGroup;
@@ -69,6 +102,7 @@ export function RouteMap({
   const tileRef = useRef<L.TileLayer | null>(null);
   const heatCanvasRef = useRef<L.Canvas | null>(null);
   const panesRef = useRef<Panes | null>(null);
+  const [greenspace, setGreenspace] = useState<FeatureCollection | null>(null);
   const heatCacheRef = useRef<{
     routes: Route[];
     cell: number;
@@ -92,6 +126,8 @@ export function RouteMap({
     }).addTo(map);
 
     const order: [keyof Panes, number][] = [
+      ['greenspace', 350],
+      ['greenLabels', 360],
       ['heat', 400],
       ['matched', 450],
       ['marker', 470],
@@ -115,6 +151,66 @@ export function RouteMap({
   useEffect(() => {
     tileRef.current?.setUrl(TILES[theme]);
   }, [theme]);
+
+  // Load the designated-areas scenery once (AONBs + National Parks).
+  useEffect(() => {
+    let alive = true;
+    fetch('/designated-areas.geojson')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: FeatureCollection | null) => {
+        if (alive && data) setGreenspace(data);
+      })
+      .catch(() => {}); // scenery is optional; never block the map
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Draw the greenspace fills + dashed boundaries (below the heat).
+  useEffect(() => {
+    const P = panesRef.current;
+    if (!P) return;
+    P.greenspace.clearLayers();
+    if (!greenspace) return;
+    const fill = token('--aonb');
+    const stroke = token('--aonb-line');
+    L.geoJSON(greenspace, {
+      pane: 'greenspace',
+      interactive: false,
+      attribution:
+        'Contains <a href="https://www.gov.uk/government/organisations/natural-england">Natural England</a> data © OGL',
+      style: () => ({
+        fillColor: fill,
+        fillOpacity: 0.7,
+        color: stroke,
+        weight: 1,
+        dashArray: '4 3',
+        opacity: 0.9,
+      }),
+    }).addTo(P.greenspace);
+  }, [greenspace, theme]);
+
+  // Designated-area labels, only from z >= 10 (brief §4).
+  useEffect(() => {
+    const P = panesRef.current;
+    if (!P) return;
+    P.greenLabels.clearLayers();
+    if (!greenspace || zoom < 10) return;
+    for (const f of greenspace.features) {
+      const name: unknown = f.properties?.['name'];
+      if (typeof name !== 'string') continue;
+      const icon = L.divIcon({
+        className: '',
+        html: `<span class="aonb-label">${name}</span>`,
+      });
+      L.marker(featureCenter(f), {
+        pane: 'greenLabels',
+        icon,
+        interactive: false,
+        keyboard: false,
+      }).addTo(P.greenLabels);
+    }
+  }, [greenspace, zoom, theme]);
 
   // Heat layer: rebuilt when routes, the grid resolution (zoom band), the search
   // state, or the theme changes. Idle = six tiers (thin drawn first so hot

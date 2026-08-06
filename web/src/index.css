@@ -23,6 +23,11 @@
   --trust-soft: #e2f1ef;
   --marker: #b4451f;
   --thumb: #8c979f;
+  /* Greenspace scenery — chroma kept low so it never reads as a state. */
+  --aonb: #dce9d6;
+  --aonb-line: #9cb394;
+  --aonb-label: #6e8a67;
+  --green: #e6eee3;
 }
 
 [data-theme='dark'] {
@@ -42,6 +47,10 @@
   --trust-soft: #102a28;
   --marker: #e8794e;
   --thumb: #7c8992;
+  --aonb: #172018;
+  --aonb-line: #2e4430;
+  --aonb-label: #6b8468;
+  --green: #141b15;
 }
 
 /* Register tokens as Tailwind theme values -> bg-surface, text-muted, etc.
@@ -87,6 +96,20 @@ body {
 .leaflet-container {
   font-family: var(--font-sans);
   background: var(--bg);
+}
+
+/* Designated-area (AONB / National Park) labels drawn on the map. */
+.aonb-label {
+  color: var(--aonb-label);
+  font:
+    600 11px Inter,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px var(--bg),
+    0 0 3px var(--bg);
 }
 
 ::-webkit-scrollbar {
