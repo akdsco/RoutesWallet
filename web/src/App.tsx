@@ -143,9 +143,15 @@ export function App() {
         ? `Within ${RADIUS_KM} km of ${place?.name ?? ''}`
         : `Shows routes passing within ${RADIUS_KM} km`;
 
-  const searchPoint: [number, number] | null = place
-    ? [place.lng, place.lat]
-    : null;
+  // Memoized so the reference only changes when the searched place does — NOT on
+  // every App re-render (e.g. a hover). RouteMap's fit-to-matches effect keys on
+  // this; an unstable array made it re-fit on any re-render, so zooming in after a
+  // search snapped the view back to the search extent (TB-52). Stable ref = fit
+  // once when the search resolves, then free zoom/pan.
+  const searchPoint = useMemo<[number, number] | null>(
+    () => (place ? [place.lng, place.lat] : null),
+    [place]
+  );
 
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
 
