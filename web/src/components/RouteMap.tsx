@@ -183,8 +183,8 @@ export function RouteMap({
     // discrete animated steps ("bump bump bump"); instead we ease the zoom
     // toward a cursor-anchored goal every animation frame, so a trackpad glide
     // scales the map continuously.
-    const SENSITIVITY = 0.014; // zoom levels per px of wheel delta
-    const EASE = 0.5; // fraction of the remaining distance closed per frame
+    const SENSITIVITY = 0.022; // zoom levels per px of wheel delta
+    const EASE = 0.2; // fraction of the remaining distance closed per frame
     let goalZoom = map.getZoom();
     let anchor = map.getCenter();
     let raf: number | null = null;
