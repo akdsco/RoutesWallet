@@ -1,0 +1,3 @@
+# RoutesWallet — public static site, indexing welcome.
+User-agent: *
+Allow: /
