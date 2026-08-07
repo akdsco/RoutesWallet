@@ -3,8 +3,11 @@ import {
   BASEMAPS,
   BASEMAP_ORDER,
   DEFAULT_BASEMAP,
+  DARK_CAVEAT,
   tileConfig,
   isBasemapId,
+  showsDarkCaveat,
+  cycleBasemap,
 } from './basemaps.ts';
 
 describe('basemap config', () => {
@@ -15,6 +18,42 @@ describe('basemap config', () => {
 
   it('every ordered id has a definition', () => {
     for (const id of BASEMAP_ORDER) expect(BASEMAPS[id]).toBeDefined();
+  });
+
+  it('every option carries a label, description and short credit', () => {
+    for (const id of BASEMAP_ORDER) {
+      const def = BASEMAPS[id];
+      expect(def.label).toBeTruthy();
+      expect(def.description).toBeTruthy();
+      expect(def.credit).toContain('OpenStreetMap');
+    }
+    expect(BASEMAPS.standard.credit).toContain('CARTO');
+    expect(BASEMAPS.cyclosm.credit).toContain('CyclOSM');
+  });
+});
+
+describe('showsDarkCaveat', () => {
+  it('is true only for CyclOSM in the dark theme (its one caveat)', () => {
+    expect(showsDarkCaveat('cyclosm', 'dark')).toBe(true);
+    expect(showsDarkCaveat('cyclosm', 'light')).toBe(false);
+    expect(showsDarkCaveat('standard', 'dark')).toBe(false);
+    expect(showsDarkCaveat('standard', 'light')).toBe(false);
+  });
+
+  it('has caveat copy to announce', () => {
+    expect(DARK_CAVEAT.toLowerCase()).toContain('no dark');
+  });
+});
+
+describe('cycleBasemap (arrow-key navigation over the ordered list)', () => {
+  it('steps forward and wraps', () => {
+    expect(cycleBasemap('standard', 1)).toBe('cyclosm');
+    expect(cycleBasemap('cyclosm', 1)).toBe('standard');
+  });
+
+  it('steps backward and wraps', () => {
+    expect(cycleBasemap('standard', -1)).toBe('cyclosm');
+    expect(cycleBasemap('cyclosm', -1)).toBe('standard');
   });
 });
 
