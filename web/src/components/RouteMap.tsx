@@ -147,11 +147,12 @@ export function RouteMap({
     if (!elRef.current || mapRef.current) return;
     const map = L.map(elRef.current, {
       zoomControl: false,
-      // Continuous fractional zoom (default snaps to whole levels, which feels
-      // steppy on a trackpad); retina tiles stay crisp between levels. Wheel
-      // sensitivity stays at Leaflet's default so it doesn't feel sluggish.
+      // Continuous fractional zoom (default snaps to whole levels). Retina tiles
+      // stay crisp between levels. We drive the wheel ourselves (see below) for a
+      // smooth cursor-anchored glide, so Leaflet's stepped wheel zoom is off.
       zoomSnap: 0,
       zoomDelta: 1, // +/- buttons & keyboard still step by a whole level
+      scrollWheelZoom: false,
     }).setView([51.5072, -0.1276], 6);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // The tile layer is created + swapped by the theme effect below (it owns the
@@ -177,6 +178,45 @@ export function RouteMap({
     heatCanvasRef.current = L.canvas({ pane: 'heat' });
     map.on('zoomend', () => setZoom(map.getZoom()));
     map.on('moveend', () => setViewTick((v) => v + 1));
+
+    // Smooth, Figma-style wheel zoom. Leaflet's built-in wheel zoom fires
+    // discrete animated steps ("bump bump bump"); instead we ease the zoom
+    // toward a cursor-anchored goal every animation frame, so a trackpad glide
+    // scales the map continuously.
+    const SENSITIVITY = 0.014; // zoom levels per px of wheel delta
+    const EASE = 0.5; // fraction of the remaining distance closed per frame
+    let goalZoom = map.getZoom();
+    let anchor = map.getCenter();
+    let raf: number | null = null;
+
+    const stepZoom = () => {
+      const cur = map.getZoom();
+      const diff = goalZoom - cur;
+      if (Math.abs(diff) < 0.006) {
+        raf = null;
+        return;
+      }
+      map.setZoomAround(anchor, cur + diff * EASE, { animate: false });
+      raf = requestAnimationFrame(stepZoom);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      let d = e.deltaY;
+      if (e.deltaMode === 1) d *= 20; // lines -> ~px
+      else if (e.deltaMode === 2) d *= 400; // pages -> ~px
+      const base = raf != null ? goalZoom : map.getZoom();
+      goalZoom = Math.max(
+        map.getMinZoom(),
+        Math.min(map.getMaxZoom(), base - d * SENSITIVITY)
+      );
+      anchor = map.mouseEventToLatLng(e); // zoom toward the cursor
+      if (raf == null) raf = requestAnimationFrame(stepZoom);
+    };
+    // Lives with the map (created once, guarded above) — like the map.on
+    // handlers, it isn't torn down, so a StrictMode remount doesn't orphan it.
+    map.getContainer().addEventListener('wheel', onWheel, { passive: false });
+
     mapRef.current = map;
   }, []);
 
