@@ -20,6 +20,13 @@ anyone got a route near X?" — as a plain link, with no App Store, no backend, 
 no $99 Apple fee. See [`docs/plans/`](docs/plans/) for the reasoning and
 [`CLAUDE.md`](CLAUDE.md) for the scope guardrails.
 
+## Hosting
+
+Static site, £0 to run. **Cloudflare Pages** is the recommended host and there's
+a documented path for adding a database (Supabase / D1) later without changing
+the host. Full architecture, deploy steps, external services and the DB pivot
+are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ## Working in each app
 
 ```bash

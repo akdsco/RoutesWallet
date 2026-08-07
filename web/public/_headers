@@ -1,0 +1,12 @@
+# Cache headers for static hosts that honour a _headers file (Cloudflare Pages,
+# Netlify). Ignored harmlessly elsewhere. See docs/DEPLOYMENT.md §5.
+
+# Content-hashed build assets never change under a given name — cache forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Route/POI data keeps a stable filename, so cache briefly — data edits show
+# within the hour without a redeploy. (index.html is left to the host default,
+# which revalidates, so new asset hashes are always picked up.)
+/*.geojson
+  Cache-Control: public, max-age=3600
