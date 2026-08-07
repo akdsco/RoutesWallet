@@ -1,0 +1,36 @@
+name: web CI
+
+# Guardrails for the web/ app: typecheck, tests, lint, format. The parked
+# mobile/ app is not built here. Runs on pushes/PRs that touch web/.
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/web-ci.yml']
+  pull_request:
+    paths: ['web/**', '.github/workflows/web-ci.yml']
+
+# Rapid pushes queued a pile-up of PR runs and GitHub cancelled the older ones
+# during "Set up job". Only keep the latest run per ref; cancel superseded ones.
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # checks take ~1 min; fail fast if a runner ever hangs
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test

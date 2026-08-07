@@ -1,0 +1,139 @@
+// A tiny built-in gazetteer so the seeded demo places resolve instantly and offline.
+// Anything else falls back to Nominatim (OpenStreetMap's free geocoder).
+const GAZETTEER: Record<string, [number, number]> = {
+  girona: [2.8214, 41.9794],
+  cambridge: [0.1218, 52.2053],
+  london: [-0.1276, 51.5072],
+  banyoles: [2.75, 42.12],
+  alcudia: [3.12, 39.85],
+  "port d'alcudia": [3.12, 39.85],
+  mallorca: [2.98, 39.62],
+};
+
+/** Resolve a known place name to [lng, lat], or null. Pure — unit tested. */
+export function gazetteerLookup(query: string): [number, number] | null {
+  return GAZETTEER[query.trim().toLowerCase()] ?? null;
+}
+
+/**
+ * Pull an ISO-3166-1 alpha-2 country (lowercase) from a list of BCP-47 locales,
+ * e.g. ['en-GB'] -> 'gb'. Skips language-only tags ('en'). Pure — unit tested.
+ */
+export function countryFromLocales(
+  locales: readonly string[]
+): string | undefined {
+  for (const locale of locales) {
+    const m = /-([A-Za-z]{2})(?:$|[-_])/.exec(locale);
+    if (m && m[1]) return m[1].toLowerCase();
+  }
+  return undefined;
+}
+
+/** The user's country from the browser locale — used to bias geocoding. */
+export function userCountry(): string | undefined {
+  if (typeof navigator === 'undefined') return undefined;
+  const langs =
+    navigator.languages && navigator.languages.length > 0
+      ? navigator.languages
+      : [navigator.language];
+  return countryFromLocales(langs.filter((l): l is string => Boolean(l)));
+}
+
+type NominatimHit = { lon: string; lat: string };
+
+/**
+ * The club's country — searches bias here so "Epping" finds Epping Forest, not
+ * Epping in Moselle. Deliberately NOT the browser locale: a member searching
+ * from abroad (or an en-US browser) still wants UK routes. Hub Velo is GB-based.
+ */
+export const CLUB_COUNTRY = 'gb';
+
+const TIMEOUT_MS = 7000;
+
+// UK postcode shapes (case-insensitive): a full unit code (e.g. "SW1A 1AA",
+// "EN11 0QZ") or just the outward part (e.g. "EN11", "E1").
+const FULL_POSTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/;
+const OUTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?$/;
+
+/** Classify a query as a full UK postcode, an outward code, or neither. Pure. */
+export function ukPostcodeKind(query: string): 'full' | 'outcode' | null {
+  const s = query.trim();
+  if (FULL_POSTCODE.test(s)) return 'full';
+  if (OUTCODE.test(s)) return 'outcode';
+  return null;
+}
+
+/**
+ * Resolve a UK postcode via postcodes.io — free, no key, and (unlike OSM/
+ * Nominatim) has complete ONS-sourced coverage of live postcodes. Returns null
+ * on a 404 (unknown postcode) so the caller can fall back to Nominatim.
+ */
+async function postcodesIo(
+  query: string,
+  kind: 'full' | 'outcode'
+): Promise<[number, number] | null> {
+  const code = query.replace(/\s+/g, '').toUpperCase();
+  const base = kind === 'full' ? 'postcodes' : 'outcodes';
+  const signal = AbortSignal.timeout?.(TIMEOUT_MS);
+  const res = await fetch(
+    `https://api.postcodes.io/${base}/${encodeURIComponent(code)}`,
+    { headers: { Accept: 'application/json' }, signal }
+  );
+  if (!res.ok) return null; // 404 = unknown postcode
+  const body = (await res.json()) as {
+    result?: { longitude?: number; latitude?: number };
+  };
+  const lng = body.result?.longitude;
+  const lat = body.result?.latitude;
+  if (typeof lng !== 'number' || typeof lat !== 'number') return null;
+  return [lng, lat];
+}
+
+async function nominatim(
+  query: string,
+  country?: string
+): Promise<[number, number] | null> {
+  const params = new URLSearchParams({ format: 'json', limit: '1', q: query });
+  if (country) params.set('countrycodes', country);
+  // Abort a hung connection so the search can fail instead of spinning forever.
+  const signal = AbortSignal.timeout?.(TIMEOUT_MS);
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    { headers: { Accept: 'application/json' }, signal }
+  );
+  if (!res.ok) return null;
+  const hits = (await res.json()) as NominatimHit[];
+  const hit = hits?.[0];
+  if (!hit) return null;
+  const lng = parseFloat(hit.lon);
+  const lat = parseFloat(hit.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  return [lng, lat];
+}
+
+/**
+ * Resolve a place to [lng, lat]: gazetteer first, then Nominatim biased to the
+ * club's country, falling back to a global search if nothing local. May throw on
+ * a network/parse failure — callers should treat that as a failed lookup.
+ */
+export async function geocode(
+  query: string,
+  country = CLUB_COUNTRY
+): Promise<[number, number] | null> {
+  const local = gazetteerLookup(query);
+  if (local) return local;
+
+  // UK postcodes first — postcodes.io is complete where Nominatim is patchy.
+  const kind = ukPostcodeKind(query);
+  if (kind) {
+    const pc = await postcodesIo(query, kind);
+    if (pc) return pc;
+    // Unknown postcode → fall through to Nominatim (it may still know the area).
+  }
+
+  if (country) {
+    const biased = await nominatim(query, country);
+    if (biased) return biased;
+  }
+  return nominatim(query);
+}

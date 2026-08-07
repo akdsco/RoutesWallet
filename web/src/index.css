@@ -1,0 +1,152 @@
+@import 'tailwindcss';
+
+/* Manual theming: drive `dark:` off our data-theme attribute (set by next-themes)
+   rather than the OS media query, so the toggle can override the system. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Design tokens (Claude Design spec). Emphasis = value + weight, trust = badge +
+   dash — never hue — so states survive greyscale and CVD. Light + dark. */
+:root {
+  --bg: #f2f4f5;
+  --surface: #ffffff;
+  --surface-2: #f1f3f5;
+  --line: #e1e5e8;
+  --line-2: #edf0f2;
+  --text: #12171a;
+  --text-2: #4b5660;
+  --muted: #647079; /* darkened for WCAG AA (4.5:1) on white — was #78848c */
+  --sel: #1f6feb;
+  --sel-soft: #e7f0fe;
+  --match: #33414d;
+  --heat: #5d6e7b;
+  --trust: #0e6b60;
+  --trust-soft: #e2f1ef;
+  --marker: #b4451f;
+  --thumb: #8c979f;
+  /* Greenspace scenery — chroma kept low so it never reads as a state. */
+  --aonb: #dce9d6;
+  --aonb-line: #9cb394;
+  --aonb-label: #6e8a67;
+  --green: #e6eee3;
+}
+
+[data-theme='dark'] {
+  --bg: #0b0e10;
+  --surface: #14191c;
+  --surface-2: #1b2225;
+  --line: #262e33;
+  --line-2: #1f272b;
+  --text: #e9eef1;
+  --text-2: #b3bfc6;
+  --muted: #7e8b93;
+  --sel: #4d9bff;
+  --sel-soft: #12263f;
+  --match: #c6d1d8;
+  --heat: #8fa3b0;
+  --trust: #4fbfae;
+  --trust-soft: #102a28;
+  --marker: #e8794e;
+  --thumb: #7c8992;
+  --aonb: #141a12;
+  --aonb-line: #26361f;
+  --aonb-label: #6b8468;
+  --green: #141b15;
+}
+
+/* Register tokens as Tailwind theme values -> bg-surface, text-muted, etc.
+   `inline` keeps them referencing the vars, so the theme swap is live. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-sel: var(--sel);
+  --color-sel-soft: var(--sel-soft);
+  --color-match: var(--match);
+  --color-heat: var(--heat);
+  --color-trust: var(--trust);
+  --color-trust-soft: var(--trust-soft);
+  --color-marker: var(--marker);
+  --color-thumb: var(--thumb);
+
+  --font-sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Leaflet: inherit our font, match the basemap backdrop during tile load. */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--bg);
+}
+
+/* Curated POI markers (cafe / toilet / water / station). */
+.poi-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  line-height: 1;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(16, 24, 32, 0.25);
+}
+
+/* Designated-area (AONB / National Park) shapes. Colour + opacity live here,
+   per theme, so the theme toggle restyles them instantly through the CSS
+   cascade — CSS beats Leaflet's presentation attributes, and there's no JS
+   colour read to race the data-theme swap. On dark the fill is dialled right
+   down (Dark Matter's near-black land makes any fill read as a pale patch). */
+.aonb-shape {
+  fill: var(--aonb);
+  fill-opacity: 0.45;
+  stroke: var(--aonb-line);
+  stroke-opacity: 0.7;
+}
+[data-theme='dark'] .aonb-shape {
+  fill-opacity: 0.18;
+  stroke-opacity: 0.5;
+}
+
+/* Designated-area (AONB / National Park) labels drawn on the map. */
+.aonb-label {
+  color: var(--aonb-label);
+  font:
+    600 11px Inter,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px var(--bg),
+    0 0 3px var(--bg);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}

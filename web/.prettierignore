@@ -1,0 +1,7 @@
+# npm scripts run with cwd=web/, so they don't see the repo-root .prettierignore.
+# Keep this in sync with it for anything under web/.
+dist/
+node_modules/
+
+# Route geometry — large machine data, never hand-format.
+**/*.geojson

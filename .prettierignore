@@ -1,0 +1,9 @@
+# Parked RN app keeps its own (double-quote) style — do not reformat it.
+mobile/
+
+node_modules/
+dist/
+build/
+
+# Route geometry — large machine data, never hand-format.
+**/*.geojson

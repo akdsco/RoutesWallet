@@ -1,0 +1,44 @@
+/**
+ * Render a route's [lng, lat] line into an SVG `points` string, bbox-fitted into
+ * a small box (default 52×36) with an inset. Latitude is flipped so north is up.
+ * Pure — unit tested. Used for the route-card thumbnail; no extra data needed.
+ */
+export function routeThumbnail(
+  coords: number[][],
+  width = 52,
+  height = 36,
+  inset = 4
+): string {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const p of coords) {
+    const x = p[0] ?? 0;
+    const y = p[1] ?? 0;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const bw = maxX - minX || 1;
+  const bh = maxY - minY || 1;
+  const scale = Math.min((width - 2 * inset) / bw, (height - 2 * inset) / bh);
+  const ox = (width - bw * scale) / 2;
+  const oy = (height - bh * scale) / 2;
+  // A 52×36 preview can't show more than ~100 vertices; sample down so full-
+  // resolution routes don't bloat the sidebar DOM. Bounds still use every point.
+  const MAX = 100;
+  const step = Math.max(1, Math.ceil(coords.length / MAX));
+  const sampled =
+    step === 1
+      ? coords
+      : coords.filter((_, i) => i % step === 0 || i === coords.length - 1);
+  return sampled
+    .map((p) => {
+      const x = ox + ((p[0] ?? 0) - minX) * scale;
+      const y = oy + (maxY - (p[1] ?? 0)) * scale; // flip: north up
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+}
