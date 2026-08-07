@@ -7,9 +7,28 @@ import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
+import {
+  BASEMAP_ORDER,
+  BASEMAPS,
+  DEFAULT_BASEMAP,
+  isBasemapId,
+  type BasemapId,
+} from './lib/basemaps.ts';
 import type { Route } from './types.ts';
 
 const RADIUS_KM = 25;
+const BASEMAP_STORAGE_KEY = 'rw:basemap';
+
+/** The saved basemap choice, or the default if none/invalid/unavailable. */
+function readSavedBasemap(): BasemapId {
+  try {
+    const v = window.localStorage.getItem(BASEMAP_STORAGE_KEY);
+    if (isBasemapId(v)) return v;
+  } catch {
+    // private mode / storage disabled — fall back to the default
+  }
+  return DEFAULT_BASEMAP;
+}
 
 type Place = { lng: number; lat: number; name: string };
 
@@ -29,6 +48,17 @@ export function App() {
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
   );
+  const [basemap, setBasemap] = useState<BasemapId>(readSavedBasemap);
+
+  // Persist the basemap choice so it survives a reload (theme already persists
+  // via next-themes). Best-effort — storage may be unavailable in private mode.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(BASEMAP_STORAGE_KEY, basemap);
+    } catch {
+      /* ignore */
+    }
+  }, [basemap]);
 
   const togglePoi = useCallback(
     (t: string) =>
@@ -182,10 +212,37 @@ export function App() {
           searchPoint={searchPoint}
           radiusKm={RADIUS_KM}
           theme={theme}
+          basemap={basemap}
           poiTypes={poiTypes}
           onHover={onHover}
           onSelect={onSelect}
         />
+
+        {/* Basemap switcher — a segmented control in the conventional
+            layers-control corner (bottom-right), clear of the legend and chips.
+            Standard is theme-aware; CyclOSM is a cycling-specific base. */}
+        <div
+          role="group"
+          aria-label="Basemap"
+          className="absolute bottom-5 right-5 z-[500] flex overflow-hidden rounded-full border border-line bg-surface text-[12px]"
+        >
+          {BASEMAP_ORDER.map((id) => {
+            const on = basemap === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setBasemap(id)}
+                className={`px-3 py-1 transition-colors ${
+                  on ? 'bg-text text-surface' : 'text-text-2 hover:text-text'
+                }`}
+              >
+                {BASEMAPS[id].label}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
           {(

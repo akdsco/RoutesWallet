@@ -13,6 +13,7 @@ import {
 } from '../lib/heat.ts';
 import { isDashed } from '../lib/source.ts';
 import { mapPalette } from '../lib/mapColors.ts';
+import { tileConfig, type BasemapId } from '../lib/basemaps.ts';
 import { decimate } from '../lib/decimate.ts';
 import { zoomAnchorOffset } from '../lib/zoomTransform.ts';
 import { escapeHtml } from '../lib/sanitize.ts';
@@ -27,6 +28,8 @@ type Props = {
   searchPoint: [number, number] | null;
   radiusKm: number;
   theme: 'light' | 'dark';
+  /** Which basemap (tile layer) to show. */
+  basemap: BasemapId;
   /** Which POI types (cafe/toilet/water/station) are toggled on. */
   poiTypes: ReadonlySet<string>;
   onHover: (id: string | null) => void;
@@ -39,18 +42,6 @@ const POI_ICON: Record<string, string> = {
   water: '💧',
   station: '🚉',
 };
-
-const TILES = {
-  // Voyager has landcover (parks/woods) baked in — the scalable way to show
-  // greenspace everywhere without a custom dataset. No dark variant yet; dark
-  // theme is dropped for the prototype (future: a basemap toggle incl. CyclOSM).
-  light:
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-} as const;
-
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 /** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
 function toLatLngs(coords: number[][]): [number, number][] {
@@ -106,6 +97,7 @@ export function RouteMap({
   searchPoint,
   radiusKm,
   theme,
+  basemap,
   poiTypes,
   onHover,
   onSelect,
@@ -253,24 +245,26 @@ export function RouteMap({
     mapRef.current = map;
   }, []);
 
-  // Own + swap the basemap when the theme flips. We REPLACE the whole tile layer
-  // rather than calling setUrl(): at a fractional zoom (zoomSnap:0) setUrl
-  // mis-positions the reloaded tiles so they render far from the real view
-  // ("UK over Africa"). A fresh layer recomputes tile positions from the current
-  // view; drop the old layer once the new one has painted to avoid a flash.
+  // Own + swap the basemap when the theme OR the chosen basemap changes. We
+  // REPLACE the whole tile layer rather than calling setUrl(): at a fractional
+  // zoom (zoomSnap:0) setUrl mis-positions the reloaded tiles so they render far
+  // from the real view ("UK over Africa"). A fresh layer recomputes tile
+  // positions from the current view; drop the old layer once the new one has
+  // painted to avoid a flash.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const prev = tileRef.current;
-    const next = L.tileLayer(TILES[theme], {
-      attribution: ATTRIBUTION,
-      subdomains: 'abcd',
-      maxZoom: 20,
+    const cfg = tileConfig(basemap, theme);
+    const next = L.tileLayer(cfg.url, {
+      attribution: cfg.attribution,
+      subdomains: cfg.subdomains,
+      maxZoom: cfg.maxZoom,
       keepBuffer: 4, // hold more off-screen tiles so panning shows fewer gaps
     }).addTo(map);
     tileRef.current = next;
     if (prev) next.once('load', () => map.removeLayer(prev));
-  }, [theme]);
+  }, [theme, basemap]);
 
   // Load the designated-areas scenery once (AONBs + National Parks).
   useEffect(() => {
