@@ -125,14 +125,17 @@ export const HEAT_TIERS: {
 type HeatTier = { max: number; weight: number; opacity: number; color: string };
 
 export const HEAT_RAMP: Record<'light' | 'dark', HeatTier[]> = {
-  // Light basemap: orange (quiet) -> deep maroon (busiest = darkest).
+  // Light basemap: PURE reds, soft red (quiet) -> deep maroon (busiest =
+  // darkest). Deliberately no orange/amber — that collides with Voyager's
+  // orange A/B roads, making faint heat look like just another road (Strava
+  // sidesteps this with a grey basemap; we keep the green base and drop orange).
   light: [
-    { max: 1, weight: 1.3, opacity: 0.5, color: '#f59e0b' },
-    { max: 2, weight: 1.8, opacity: 0.62, color: '#f97316' },
-    { max: 3, weight: 2.3, opacity: 0.72, color: '#ea580c' },
-    { max: 5, weight: 2.9, opacity: 0.82, color: '#dc2626' },
-    { max: 8, weight: 3.7, opacity: 0.9, color: '#b91c1c' },
-    { max: Infinity, weight: 4.5, opacity: 0.97, color: '#7f1d1d' },
+    { max: 1, weight: 1.3, opacity: 0.55, color: '#f87171' },
+    { max: 2, weight: 1.8, opacity: 0.66, color: '#ef4444' },
+    { max: 3, weight: 2.3, opacity: 0.76, color: '#dc2626' },
+    { max: 5, weight: 2.9, opacity: 0.85, color: '#b91c1c' },
+    { max: 8, weight: 3.7, opacity: 0.92, color: '#991b1b' },
+    { max: Infinity, weight: 4.5, opacity: 0.98, color: '#7f1d1d' },
   ],
   // Dark basemap: dim red (quiet) -> bright amber (busiest = brightest).
   dark: [
@@ -150,7 +153,7 @@ export const FLAT_HEAT_RED: Record<
   'light' | 'dark',
   { weight: number; opacity: number; color: string }
 > = {
-  light: { weight: 1.1, opacity: 0.34, color: '#ea580c' },
+  light: { weight: 1.1, opacity: 0.36, color: '#dc2626' },
   dark: { weight: 1.1, opacity: 0.2, color: '#b91c1c' },
 };
 

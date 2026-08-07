@@ -48,7 +48,7 @@ export function App() {
   const heatLegend =
     theme === 'dark'
       ? ['#7f1d1d', '#ef4444', '#f97316', '#ffb020']
-      : ['#f59e0b', '#ea580c', '#b91c1c', '#7f1d1d'];
+      : ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'];
 
   useEffect(() => {
     loadRoutes()
