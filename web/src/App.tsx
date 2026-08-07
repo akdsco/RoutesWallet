@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Legend } from './components/Legend.tsx';
+import { RouteDetail } from './components/RouteDetail.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
@@ -154,6 +155,9 @@ export function App() {
   );
 
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
+  const selectedRoute = selectedId
+    ? (routes.find((r) => r.id === selectedId) ?? null)
+    : null;
 
   return (
     <div className="flex h-screen">
@@ -220,7 +224,17 @@ export function App() {
 
         <Legend searching={searchPoint !== null} theme={theme} />
 
-        {hovered && (
+        {selectedRoute && (
+          <RouteDetail
+            route={selectedRoute}
+            nearKm={nearKm.get(selectedRoute.id)}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+
+        {/* Transient hover peek — suppressed while a route is selected so it
+            never collides with the pinned detail card (same top-right corner). */}
+        {hovered && !selectedRoute && (
           <div
             role="status"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
