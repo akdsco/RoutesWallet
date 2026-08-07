@@ -1,18 +1,10 @@
 import type { ReactNode } from 'react';
+import { LEGEND_HEAT_STOPS } from '../lib/heat.ts';
 
 type Props = {
   /** true once a place search has resolved — the map shows matches + a radius. */
   searching: boolean;
   theme: 'light' | 'dark';
-};
-
-// Heat legend stops (faint -> hot), matching the map ramp in lib/heat.ts: the
-// light basemap inverts to a deep red for the busiest corridors, the dark map
-// runs to bright amber. Kept in sync with HEAT_RAMP by eye (both are per-theme
-// reds); this is the swatch, not the drawn layer.
-const HEAT_STOPS: Record<'light' | 'dark', [string, string, string, string]> = {
-  light: ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'],
-  dark: ['#7f1d1d', '#ef4444', '#f97316', '#ffb020'],
 };
 
 // Four segments across the 52px swatch, thickening + solidifying faint -> hot.
@@ -81,7 +73,7 @@ export function Legend({ searching, theme }: Props) {
                   y1="5"
                   x2={s.x2}
                   y2="5"
-                  stroke={HEAT_STOPS[theme][i]}
+                  stroke={LEGEND_HEAT_STOPS[theme][i]}
                   strokeWidth={s.w}
                   strokeOpacity={s.o}
                 />
