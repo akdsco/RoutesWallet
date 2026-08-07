@@ -22,6 +22,10 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     port: PORT,
+    // Local only: a preview already bound to PORT is reused, skipping the
+    // build+preview above — so a STALE `dist/` from a leftover `npm run preview`
+    // (or a prior run) can be tested. If a local run looks wrong, kill anything
+    // on PORT and re-run. CI always sets CI, so it never reuses: it builds fresh.
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

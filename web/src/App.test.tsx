@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
+import type { Route } from './types.ts';
 
 // Mock the network + map boundaries; the flow logic under test is App's own.
 // loadRoutes/geocode are exercised for real at the unit level (lib/*.test.ts);
@@ -17,12 +18,16 @@ vi.mock('./components/RouteMap.tsx', () => ({
     selectedId: string | null;
     matchedIds: Set<string> | null;
     searchPoint: [number, number] | null;
+    poiTypes: ReadonlySet<string>;
   }) => (
     <div
       data-testid="route-map"
       data-selected={props.selectedId ?? ''}
-      data-matched={props.matchedIds ? [...props.matchedIds].join(',') : ''}
+      data-matched={
+        props.matchedIds ? [...props.matchedIds].sort().join(',') : ''
+      }
       data-search={props.searchPoint ? props.searchPoint.join(',') : ''}
+      data-poi={[...props.poiTypes].sort().join(',')}
     />
   ),
 }));
@@ -52,6 +57,18 @@ async function renderLoaded() {
 }
 
 const routeList = () => screen.getByRole('list', { name: 'Routes' });
+const searchBox = () =>
+  screen.getByRole('textbox', { name: /find routes near a place/i });
+const mapProps = () => screen.getByTestId('route-map');
+
+/** A promise whose resolution we control, to drive out-of-order async flows. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
 
 beforeEach(() => {
   loadRoutesMock.mockReset();
@@ -90,10 +107,7 @@ describe('App — search', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'Cambridge{Enter}'
-    );
+    await user.type(searchBox(), 'Cambridge{Enter}');
 
     // London Orbital (~70 km away) drops out; the two Cambridge routes remain.
     await waitFor(() =>
@@ -107,22 +121,25 @@ describe('App — search', () => {
       screen.getByText('2 routes within 25 km of Cambridge')
     ).toBeInTheDocument();
 
-    // The map receives the same match set + search marker.
-    expect(screen.getByTestId('route-map')).toHaveAttribute(
-      'data-search',
-      CAMBRIDGE.join(',')
-    );
+    // The same filtered set + search marker reach the map, not just the list.
+    expect(mapProps()).toHaveAttribute('data-search', CAMBRIDGE.join(','));
+    expect(mapProps().getAttribute('data-matched')?.split(',')).toEqual([
+      'cam-loop',
+      'grantchester',
+    ]);
   });
 
-  it('resolves a UK postcode the same as any place', async () => {
+  // NB: geocode is mocked here, so the postcode *branch* (ukPostcodeKind,
+  // postcodes.io) is NOT exercised — that lives in geocode.test.ts (unit) and
+  // e2e/app.spec.ts (real geocode vs a stubbed postcodes.io). This only proves
+  // App forwards the raw query untrimmed-of-shape and treats the result like
+  // any other place.
+  it('forwards a postcode-shaped query verbatim to the geocoder', async () => {
     geocodeMock.mockResolvedValue(CAMBRIDGE);
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'CB2 1TN{Enter}'
-    );
+    await user.type(searchBox(), 'CB2 1TN{Enter}');
 
     await waitFor(() =>
       expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
@@ -135,10 +152,7 @@ describe('App — search', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'Girona{Enter}'
-    );
+    await user.type(searchBox(), 'Girona{Enter}');
 
     // The "show all routes" escape hatch marks a dismissible search notice
     // (empty-state has none), distinguishing it from the idle list.
@@ -157,13 +171,15 @@ describe('App — search', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'Nowheresville{Enter}'
-    );
+    await user.type(searchBox(), 'Nowheresville{Enter}');
 
     expect(
       await screen.findByText('Couldn’t find that place')
+    ).toBeInTheDocument();
+    // The distinct geofail aria-live announcement (interpolating the query) is
+    // its own screen-reader contract, separate from the visible notice copy.
+    expect(
+      screen.getByText(/Couldn.t find .Nowheresville.\. Try a town/i)
     ).toBeInTheDocument();
   });
 
@@ -172,14 +188,63 @@ describe('App — search', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'Cambridge{Enter}'
-    );
+    await user.type(searchBox(), 'Cambridge{Enter}');
 
     expect(
       await screen.findByText('Couldn’t find that place')
     ).toBeInTheDocument();
+  });
+
+  it('ignores a slow earlier search once a newer one has resolved', async () => {
+    // The searchSeq guard: an out-of-order geocode must not clobber fresher
+    // results. Drive two overlapping searches, resolving the stale one LAST.
+    const slow = deferred<[number, number] | null>();
+    const fast = deferred<[number, number] | null>();
+    geocodeMock
+      .mockReturnValueOnce(slow.promise)
+      .mockReturnValueOnce(fast.promise);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Girona{Enter}'); // seq 1 — pending
+    await user.clear(searchBox());
+    await user.type(searchBox(), 'Cambridge{Enter}'); // seq 2 — pending
+
+    await act(async () => {
+      fast.resolve(CAMBRIDGE);
+      await Promise.resolve();
+    });
+    await waitFor(() =>
+      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
+    );
+
+    // The stale seq-1 query now resolves to a far point; the guard must drop it.
+    await act(async () => {
+      slow.resolve(GIRONA);
+      await Promise.resolve();
+    });
+    expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('does not search before the routes have loaded', async () => {
+    // Hold loadRoutes open so the app stays in its loading state.
+    const gate = deferred<Route[]>();
+    loadRoutesMock.mockReturnValue(gate.promise);
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    // The guard means an early submit is a no-op — no false "no routes" banner.
+    expect(geocodeMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      gate.resolve(sampleRoutes);
+      await Promise.resolve();
+    });
+    await waitFor(() =>
+      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(3)
+    );
   });
 
   it('clears the search and restores the full list', async () => {
@@ -187,10 +252,7 @@ describe('App — search', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.type(
-      screen.getByRole('textbox', { name: /find routes near a place/i }),
-      'Cambridge{Enter}'
-    );
+    await user.type(searchBox(), 'Cambridge{Enter}');
     await waitFor(() =>
       expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
     );
@@ -224,22 +286,41 @@ describe('App — selecting a route', () => {
 });
 
 describe('App — POI + theme controls', () => {
-  it('toggles the café POI layer via aria-pressed', async () => {
+  // The chips are found by their visible label — legitimate here: the label is
+  // the control's identity (disambiguating otherwise-identical toggles), and we
+  // assert the behaviour (aria-pressed + the layer set that reaches the map).
+  it('toggles POI layers, and the change reaches the map', async () => {
     const user = userEvent.setup();
     await renderLoaded();
 
+    // Defaults: cafés off (they swamp the map); toilets/water/stations on.
+    expect(mapProps().getAttribute('data-poi')?.split(',')).toEqual([
+      'station',
+      'toilet',
+      'water',
+    ]);
     const cafe = screen.getByRole('button', { name: 'Cafés' });
-    // Cafés default off (they swamp the map); the rest default on.
+    const toilets = screen.getByRole('button', { name: 'Toilets' });
     expect(cafe).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Toilets' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
+    expect(toilets).toHaveAttribute('aria-pressed', 'true');
 
+    // Toggle cafés ON (the add branch)…
     await user.click(cafe);
     expect(cafe).toHaveAttribute('aria-pressed', 'true');
+    expect(mapProps().getAttribute('data-poi')).toContain('cafe');
+
+    // …and toilets OFF (the delete branch) — both propagate to the map props.
+    await user.click(toilets);
+    expect(toilets).toHaveAttribute('aria-pressed', 'false');
+    expect(mapProps().getAttribute('data-poi')).not.toContain('toilet');
   });
 
+  // NB: the toggle is located by its aria-label, which itself flips with state
+  // ("Switch to dark" ⇄ "Switch to light"). That couples this to copy — but a
+  // pure `getByRole('button', { pressed })` is ambiguous (the POI chips also
+  // carry aria-pressed). A stable, state-independent aria-label on the toggle
+  // (Sidebar.tsx) would let this assert only aria-pressed. Flagged for the
+  // Sidebar owner; not changed here (shared, churning surface).
   it('flips the theme toggle state', async () => {
     const user = userEvent.setup();
     await renderLoaded();

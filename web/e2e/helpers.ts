@@ -71,7 +71,15 @@ const ROUTES_FEED = {
  * navigating.
  */
 export async function stubExternal(page: Page): Promise<void> {
-  await page.route(/basemaps\.cartocdn\.com/, (route) => route.abort());
+  // Registered first, so it has the LOWEST priority (Playwright matches handlers
+  // last-registered-first). Any external host NOT explicitly stubbed below is
+  // aborted — so a stub whose URL silently drifts fails loudly instead of
+  // leaking a real network call that happens to still pass. Local preview
+  // requests (localhost) are left untouched and served normally.
+  await page.route(
+    (url) => url.hostname !== 'localhost' && url.hostname !== '127.0.0.1',
+    (route) => route.abort()
+  );
 
   await page.route('**/routes.geojson', (route) =>
     route.fulfill({
@@ -80,7 +88,7 @@ export async function stubExternal(page: Page): Promise<void> {
     })
   );
 
-  // UK postcode → postcodes.io. Fixed to a Cambridge point so a postcode search
+  // UK postcode → postcodes.io, fixed to a Cambridge point so a postcode search
   // matches the two Cambridge routes.
   await page.route(/api\.postcodes\.io\//, (route) =>
     route.fulfill({
@@ -91,10 +99,14 @@ export async function stubExternal(page: Page): Promise<void> {
     })
   );
 
+  // Nominatim is the FALLBACK. Return a deliberately out-of-range point (Girona,
+  // ~1,000 km away) so the postcode journey is load-bearing: if the postcode
+  // path breaks and falls through to here, the search yields zero matches and
+  // the test fails, instead of both geocoders returning the same Cambridge hit.
   await page.route(/nominatim\.openstreetmap\.org/, (route) =>
     route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify([{ lon: '0.1218', lat: '52.2053' }]),
+      body: JSON.stringify([{ lon: '2.8214', lat: '41.9794' }]),
     })
   );
 }

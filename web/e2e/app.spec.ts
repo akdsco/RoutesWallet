@@ -33,6 +33,10 @@ test('searches near a place and filters to routes in range', async ({
   ).toBeAttached();
 });
 
+// Load-bearing for the postcode path specifically: real geocode runs here, the
+// postcodes.io stub returns Cambridge and the Nominatim FALLBACK returns Girona
+// (out of range). So a match only happens via the postcode branch — if it broke
+// and fell through to Nominatim, the count would be 0 and this would fail.
 test('searches a UK postcode via the postcode geocoder', async ({ page }) => {
   await page
     .getByRole('textbox', { name: /find routes near a place/i })
@@ -63,10 +67,18 @@ test('flips the theme toggle', async ({ page }) => {
   ).toHaveAttribute('aria-pressed', 'true');
 });
 
-test.describe('with reduced motion', () => {
+// A render-smoke under prefers-reduced-motion: it proves the app boots and the
+// search journey works with the flag set, and guards against a crash in code
+// that reads the media query. It does NOT assert the actual reduced-motion
+// behaviour — the only consumer is the wheel-zoom EASE snap inside the Leaflet
+// canvas (RouteMap.tsx), which isn't driven here and can't be asserted on
+// pixels. Verified by eye; noted honestly rather than faked.
+test.describe('under prefers-reduced-motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('the core search journey still works', async ({ page }) => {
+  test('boots and completes the search journey without error', async ({
+    page,
+  }) => {
     await expect(page.locator('.leaflet-container')).toBeVisible();
 
     await page
