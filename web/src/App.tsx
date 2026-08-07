@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
-import { distanceToRouteKm } from './lib/search.ts';
+import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
 import type { Route } from './types.ts';
@@ -69,6 +69,7 @@ export function App() {
     setSelectedId(null);
   }, []);
 
+  const searchSeq = useRef(0);
   const runSearch = useCallback(
     async (raw: string) => {
       const q = raw.trim();
@@ -76,25 +77,40 @@ export function App() {
         clearSearch();
         return;
       }
-      const point = await geocode(q);
-      if (!point) {
+      // Don't score against an empty/unloaded dataset — that would show a false
+      // "no routes within 25 km" that never re-runs once the data lands.
+      if (loading || routes.length === 0) return;
+
+      const seq = ++searchSeq.current;
+      const fail = () => {
+        if (seq !== searchSeq.current) return; // a newer search superseded us
         setPlace(null);
         setMatches(null);
         setBanner('geofail');
         setSelectedId(null);
+      };
+
+      let point: [number, number] | null;
+      try {
+        point = await geocode(q);
+      } catch {
+        fail(); // network / rate-limit / bad JSON — treat as a failed lookup
         return;
       }
-      const scored = routes
-        .map((route) => ({ route, km: distanceToRouteKm(point, route) }))
-        .filter((o) => o.km <= RADIUS_KM)
-        .sort((a, b) => a.km - b.km);
+      // A slower earlier query must not overwrite a newer one's results.
+      if (seq !== searchSeq.current) return;
+      if (!point) {
+        fail();
+        return;
+      }
+      const scored = routesNear(point, routes, RADIUS_KM);
       setPlace({ lng: point[0], lat: point[1], name: q });
       setMatches(scored.map((o) => o.route));
       setNearKm(new Map(scored.map((o) => [o.route.id, o.km])));
       setBanner(scored.length ? 'none' : 'nomatch');
       setSelectedId(null);
     },
-    [routes, clearSearch]
+    [routes, loading, clearSearch]
   );
 
   const matchedIds = useMemo(
@@ -255,9 +271,13 @@ export function App() {
         )}
 
         <span className="sr-only" aria-live="polite">
-          {matches
-            ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
-            : ''}
+          {banner === 'geofail'
+            ? `Couldn't find “${query}”. Try a town, village or landmark.`
+            : banner === 'nomatch'
+              ? `No routes within ${RADIUS_KM} km of ${place?.name ?? query}`
+              : matches
+                ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
+                : ''}
         </span>
       </div>
     </div>

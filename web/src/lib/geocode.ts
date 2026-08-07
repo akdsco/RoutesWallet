@@ -41,31 +41,45 @@ export function userCountry(): string | undefined {
 
 type NominatimHit = { lon: string; lat: string };
 
+/**
+ * The club's country — searches bias here so "Epping" finds Epping Forest, not
+ * Epping in Moselle. Deliberately NOT the browser locale: a member searching
+ * from abroad (or an en-US browser) still wants UK routes. Hub Velo is GB-based.
+ */
+export const CLUB_COUNTRY = 'gb';
+
+const TIMEOUT_MS = 7000;
+
 async function nominatim(
   query: string,
   country?: string
 ): Promise<[number, number] | null> {
   const params = new URLSearchParams({ format: 'json', limit: '1', q: query });
   if (country) params.set('countrycodes', country);
+  // Abort a hung connection so the search can fail instead of spinning forever.
+  const signal = AbortSignal.timeout?.(TIMEOUT_MS);
   const res = await fetch(
     `https://nominatim.openstreetmap.org/search?${params.toString()}`,
-    { headers: { Accept: 'application/json' } }
+    { headers: { Accept: 'application/json' }, signal }
   );
   if (!res.ok) return null;
   const hits = (await res.json()) as NominatimHit[];
-  const [hit] = hits;
+  const hit = hits?.[0];
   if (!hit) return null;
-  return [parseFloat(hit.lon), parseFloat(hit.lat)];
+  const lng = parseFloat(hit.lon);
+  const lat = parseFloat(hit.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  return [lng, lat];
 }
 
 /**
  * Resolve a place to [lng, lat]: gazetteer first, then Nominatim biased to the
- * user's country (so "Epping" finds Epping Forest for a GB user, and Epping in
- * Moselle for an FR user), falling back to a global search if nothing local.
+ * club's country, falling back to a global search if nothing local. May throw on
+ * a network/parse failure — callers should treat that as a failed lookup.
  */
 export async function geocode(
   query: string,
-  country = userCountry()
+  country = CLUB_COUNTRY
 ): Promise<[number, number] | null> {
   const local = gazetteerLookup(query);
   if (local) return local;

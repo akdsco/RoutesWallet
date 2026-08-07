@@ -7,6 +7,7 @@ import {
   buildHeatIndex,
   HEAT_RAMP,
   FLAT_HEAT_RED,
+  heatTierIndex,
   cellSizeForZoom,
   type HeatSegment,
 } from '../lib/heat.ts';
@@ -14,6 +15,7 @@ import { isDashed } from '../lib/source.ts';
 import { mapPalette } from '../lib/mapColors.ts';
 import { decimate } from '../lib/decimate.ts';
 import { zoomAnchorOffset } from '../lib/zoomTransform.ts';
+import { escapeHtml } from '../lib/sanitize.ts';
 
 type Props = {
   routes: Route[];
@@ -180,7 +182,11 @@ export function RouteMap({
     // the wheel stops we commit the real zoom once (crisp re-render). This is how
     // pinch-zoom works; the map never disappears and stays at 60 fps.
     const SENSITIVITY = 0.02; // zoom levels per px of wheel delta
-    const EASE = 0.33; // fraction of the remaining distance closed per frame
+    // Honour reduced-motion: EASE 1 = snap straight to the goal (no glide).
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const EASE = reduceMotion ? 1 : 0.33; // remaining distance closed per frame
     const mapPane = map.getPane('mapPane') ?? map.getContainer();
 
     let gesturing = false;
@@ -315,7 +321,7 @@ export function RouteMap({
       if (typeof name !== 'string') continue;
       const icon = L.divIcon({
         className: '',
-        html: `<span class="aonb-label">${name}</span>`,
+        html: `<span class="aonb-label">${escapeHtml(name)}</span>`,
       });
       L.marker(featureCenter(f), {
         pane: 'greenLabels',
@@ -368,7 +374,11 @@ export function RouteMap({
       });
       const m = L.marker([lat, lng], { pane: 'pois', icon, keyboard: false });
       if (typeof name === 'string') {
-        m.bindTooltip(name, { direction: 'top', offset: [0, -10] });
+        // Bind an element with textContent (not a raw string, which Leaflet sets
+        // via innerHTML) — POI names come from world-editable OSM data.
+        const label = document.createElement('span');
+        label.textContent = name;
+        m.bindTooltip(label, { direction: 'top', offset: [0, -10] });
       }
       m.addTo(P.pois);
     }
@@ -448,11 +458,7 @@ export function RouteMap({
       // Bucket segments by tier, then draw thin tiers first so hot corridors
       // sit on top (ramp is ordered faint -> hot).
       const buckets: HeatSegment[][] = ramp.map(() => []);
-      for (const s of segs) {
-        let i = ramp.findIndex((t) => s.count <= t.max);
-        if (i < 0) i = ramp.length - 1;
-        buckets[i]!.push(s);
-      }
+      for (const s of segs) buckets[heatTierIndex(s.count, theme)]!.push(s);
       ramp.forEach((t, i) =>
         drawGroup(buckets[i]!, t.color, t.weight, t.opacity)
       );

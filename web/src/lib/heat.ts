@@ -96,26 +96,6 @@ export function cellSizeForZoom(zoom: number): number {
   return 150;
 }
 
-export type HeatStyle = { weight: number; opacity: number; color: string };
-
-/**
- * Six overlap tiers. Exported as config, not inline literals — real club data peaks
- * lower than synthetic (~6–10, not ~20), so these thresholds get retuned against it.
- */
-export const HEAT_TIERS: {
-  max: number;
-  weight: number;
-  opacity: number;
-  color: string;
-}[] = [
-  { max: 1, weight: 1.0, opacity: 0.11, color: 'var(--heat)' },
-  { max: 2, weight: 1.6, opacity: 0.26, color: 'var(--heat)' },
-  { max: 3, weight: 2.1, opacity: 0.4, color: 'var(--heat)' },
-  { max: 5, weight: 2.8, opacity: 0.56, color: 'var(--match)' },
-  { max: 8, weight: 3.6, opacity: 0.74, color: 'var(--match)' },
-  { max: Infinity, weight: 4.4, opacity: 0.92, color: 'var(--text)' },
-];
-
 /**
  * PROTOTYPE: Strava-style red heat, PER THEME. Strava inverts its ramp by
  * basemap so the busiest corridors always have the most contrast: on the light
@@ -157,20 +137,8 @@ export const FLAT_HEAT_RED: Record<
   dark: { weight: 1.1, opacity: 0.2, color: '#b91c1c' },
 };
 
-/** Idle heat style for an overlap count (weight rises, opacity deepens). */
-export function heatStyle(count: number): HeatStyle {
-  const tier =
-    HEAT_TIERS.find((t) => count <= t.max) ??
-    HEAT_TIERS[HEAT_TIERS.length - 1]!;
-  return { weight: tier.weight, opacity: tier.opacity, color: tier.color };
+/** Which HEAT_RAMP tier a segment with `count` overlapping routes falls into. */
+export function heatTierIndex(count: number, theme: 'light' | 'dark'): number {
+  const i = HEAT_RAMP[theme].findIndex((t) => count <= t.max);
+  return i < 0 ? HEAT_RAMP[theme].length - 1 : i;
 }
-
-/**
- * While a search is active the heat FLATTENS to a uniform faint layer — tiers off —
- * so its hottest corridors can't out-weigh the matched lines drawn over it.
- */
-export const FLAT_HEAT: HeatStyle = {
-  weight: 1.1,
-  opacity: 0.13,
-  color: 'var(--heat)',
-};

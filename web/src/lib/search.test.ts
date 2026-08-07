@@ -47,22 +47,27 @@ describe('distanceToRouteKm', () => {
 
 describe('routesNear', () => {
   const all = [highlands, cambridge, london];
+  const ids = (pt: [number, number], r: number) =>
+    routesNear(pt, all, r).map((s) => s.route.id);
 
-  it('returns only routes whose line passes within the radius', () => {
+  it('returns only routes whose line passes within the radius, with distances', () => {
     const near = routesNear([-0.09, 51.51], all, 25);
-    expect(near.map((r) => r.id)).toEqual(['london']);
+    expect(near.map((s) => s.route.id)).toEqual(['london']);
+    expect(near[0]!.km).toBeLessThan(1); // on the line
   });
 
   it('sorts matches nearest-first', () => {
-    // A point just north of London: London is closest, Cambridge next, Highlands excluded.
-    const near = routesNear([-0.05, 51.7], all, 100);
-    expect(near.map((r) => r.id)).toEqual(['london', 'cambridge']);
+    // A point just north of London: London closest, Cambridge next, Highlands excluded.
+    expect(ids([-0.05, 51.7], 100)).toEqual(['london', 'cambridge']);
   });
 
   it('returns an empty array when nothing is in range', () => {
-    expect(
-      routesNear([-0.09, 51.51], all, 5).filter((r) => r.id !== 'london')
-    ).toEqual([]);
-    expect(routesNear([10, 10], all, 25)).toEqual([]);
+    expect(ids([10, 10], 25)).toEqual([]);
+  });
+
+  it('includes a route exactly at the radius boundary (<=), excludes just beyond', () => {
+    const d = distanceToRouteKm([-0.05, 51.7], london);
+    expect(ids([-0.05, 51.7], d + 1e-6)).toContain('london'); // within
+    expect(ids([-0.05, 51.7], d - 1e-6)).not.toContain('london'); // just outside
   });
 });

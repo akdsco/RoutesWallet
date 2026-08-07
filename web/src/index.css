@@ -14,7 +14,7 @@
   --line-2: #edf0f2;
   --text: #12171a;
   --text-2: #4b5660;
-  --muted: #78848c;
+  --muted: #647079; /* darkened for WCAG AA (4.5:1) on white — was #78848c */
   --sel: #1f6feb;
   --sel-soft: #e7f0fe;
   --match: #33414d;

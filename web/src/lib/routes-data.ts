@@ -1,17 +1,22 @@
-import type { Feature, FeatureCollection, LineString } from 'geojson';
+import type { FeatureCollection } from 'geojson';
 import type { Route, RouteSource } from '../types.ts';
 
-type RouteProps = {
-  id: string;
-  name: string;
-  link: string;
-  distance_km: number;
-  source: RouteSource;
-  region?: string;
-  notes?: string;
-  cafe?: string;
-  route_type?: string;
-};
+const SOURCES: readonly RouteSource[] = [
+  'club-verified',
+  'club-member',
+  'third-party',
+];
+
+/** Coerce an unknown source to a valid tier — default to the least-trusted. */
+function normSource(s: unknown): RouteSource {
+  return typeof s === 'string' && (SOURCES as readonly string[]).includes(s)
+    ? (s as RouteSource)
+    : 'third-party';
+}
+
+function str(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
 
 function centroidOf(coords: number[][]): [number, number] {
   const n = coords.length;
@@ -26,27 +31,40 @@ function centroidOf(coords: number[][]): [number, number] {
 
 /**
  * Map a GeoJSON FeatureCollection (the on-disk routes.geojson format, openable in
- * any GIS tool) into the app's Route contract. Pure — unit tested.
+ * any GIS tool) into the app's Route contract. Defensive: routes.geojson is
+ * served from a CDN, outside the type system, so one malformed feature must not
+ * crash the app — features missing id/name/link, or without a >=2-point
+ * LineString, are skipped rather than throwing. Pure — unit tested.
  */
 export function featuresToRoutes(fc: FeatureCollection): Route[] {
-  return fc.features
-    .filter(
-      (f): f is Feature<LineString, RouteProps> =>
-        f.geometry?.type === 'LineString'
-    )
-    .map((f) => ({
-      id: f.properties.id,
-      name: f.properties.name,
-      link: f.properties.link,
-      distance_km: f.properties.distance_km,
-      source: f.properties.source,
-      region: f.properties.region ?? 'Other',
-      notes: f.properties.notes ?? '',
-      cafe: f.properties.cafe ?? '',
-      route_type: f.properties.route_type,
+  const out: Route[] = [];
+  for (const f of fc.features ?? []) {
+    if (f?.geometry?.type !== 'LineString') continue;
+    const coords = f.geometry.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) continue;
+    const p = (f.properties ?? {}) as Record<string, unknown>;
+    if (
+      typeof p.id !== 'string' ||
+      typeof p.name !== 'string' ||
+      typeof p.link !== 'string'
+    ) {
+      continue;
+    }
+    out.push({
+      id: p.id,
+      name: p.name,
+      link: p.link,
+      distance_km: typeof p.distance_km === 'number' ? p.distance_km : 0,
+      source: normSource(p.source),
+      region: str(p.region, 'Other'),
+      notes: str(p.notes),
+      cafe: str(p.cafe),
+      route_type: typeof p.route_type === 'string' ? p.route_type : undefined,
       geometry: f.geometry,
-      centroid: centroidOf(f.geometry.coordinates),
-    }));
+      centroid: centroidOf(coords),
+    });
+  }
+  return out;
 }
 
 export async function loadRoutes(url = '/routes.geojson'): Promise<Route[]> {

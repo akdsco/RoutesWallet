@@ -55,4 +55,72 @@ describe('featuresToRoutes', () => {
   it('ignores non-LineString features', () => {
     expect(featuresToRoutes(fc).map((r) => r.id)).not.toContain('skip');
   });
+
+  // The data is CDN-served and outside the type system — one bad feature must
+  // never crash the app or wipe the good routes.
+  it('skips malformed features without throwing, keeping the good ones', () => {
+    const dirty = {
+      type: 'FeatureCollection',
+      features: [
+        fc.features[0], // good
+        {
+          type: 'Feature',
+          properties: null,
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        }, // null props
+        {
+          type: 'Feature',
+          properties: { id: 'b', name: 'B' },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        }, // missing link
+        {
+          type: 'Feature',
+          properties: { id: 'c', name: 'C', link: 'x' },
+          geometry: { type: 'LineString', coordinates: [[0, 0]] },
+        }, // <2 points
+      ],
+    } as unknown as FeatureCollection;
+    let routes: ReturnType<typeof featuresToRoutes> = [];
+    expect(() => {
+      routes = featuresToRoutes(dirty);
+    }).not.toThrow();
+    expect(routes.map((r) => r.id)).toEqual(['a']);
+  });
+
+  it('coerces an unknown source to the least-trusted tier', () => {
+    const odd = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'x',
+            name: 'X',
+            link: 'https://e/x',
+            source: 'HV-signed',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    expect(featuresToRoutes(odd)[0]!.source).toBe('third-party');
+  });
 });

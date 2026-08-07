@@ -13,18 +13,21 @@ export function distanceToRouteKm(pt: [number, number], route: Route): number {
   );
 }
 
+export type ScoredRoute = { route: Route; km: number };
+
 /**
- * Routes whose line passes within `radiusKm` of `pt` ([lng, lat]), nearest first.
- * This is the one behaviour behind the "routes near <place>" search.
+ * Routes whose line passes within `radiusKm` of `pt` ([lng, lat]), nearest first,
+ * each with its distance. This is the one behaviour behind the "routes near
+ * <place>" search — App renders directly from it, so the tested path is the live
+ * path.
  */
 export function routesNear(
   pt: [number, number],
   routes: Route[],
   radiusKm: number
-): Route[] {
+): ScoredRoute[] {
   return routes
     .map((route) => ({ route, km: distanceToRouteKm(pt, route) }))
     .filter(({ km }) => km <= radiusKm)
-    .sort((a, b) => a.km - b.km)
-    .map(({ route }) => route);
+    .sort((a, b) => a.km - b.km);
 }

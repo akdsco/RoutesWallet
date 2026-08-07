@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { mapPalette, type Theme } from './mapColors.ts';
-import { heatStyle } from './heat.ts';
+import { HEAT_RAMP, heatTierIndex } from './heat.ts';
 
 // The palette is a hand-maintained mirror of the CSS theme tokens (the canvas
 // can't read CSS vars). These tests fail if the two drift apart, and pin the
@@ -57,30 +57,28 @@ describe('MAP_PALETTE mirrors the index.css theme tokens', () => {
   }
 });
 
-/** Resolve the concrete colour a heat segment of `count` overlaps gets. */
+/** Concrete red-ramp colour a segment with `count` overlapping routes gets. */
 function heatColor(theme: Theme, count: number): string {
-  const v = heatStyle(count).color;
-  const pal = mapPalette(theme);
-  if (v === 'var(--text)') return pal.text;
-  if (v === 'var(--match)') return pal.match;
-  return pal.heat;
+  return HEAT_RAMP[theme][heatTierIndex(count, theme)]!.color;
 }
 
-describe('heat grading inverts between themes', () => {
-  it('light: busier corridors get DARKER (dark ink on a light map)', () => {
+describe('HEAT_RAMP grading inverts between themes (Strava-style)', () => {
+  it('light: busier corridors get DARKER (deep red for the hottest)', () => {
     expect(relLum(heatColor('light', 99))).toBeLessThan(
       relLum(heatColor('light', 1))
     );
   });
 
-  it('dark: busier corridors get LIGHTER (light ink on a dark map)', () => {
+  it('dark: busier corridors get LIGHTER (bright amber for the hottest)', () => {
     expect(relLum(heatColor('dark', 99))).toBeGreaterThan(
       relLum(heatColor('dark', 1))
     );
   });
 
-  it('the hottest tier is opposite ink in each theme', () => {
-    expect(relLum(heatColor('light', 99))).toBeLessThan(0.2); // near-black
-    expect(relLum(heatColor('dark', 99))).toBeGreaterThan(0.6); // near-white
+  it('the hottest tier is opposite luminance in each theme (the inversion)', () => {
+    // Dark map's hottest is far lighter than the light map's hottest.
+    expect(relLum(heatColor('dark', 99))).toBeGreaterThan(
+      relLum(heatColor('light', 99))
+    );
   });
 });

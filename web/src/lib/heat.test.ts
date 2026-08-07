@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildHeatIndex, heatStyle, cellSizeForZoom } from './heat.ts';
+import {
+  buildHeatIndex,
+  cellSizeForZoom,
+  heatTierIndex,
+  HEAT_RAMP,
+} from './heat.ts';
 import type { Route } from '../types.ts';
 
 function route(id: string, coords: [number, number][]): Route {
@@ -61,6 +66,14 @@ describe('buildHeatIndex', () => {
     expect(coarse.some((s) => s.count === 2)).toBe(true);
     expect(fine.every((s) => s.count === 1)).toBe(true);
   });
+
+  it('counts an out-and-back segment once per route (no self-doubling)', () => {
+    // Ride out along base, then back over the same cells.
+    const outAndBack = route('a', [...base, ...[...base].reverse().slice(1)]);
+    const segs = buildHeatIndex([outAndBack], 150);
+    expect(segs.length).toBeGreaterThan(0);
+    expect(segs.every((s) => s.count === 1)).toBe(true);
+  });
 });
 
 describe('cellSizeForZoom', () => {
@@ -68,11 +81,23 @@ describe('cellSizeForZoom', () => {
     expect(cellSizeForZoom(15)).toBeLessThan(cellSizeForZoom(12));
     expect(cellSizeForZoom(12)).toBeLessThan(cellSizeForZoom(9));
   });
+
+  it('has the documented breakpoints (>=14 -> 25, >=11 -> 60, else 150)', () => {
+    expect(cellSizeForZoom(14)).toBe(25);
+    expect(cellSizeForZoom(13.9)).toBe(60);
+    expect(cellSizeForZoom(11)).toBe(60);
+    expect(cellSizeForZoom(10.9)).toBe(150);
+    expect(cellSizeForZoom(5)).toBe(150);
+  });
 });
 
-describe('heatStyle', () => {
-  it('deepens weight and opacity as the count rises', () => {
-    expect(heatStyle(9).weight).toBeGreaterThan(heatStyle(1).weight);
-    expect(heatStyle(9).opacity).toBeGreaterThan(heatStyle(1).opacity);
+describe('heatTierIndex', () => {
+  it('rises with overlap count and clamps at the hottest tier', () => {
+    expect(heatTierIndex(9, 'light')).toBeGreaterThan(
+      heatTierIndex(1, 'light')
+    );
+    expect(heatTierIndex(1, 'light')).toBe(0);
+    expect(heatTierIndex(1000, 'light')).toBe(HEAT_RAMP.light.length - 1);
+    expect(heatTierIndex(1000, 'dark')).toBe(HEAT_RAMP.dark.length - 1);
   });
 });

@@ -2,6 +2,7 @@ import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { openLabel } from '../lib/links.ts';
+import { safeHref } from '../lib/sanitize.ts';
 import { SOURCE_META } from '../lib/source.ts';
 
 export type CardVM = { route: Route; nearKm?: number };
@@ -68,11 +69,16 @@ export function Sidebar(props: Props) {
             <button
               type="button"
               aria-pressed={theme === 'dark'}
+              aria-label={
+                theme === 'dark'
+                  ? 'Switch to light theme'
+                  : 'Switch to dark theme'
+              }
               onClick={onToggleTheme}
               title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
               className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
             >
-              {theme === 'dark' ? '☀︎' : '☾'}
+              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
             </button>
           </div>
         </div>
@@ -311,9 +317,9 @@ function RouteCard({
         {selected && (
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <a
-              href={r.link}
+              href={safeHref(r.link)}
               target="_blank"
-              rel="noopener"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 rounded-md bg-sel px-3 py-[7px] text-[12px] font-medium text-white"
             >
               {openLabel(r.link)} ↗
