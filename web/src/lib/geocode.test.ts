@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { gazetteerLookup, countryFromLocales, geocode } from './geocode.ts';
+import {
+  gazetteerLookup,
+  countryFromLocales,
+  geocode,
+  ukPostcodeKind,
+} from './geocode.ts';
 
 function mockFetch(body: unknown) {
   const res = {
@@ -9,6 +14,27 @@ function mockFetch(body: unknown) {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => Promise.resolve(res))
+  );
+}
+
+/** Route responses by URL substring so postcode + Nominatim paths can differ. */
+function mockFetchByUrl(routes: Record<string, unknown>, fallbackOk = true) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      for (const [needle, body] of Object.entries(routes)) {
+        if (url.includes(needle)) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(body),
+          } as unknown as Response);
+        }
+      }
+      return Promise.resolve({
+        ok: fallbackOk,
+        status: fallbackOk ? 200 : 404,
+      } as unknown as Response);
+    })
   );
 }
 
@@ -80,5 +106,53 @@ describe('geocode (Nominatim path, fetch mocked)', () => {
       vi.fn(() => Promise.reject(new TypeError('Failed to fetch')))
     );
     await expect(geocode('Offline')).rejects.toBeInstanceOf(TypeError);
+  });
+});
+
+describe('ukPostcodeKind', () => {
+  it('recognises full postcodes (with or without a space, any case)', () => {
+    expect(ukPostcodeKind('SW1A 1AA')).toBe('full');
+    expect(ukPostcodeKind('sw1a1aa')).toBe('full');
+    expect(ukPostcodeKind('EN11 0QZ')).toBe('full');
+    expect(ukPostcodeKind(' M1 1AE ')).toBe('full');
+  });
+  it('recognises outward codes', () => {
+    expect(ukPostcodeKind('EN11')).toBe('outcode');
+    expect(ukPostcodeKind('E1')).toBe('outcode');
+    expect(ukPostcodeKind('SW1A')).toBe('outcode');
+  });
+  it('rejects place names', () => {
+    expect(ukPostcodeKind('Box Hill')).toBeNull();
+    expect(ukPostcodeKind('London')).toBeNull();
+    expect(ukPostcodeKind('')).toBeNull();
+  });
+});
+
+describe('geocode (UK postcode path)', () => {
+  it('resolves a full postcode via postcodes.io', async () => {
+    mockFetchByUrl({
+      'postcodes.io/postcodes': {
+        result: { longitude: -0.1357, latitude: 51.5002 },
+      },
+    });
+    expect(await geocode('SW1A 1AA')).toEqual([-0.1357, 51.5002]);
+  });
+
+  it('resolves an outward code via the outcodes endpoint', async () => {
+    mockFetchByUrl({
+      'postcodes.io/outcodes': {
+        result: { longitude: 0.01, latitude: 51.77 },
+      },
+    });
+    expect(await geocode('EN11')).toEqual([0.01, 51.77]);
+  });
+
+  it('falls back to Nominatim when the postcode is unknown (404)', async () => {
+    // postcodes.io 404s (unmatched -> fallback 404); Nominatim answers.
+    mockFetchByUrl(
+      { 'nominatim.openstreetmap.org': [{ lon: '-1.9', lat: '52.5' }] },
+      false
+    );
+    expect(await geocode('ZZ99 9ZZ')).toEqual([-1.9, 52.5]);
   });
 });

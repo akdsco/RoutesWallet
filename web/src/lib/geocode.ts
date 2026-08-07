@@ -50,6 +50,45 @@ export const CLUB_COUNTRY = 'gb';
 
 const TIMEOUT_MS = 7000;
 
+// UK postcode shapes (case-insensitive): a full unit code (e.g. "SW1A 1AA",
+// "EN11 0QZ") or just the outward part (e.g. "EN11", "E1").
+const FULL_POSTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/;
+const OUTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?$/;
+
+/** Classify a query as a full UK postcode, an outward code, or neither. Pure. */
+export function ukPostcodeKind(query: string): 'full' | 'outcode' | null {
+  const s = query.trim();
+  if (FULL_POSTCODE.test(s)) return 'full';
+  if (OUTCODE.test(s)) return 'outcode';
+  return null;
+}
+
+/**
+ * Resolve a UK postcode via postcodes.io — free, no key, and (unlike OSM/
+ * Nominatim) has complete ONS-sourced coverage of live postcodes. Returns null
+ * on a 404 (unknown postcode) so the caller can fall back to Nominatim.
+ */
+async function postcodesIo(
+  query: string,
+  kind: 'full' | 'outcode'
+): Promise<[number, number] | null> {
+  const code = query.replace(/\s+/g, '').toUpperCase();
+  const base = kind === 'full' ? 'postcodes' : 'outcodes';
+  const signal = AbortSignal.timeout?.(TIMEOUT_MS);
+  const res = await fetch(
+    `https://api.postcodes.io/${base}/${encodeURIComponent(code)}`,
+    { headers: { Accept: 'application/json' }, signal }
+  );
+  if (!res.ok) return null; // 404 = unknown postcode
+  const body = (await res.json()) as {
+    result?: { longitude?: number; latitude?: number };
+  };
+  const lng = body.result?.longitude;
+  const lat = body.result?.latitude;
+  if (typeof lng !== 'number' || typeof lat !== 'number') return null;
+  return [lng, lat];
+}
+
 async function nominatim(
   query: string,
   country?: string
@@ -83,6 +122,14 @@ export async function geocode(
 ): Promise<[number, number] | null> {
   const local = gazetteerLookup(query);
   if (local) return local;
+
+  // UK postcodes first — postcodes.io is complete where Nominatim is patchy.
+  const kind = ukPostcodeKind(query);
+  if (kind) {
+    const pc = await postcodesIo(query, kind);
+    if (pc) return pc;
+    // Unknown postcode → fall through to Nominatim (it may still know the area).
+  }
 
   if (country) {
     const biased = await nominatim(query, country);

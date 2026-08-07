@@ -115,7 +115,7 @@ export function Sidebar(props: Props) {
               id="q"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="e.g. Box Hill"
+              placeholder="e.g. Box Hill or EN11"
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
             />
