@@ -439,23 +439,20 @@ export function RouteMap({
       }).addTo(P.heat);
     };
 
+    const ramp = HEAT_RAMP[theme]; // Strava-style reds; inverts by basemap
     if (matchedIds !== null) {
-      drawGroup(
-        segs,
-        FLAT_HEAT_RED.color,
-        FLAT_HEAT_RED.weight,
-        FLAT_HEAT_RED.opacity
-      );
+      const flat = FLAT_HEAT_RED[theme];
+      drawGroup(segs, flat.color, flat.weight, flat.opacity);
     } else {
       // Bucket segments by tier, then draw thin tiers first so hot corridors
-      // sit on top (HEAT_RAMP is ordered faint -> hot).
-      const buckets: HeatSegment[][] = HEAT_RAMP.map(() => []);
+      // sit on top (ramp is ordered faint -> hot).
+      const buckets: HeatSegment[][] = ramp.map(() => []);
       for (const s of segs) {
-        let i = HEAT_RAMP.findIndex((t) => s.count <= t.max);
-        if (i < 0) i = HEAT_RAMP.length - 1;
+        let i = ramp.findIndex((t) => s.count <= t.max);
+        if (i < 0) i = ramp.length - 1;
         buckets[i]!.push(s);
       }
-      HEAT_RAMP.forEach((t, i) =>
+      ramp.forEach((t, i) =>
         drawGroup(buckets[i]!, t.color, t.weight, t.opacity)
       );
     }

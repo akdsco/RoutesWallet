@@ -43,6 +43,12 @@ export function App() {
 
   const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
+  // Legend heat stops (faint -> hot), matching the map ramp: light inverts to a
+  // deep red for the busiest, dark runs to bright amber. See lib/heat.ts.
+  const heatLegend =
+    theme === 'dark'
+      ? ['#7f1d1d', '#ef4444', '#f97316', '#ffb020']
+      : ['#f59e0b', '#ea580c', '#b91c1c', '#7f1d1d'];
 
   useEffect(() => {
     loadRoutes()
@@ -201,42 +207,18 @@ export function App() {
           </span>
           <span className="flex items-center gap-1.5 text-[12px] text-text-2">
             <svg width="52" height="10" aria-hidden="true">
-              <line
-                x1="0"
-                y1="5"
-                x2="13"
-                y2="5"
-                stroke="#d11149"
-                strokeWidth="1.3"
-                strokeOpacity="0.4"
-              />
-              <line
-                x1="13"
-                y1="5"
-                x2="26"
-                y2="5"
-                stroke="#f0341f"
-                strokeWidth="2.2"
-                strokeOpacity="0.6"
-              />
-              <line
-                x1="26"
-                y1="5"
-                x2="39"
-                y2="5"
-                stroke="#ff8a1e"
-                strokeWidth="3.2"
-                strokeOpacity="0.85"
-              />
-              <line
-                x1="39"
-                y1="5"
-                x2="52"
-                y2="5"
-                stroke="#ffb020"
-                strokeWidth="4.3"
-                strokeOpacity="1"
-              />
+              {heatLegend.map((c, i) => (
+                <line
+                  key={c}
+                  x1={i * 13}
+                  y1="5"
+                  x2={(i + 1) * 13}
+                  y2="5"
+                  stroke={c}
+                  strokeWidth={[1.3, 2.2, 3.2, 4.3][i]}
+                  strokeOpacity={[0.4, 0.6, 0.85, 1][i]}
+                />
+              ))}
             </svg>
             1 → many rides
           </span>

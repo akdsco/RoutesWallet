@@ -117,28 +117,42 @@ export const HEAT_TIERS: {
 ];
 
 /**
- * PROTOTYPE: Strava-style red→amber heat ramp (faint dim-red for a lone lane,
- * bright amber for the hottest corridors). A SINGLE palette for both light and
- * dark, mirroring Strava (which has no theme) — opacity carries most of the
- * faint→hot range so the reds read over both the cream and near-black basemaps.
- * If green-lit, this replaces (or theme-tunes) the ink tiers above.
+ * PROTOTYPE: Strava-style red heat, PER THEME. Strava inverts its ramp by
+ * basemap so the busiest corridors always have the most contrast: on the light
+ * map hot is a DEEP red fading to orange; on the dark map hot is a BRIGHT amber
+ * fading to dim red. Ordered faint -> hot within each theme.
  */
-export const HEAT_RAMP: {
-  max: number;
-  weight: number;
-  opacity: number;
-  color: string;
-}[] = [
-  { max: 1, weight: 1.3, opacity: 0.32, color: '#d11149' },
-  { max: 2, weight: 1.8, opacity: 0.44, color: '#e11d3f' },
-  { max: 3, weight: 2.3, opacity: 0.56, color: '#f0341f' },
-  { max: 5, weight: 2.9, opacity: 0.7, color: '#ff5a1f' },
-  { max: 8, weight: 3.7, opacity: 0.85, color: '#ff8a1e' },
-  { max: Infinity, weight: 4.5, opacity: 0.97, color: '#ffb020' },
-];
+type HeatTier = { max: number; weight: number; opacity: number; color: string };
 
-/** Faint red used while a search is active (heat flattens under the matches). */
-export const FLAT_HEAT_RED = { weight: 1.1, opacity: 0.16, color: '#d11149' };
+export const HEAT_RAMP: Record<'light' | 'dark', HeatTier[]> = {
+  // Light basemap: orange (quiet) -> deep maroon (busiest = darkest).
+  light: [
+    { max: 1, weight: 1.3, opacity: 0.5, color: '#f59e0b' },
+    { max: 2, weight: 1.8, opacity: 0.62, color: '#f97316' },
+    { max: 3, weight: 2.3, opacity: 0.72, color: '#ea580c' },
+    { max: 5, weight: 2.9, opacity: 0.82, color: '#dc2626' },
+    { max: 8, weight: 3.7, opacity: 0.9, color: '#b91c1c' },
+    { max: Infinity, weight: 4.5, opacity: 0.97, color: '#7f1d1d' },
+  ],
+  // Dark basemap: dim red (quiet) -> bright amber (busiest = brightest).
+  dark: [
+    { max: 1, weight: 1.3, opacity: 0.55, color: '#7f1d1d' },
+    { max: 2, weight: 1.8, opacity: 0.66, color: '#b91c1c' },
+    { max: 3, weight: 2.3, opacity: 0.76, color: '#ef4444' },
+    { max: 5, weight: 2.9, opacity: 0.85, color: '#f97316' },
+    { max: 8, weight: 3.7, opacity: 0.92, color: '#ff8a1e' },
+    { max: Infinity, weight: 4.5, opacity: 0.99, color: '#ffb020' },
+  ],
+};
+
+/** Faint tone used while a search is active (heat flattens under the matches). */
+export const FLAT_HEAT_RED: Record<
+  'light' | 'dark',
+  { weight: number; opacity: number; color: string }
+> = {
+  light: { weight: 1.1, opacity: 0.34, color: '#ea580c' },
+  dark: { weight: 1.1, opacity: 0.2, color: '#b91c1c' },
+};
 
 /** Idle heat style for an overlap count (weight rises, opacity deepens). */
 export function heatStyle(count: number): HeatStyle {
