@@ -620,13 +620,32 @@ export function RouteMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchPoint]);
 
-  // Fit to a route when it's explicitly selected (not on hover).
+  // Fit to a route when it's explicitly selected (not on hover); on deselect,
+  // zoom back out to the matched set (or all routes when there's no search).
+  const prevSelectedId = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedId) return;
-    const r = routes.find((x) => x.id === selectedId);
-    if (r)
-      map.fitBounds(L.latLngBounds(toLatLngs(r.geometry.coordinates)).pad(0.3));
+    if (!map) return;
+    if (selectedId) {
+      const r = routes.find((x) => x.id === selectedId);
+      if (r)
+        map.fitBounds(
+          L.latLngBounds(toLatLngs(r.geometry.coordinates)).pad(0.3)
+        );
+    } else if (prevSelectedId.current) {
+      const pts: [number, number][] = [];
+      if (searchPoint && matchedIds) {
+        for (const r of routes)
+          if (matchedIds.has(r.id))
+            pts.push(...toLatLngs(r.geometry.coordinates));
+        pts.push([searchPoint[1], searchPoint[0]]);
+      } else {
+        for (const r of routes) pts.push(...toLatLngs(r.geometry.coordinates));
+      }
+      if (pts.length)
+        map.fitBounds(L.latLngBounds(pts).pad(searchPoint ? 0.25 : 0.2));
+    }
+    prevSelectedId.current = selectedId;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 

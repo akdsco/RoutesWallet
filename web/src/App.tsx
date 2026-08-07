@@ -158,7 +158,16 @@ export function App() {
     ? [place.lng, place.lat]
     : null;
 
+  // The top-right map panel shows the hovered route as a quick preview, but
+  // falls back to the selected route so a click keeps it on screen instead of
+  // it vanishing on mouse-leave. The deselect (×) only shows when the panel is
+  // resting on the selected route (not previewing a different hover).
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
+  const selectedRoute = selectedId
+    ? (routes.find((r) => r.id === selectedId) ?? null)
+    : null;
+  const panelRoute = hovered ?? selectedRoute;
+  const panelIsSelected = panelRoute != null && panelRoute.id === selectedId;
 
   return (
     <div className="flex h-screen">
@@ -260,19 +269,31 @@ export function App() {
           </span>
         </div>
 
-        {hovered && (
+        {panelRoute && (
           <div
             role="status"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
           >
-            <span className="text-[14px] font-medium text-text">
-              {hovered.name}
-            </span>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-[14px] font-medium text-text">
+                {panelRoute.name}
+              </span>
+              {panelIsSelected && (
+                <button
+                  type="button"
+                  aria-label="Deselect route"
+                  onClick={() => setSelectedId(null)}
+                  className="-mr-1 -mt-1 flex h-7 w-7 flex-none items-center justify-center rounded text-[15px] text-muted hover:bg-surface-2 hover:text-text"
+                >
+                  <span aria-hidden="true">×</span>
+                </button>
+              )}
+            </div>
             <span className="font-mono text-[12px] text-text-2">
-              {hovered.distance_km} km · {hovered.region}
+              {panelRoute.distance_km} km · {panelRoute.region}
             </span>
             <span className="text-[12px] text-muted">
-              {SOURCE_META[hovered.source].blurb}
+              {SOURCE_META[panelRoute.source].blurb}
             </span>
           </div>
         )}
