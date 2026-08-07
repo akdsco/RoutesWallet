@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
+import { PoiChips } from './components/PoiChips.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -187,35 +188,11 @@ export function App() {
           onSelect={onSelect}
         />
 
-        <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
-          {(
-            [
-              ['cafe', '☕', 'Cafés'],
-              ['toilet', '🚻', 'Toilets'],
-              ['water', '💧', 'Water'],
-              ['station', '🚉', 'Stations'],
-            ] as const
-          ).map(([t, icon, label]) => {
-            const on = poiTypes.has(t);
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={on}
-                title={label}
-                onClick={() => togglePoi(t)}
-                className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
-                  on
-                    ? 'border-line bg-surface text-text'
-                    : 'border-line bg-surface/60 text-muted opacity-60'
-                }`}
-              >
-                <span aria-hidden="true">{icon}</span>
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <PoiChips
+          poiTypes={poiTypes}
+          onToggle={togglePoi}
+          className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5"
+        />
 
         <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5">
           <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
