@@ -1,9 +1,16 @@
-import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useMemo,
+  useRef,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { openLabel } from '../lib/links.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { SOURCE_META } from '../lib/source.ts';
+import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
 
 export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
@@ -24,7 +31,10 @@ type Props = {
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
 };
+
+const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 const badgeBase =
   'inline-flex items-center gap-1.5 rounded-[3px] px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.05em]';
@@ -45,11 +55,41 @@ export function Sidebar(props: Props) {
     onSelect,
     onHover,
     onToggleTheme,
+    onSearchFocusChange,
   } = props;
 
   function submit(e: FormEvent) {
     e.preventDefault();
     onSubmit(query);
+  }
+
+  // Route ids in render order — the axis ↑/↓/Home/End walk. The card whose id
+  // this resolves to is the list's single Tab stop (roving tabindex), so Tab
+  // enters the list once and the arrows move within it.
+  const listRef = useRef<HTMLDivElement>(null);
+  const orderedIds = useMemo(
+    () => groups.flatMap((g) => g.items.map((i) => i.route.id)),
+    [groups]
+  );
+  const activeId = selectedId ?? orderedIds[0] ?? null;
+
+  function onListKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (!NAV_KEYS.has(e.key)) return; // Enter/Space handled per-card
+    e.preventDefault(); // don't let ↑/↓ also scroll the panel
+    // Move relative to the focused card, not selectedId — on entry the first
+    // card holds focus before anything is selected.
+    const focused = (
+      document.activeElement as HTMLElement | null
+    )?.closest<HTMLElement>('[data-route-id]');
+    const currentId = focused?.dataset.routeId ?? selectedId;
+    const target = nextRouteId(orderedIds, currentId, e.key as NavKey);
+    if (!target) return;
+    onSelect(target);
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-route-id="${target}"]`
+    );
+    el?.focus();
+    el?.scrollIntoView({ block: 'nearest' });
   }
 
   return (
@@ -115,6 +155,8 @@ export function Sidebar(props: Props) {
               id="q"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={() => onSearchFocusChange(true)}
+              onBlur={() => onSearchFocusChange(false)}
               placeholder="e.g. Box Hill or EN11"
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
@@ -134,7 +176,13 @@ export function Sidebar(props: Props) {
         </form>
       </div>
 
-      <div className="flex-1 overflow-y-auto" role="list" aria-label="Routes">
+      <div
+        ref={listRef}
+        onKeyDown={onListKeyDown}
+        className="flex-1 overflow-y-auto"
+        role="group"
+        aria-label="Routes"
+      >
         {banner === 'loading' && (
           <div className="py-2">
             {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -188,6 +236,7 @@ export function Sidebar(props: Props) {
                   route={r}
                   nearKm={nearKm}
                   selected={r.id === selectedId}
+                  tabIndex={r.id === activeId ? 0 : -1}
                   onSelect={onSelect}
                   onHover={onHover}
                 />
@@ -235,12 +284,14 @@ function RouteCard({
   route: r,
   nearKm,
   selected,
+  tabIndex,
   onSelect,
   onHover,
 }: {
   route: Route;
   nearKm?: number;
   selected: boolean;
+  tabIndex: number;
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
@@ -259,8 +310,10 @@ function RouteCard({
   };
   return (
     <div
-      role="listitem"
-      tabIndex={0}
+      role="button"
+      aria-pressed={selected}
+      tabIndex={tabIndex}
+      data-route-id={r.id}
       data-sel={selected}
       onClick={select}
       onKeyDown={onKey}

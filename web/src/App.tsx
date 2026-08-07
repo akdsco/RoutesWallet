@@ -23,6 +23,7 @@ export function App() {
   const [banner, setBanner] = useState<Banner>('none');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
   // Cafés default OFF: OSM has ~2,900 near the routes (every town café), so they'd
   // swamp the map. Toilets/water/stations are the useful facility layer; toggle
   // cafés on to browse an area's real cafés.
@@ -141,12 +142,17 @@ export function App() {
       ? 'empty'
       : banner;
 
+  // Precedence mirrors the design spec: a failure or an active search always
+  // wins; otherwise focusing the input swaps the static line for a prompt on
+  // what to type. Kept club-agnostic (no hardcoded place names) for multi-club.
   const hint =
     banner === 'geofail'
       ? 'Place not recognised'
       : matches
         ? `Within ${RADIUS_KM} km of ${place?.name ?? ''}`
-        : `Shows routes passing within ${RADIUS_KM} km`;
+        : searchFocused
+          ? 'Try a town, postcode or landmark'
+          : `Shows routes passing within ${RADIUS_KM} km`;
 
   const searchPoint: [number, number] | null = place
     ? [place.lng, place.lat]
@@ -171,6 +177,7 @@ export function App() {
         onSelect={onSelect}
         onHover={onHover}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onSearchFocusChange={setSearchFocused}
       />
 
       <div className="relative flex-1">

@@ -16,14 +16,14 @@ export function nextRouteId(
   if (orderedIds.length === 0) return null;
   const last = orderedIds.length - 1;
 
-  if (key === 'Home') return orderedIds[0];
-  if (key === 'End') return orderedIds[last];
+  if (key === 'Home') return orderedIds[0] ?? null;
+  if (key === 'End') return orderedIds[last] ?? null;
 
   // An unknown/absent selection means the list isn't entered yet: the first
   // arrow lands on the top card.
   const i = currentId ? orderedIds.indexOf(currentId) : -1;
-  if (i === -1) return orderedIds[0];
+  if (i === -1) return orderedIds[0] ?? null;
 
   const next = key === 'ArrowDown' ? Math.min(i + 1, last) : Math.max(i - 1, 0);
-  return orderedIds[next];
+  return orderedIds[next] ?? null;
 }
