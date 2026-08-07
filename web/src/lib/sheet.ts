@@ -7,7 +7,11 @@ export const SNAP_ORDER: readonly Snap[] = ['peek', 'mid', 'full'];
 
 // Tunable, like the heat tiers — keep them here as named constants, not inline
 // literals, so they're retunable by eye without touching the component.
-export const PEEK_PX = 132; // handle + search header ("header + one card")
+// Peek shows the whole search header (handle + brand + search field + hint) so the
+// primary action — "find routes near a place" — is usable without expanding. Our
+// header carries a label line above the input, so this runs taller than the
+// spec's 132px sketch. Tuned by eye; see the mobile screenshots in the PR.
+export const PEEK_PX = 200;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next

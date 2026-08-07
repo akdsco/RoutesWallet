@@ -1,4 +1,10 @@
-import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { openLabel } from '../lib/links.ts';
@@ -24,6 +30,11 @@ type Props = {
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
+  /** Rendered under the search field (mobile sheet uses it for the POI row). */
+  belowSearch?: ReactNode;
+  /** In the mobile sheet, selecting scrolls the card to the very top ('start')
+   *  so its expanded exit sits right under the handle; otherwise 'nearest'. */
+  pinSelectedTop?: boolean;
 };
 
 const badgeBase =
@@ -45,6 +56,8 @@ export function Sidebar(props: Props) {
     onSelect,
     onHover,
     onToggleTheme,
+    belowSearch,
+    pinSelectedTop,
   } = props;
 
   function submit(e: FormEvent) {
@@ -52,8 +65,25 @@ export function Sidebar(props: Props) {
     onSubmit(query);
   }
 
+  // Bring the selected route's card into view (e.g. after tapping its line on the
+  // map). In the mobile sheet we pin it to the top so its expanded "Open" exit is
+  // the first thing under the handle — no scroll, no hunt.
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectedId) return;
+    const card = listRef.current?.querySelector(
+      `[data-route-id="${CSS.escape(selectedId)}"]`
+    );
+    card?.scrollIntoView({
+      block: pinSelectedTop ? 'start' : 'nearest',
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+  }, [selectedId, pinSelectedTop]);
+
   return (
-    <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
+    <aside className="flex h-full w-full flex-none flex-col bg-surface md:w-[320px] md:border-r md:border-line lg:w-[392px]">
       <div className="flex flex-col gap-4 border-b border-line px-6 pb-4 pt-[22px]">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -132,9 +162,15 @@ export function Sidebar(props: Props) {
           </div>
           <span className="min-h-4 text-[12px] text-muted">{hint}</span>
         </form>
+        {belowSearch}
       </div>
 
-      <div className="flex-1 overflow-y-auto" role="list" aria-label="Routes">
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto overscroll-contain"
+        role="list"
+        aria-label="Routes"
+      >
         {banner === 'loading' && (
           <div className="py-2">
             {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -194,6 +230,13 @@ export function Sidebar(props: Props) {
               ))}
             </div>
           ))}
+
+        {/* Map attribution lives in the sheet on mobile (the on-map control is
+            hidden behind it); required by OSM/CARTO terms, so it rides at the
+            bottom of the list. Desktop keeps Leaflet's own attribution control. */}
+        <p className="px-6 py-3 text-[11px] text-muted md:hidden">
+          © OpenStreetMap contributors © CARTO
+        </p>
       </div>
     </aside>
   );
@@ -261,6 +304,7 @@ function RouteCard({
     <div
       role="listitem"
       tabIndex={0}
+      data-route-id={r.id}
       data-sel={selected}
       onClick={select}
       onKeyDown={onKey}
@@ -320,7 +364,7 @@ function RouteCard({
               href={safeHref(r.link)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md bg-sel px-3 py-[7px] text-[12px] font-medium text-white"
+              className="inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-md bg-sel px-3 text-[12px] font-medium text-white md:min-h-0 md:w-auto md:justify-start md:py-[7px]"
             >
               {openLabel(r.link)} ↗
             </a>

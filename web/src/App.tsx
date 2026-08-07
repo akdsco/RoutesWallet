@@ -3,6 +3,9 @@ import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { PoiChips } from './components/PoiChips.tsx';
+import { BottomSheet } from './components/BottomSheet.tsx';
+import { useMediaQuery } from './lib/useMediaQuery.ts';
+import type { Snap } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -30,6 +33,11 @@ export function App() {
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
   );
+
+  // Below 768px the sidebar becomes a draggable bottom sheet over a full-screen
+  // map (Claude Design §B). Desktop keeps the fixed sidebar unchanged.
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const [snap, setSnap] = useState<Snap>('peek');
 
   const togglePoi = useCallback(
     (t: string) =>
@@ -155,26 +163,40 @@ export function App() {
 
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
 
-  return (
-    <div className="flex h-screen">
-      <Sidebar
-        totalCount={routes.length}
-        query={query}
-        hint={hint}
-        banner={displayBanner}
-        placeLabel={place?.name ?? ''}
-        groups={groups}
-        selectedId={selectedId}
-        theme={theme}
-        onQueryChange={setQuery}
-        onSubmit={(v) => void runSearch(v)}
-        onClear={clearSearch}
-        onSelect={onSelect}
-        onHover={onHover}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      />
+  // Mobile sheet choreography. A resolved search snaps to mid so the answer (even
+  // "no matches") is visible without a gesture; selecting a route snaps to peek so
+  // the map — with the route drawn — takes the screen.
+  useEffect(() => {
+    if (isDesktop) return;
+    if (matches || banner === 'nomatch' || banner === 'geofail') setSnap('mid');
+  }, [matches, banner, isDesktop]);
 
-      <div className="relative flex-1">
+  useEffect(() => {
+    if (!isDesktop && selectedId) setSnap('peek');
+  }, [selectedId, isDesktop]);
+
+  const sidebarProps = {
+    totalCount: routes.length,
+    query,
+    hint,
+    banner: displayBanner,
+    placeLabel: place?.name ?? '',
+    groups,
+    selectedId,
+    theme,
+    onQueryChange: setQuery,
+    onSubmit: (v: string) => void runSearch(v),
+    onClear: clearSearch,
+    onSelect,
+    onHover,
+    onToggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+  };
+
+  return (
+    <div className="relative h-dvh w-full md:flex">
+      {isDesktop && <Sidebar {...sidebarProps} />}
+
+      <div className="relative flex-1 max-md:absolute max-md:inset-0">
         <RouteMap
           routes={routes}
           matchedIds={matchedIds}
@@ -188,17 +210,22 @@ export function App() {
           onSelect={onSelect}
         />
 
+        {/* POI chips live over the map on desktop; on mobile they move into the
+            sheet header (below the search field). */}
         <PoiChips
           poiTypes={poiTypes}
           onToggle={togglePoi}
-          className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5"
+          className="absolute left-5 top-[68px] z-[500] hidden items-center gap-1.5 md:flex"
         />
 
-        <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+        <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5 max-md:gap-2 max-md:px-2.5 max-md:py-1.5">
+          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted max-md:hidden">
             Legend
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
+          <span
+            className="flex items-center gap-1.5 text-[12px] text-text-2"
+            aria-label="Route ride frequency, faint for one ride to bold for many"
+          >
             <svg width="52" height="10" aria-hidden="true">
               {heatLegend.map((c, i) => (
                 <line
@@ -215,7 +242,7 @@ export function App() {
             </svg>
             1 → many rides
           </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
+          <span className="flex items-center gap-1.5 text-[12px] text-text-2 max-md:hidden">
             <svg width="20" height="6" aria-hidden="true">
               <line
                 x1="0"
@@ -233,7 +260,7 @@ export function App() {
         {hovered && (
           <div
             role="status"
-            className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
+            className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5 max-md:hidden"
           >
             <span className="text-[14px] font-medium text-text">
               {hovered.name}
@@ -257,6 +284,23 @@ export function App() {
                 : ''}
         </span>
       </div>
+
+      {!isDesktop && (
+        <BottomSheet snap={snap} onSnapChange={setSnap}>
+          <Sidebar
+            {...sidebarProps}
+            pinSelectedTop
+            belowSearch={
+              <PoiChips
+                poiTypes={poiTypes}
+                onToggle={togglePoi}
+                size="touch"
+                className="mt-2 flex gap-2 overflow-x-auto pb-1"
+              />
+            }
+          />
+        </BottomSheet>
+      )}
     </div>
   );
 }
