@@ -183,8 +183,19 @@ export function RouteMap({
     // discrete animated steps ("bump bump bump"); instead we ease the zoom
     // toward a cursor-anchored goal every animation frame, so a trackpad glide
     // scales the map continuously.
-    const SENSITIVITY = 0.022; // zoom levels per px of wheel delta
-    const EASE = 0.2; // fraction of the remaining distance closed per frame
+    //
+    // The judder was NOT the motion (the zoom value is continuous) — it was
+    // paint: re-rendering the heat canvas (tens of thousands of segments) and
+    // the big invisible hit lines EVERY frame blows the 16 ms budget. So we
+    // detach those two heavy layers for the duration of the glide (Figma/Google
+    // Maps drop detail while you zoom) and snap them back the instant it settles.
+    const SENSITIVITY = 0.03; // zoom levels per px of wheel delta
+    const EASE = 0.22; // fraction of the remaining distance closed per frame
+    const heavy = [panes.heat, panes.hit];
+    const setGliding = (on: boolean) => {
+      for (const g of heavy) if (on) map.removeLayer(g);
+      else g.addTo(map);
+    };
     let goalZoom = map.getZoom();
     let anchor = map.getCenter();
     let raf: number | null = null;
@@ -194,6 +205,7 @@ export function RouteMap({
       const diff = goalZoom - cur;
       if (Math.abs(diff) < 0.006) {
         raf = null;
+        setGliding(false);
         return;
       }
       map.setZoomAround(anchor, cur + diff * EASE, { animate: false });
@@ -211,7 +223,10 @@ export function RouteMap({
         Math.min(map.getMaxZoom(), base - d * SENSITIVITY)
       );
       anchor = map.mouseEventToLatLng(e); // zoom toward the cursor
-      if (raf == null) raf = requestAnimationFrame(stepZoom);
+      if (raf == null) {
+        setGliding(true);
+        raf = requestAnimationFrame(stepZoom);
+      }
     };
     // Lives with the map (created once, guarded above) — like the map.on
     // handlers, it isn't torn down, so a StrictMode remount doesn't orphan it.
