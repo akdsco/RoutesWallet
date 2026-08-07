@@ -1,0 +1,23 @@
+#!/bin/sh
+# Pre-commit: auto-format staged web/ files with Prettier so nothing unformatted
+# reaches CI (which runs `format:check`). mobile/ keeps its own style and is
+# intentionally excluded. Installed via core.hooksPath=.githooks — see
+# web/package.json "prepare".
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep '^web/' \
+  | grep -Ei '\.(ts|tsx|js|jsx|mjs|cjs|json|css|scss|md|html|ya?ml)$' || true)
+[ -z "$staged" ] && exit 0
+
+if [ ! -x web/node_modules/.bin/prettier ]; then
+  echo "pre-commit: prettier not installed in web/ — skipping (run 'npm install' in web/)." >&2
+  exit 0
+fi
+
+# Prettier runs from web/, so feed it paths relative to web/ (uses web/.prettierrc
+# + web/.prettierignore); then re-stage the formatted files from the repo root.
+rels=$(printf '%s\n' "$staged" | sed 's#^web/##')
+( cd web && printf '%s\n' "$rels" | xargs ./node_modules/.bin/prettier --write --ignore-unknown )
+printf '%s\n' "$staged" | xargs git add
+echo "pre-commit: prettier-formatted $(printf '%s\n' "$staged" | wc -l | tr -d ' ') staged web/ file(s)."
