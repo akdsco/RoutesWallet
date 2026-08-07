@@ -11,6 +11,7 @@ import {
   type HeatSegment,
 } from '../lib/heat.ts';
 import { isDashed } from '../lib/source.ts';
+import { mapPalette } from '../lib/mapColors.ts';
 
 type Props = {
   routes: Route[];
@@ -46,14 +47,6 @@ const TILES = {
 
 const ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
-
-/** Resolve a CSS token to a concrete colour (canvas can't read var()). */
-function token(name: string): string {
-  return (
-    getComputedStyle(document.documentElement).getPropertyValue(name).trim() ||
-    '#000000'
-  );
-}
 
 /** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
 function toLatLngs(coords: number[][]): [number, number][] {
@@ -340,16 +333,16 @@ export function RouteMap({
       };
     }
     const segs = heatCacheRef.current.segs;
-    const cHeat = token('--heat');
-    const cMatch = token('--match');
-    const cText = token('--text');
+    // Colours come from the theme PROP (not getComputedStyle), so a toggle never
+    // draws the previous theme's palette — see mapColors.ts.
+    const pal = mapPalette(theme);
     const resolve = (v: string): string =>
       v === 'var(--heat)'
-        ? cHeat
+        ? pal.heat
         : v === 'var(--match)'
-          ? cMatch
+          ? pal.match
           : v === 'var(--text)'
-            ? cText
+            ? pal.text
             : v;
 
     P.heat.clearLayers();
@@ -376,7 +369,8 @@ export function RouteMap({
       ).addTo(P.heat);
 
     if (matchedIds !== null) {
-      for (const s of segs) line(s, cHeat, FLAT_HEAT.weight, FLAT_HEAT.opacity);
+      for (const s of segs)
+        line(s, pal.heat, FLAT_HEAT.weight, FLAT_HEAT.opacity);
     } else {
       const styled = segs
         .map((s) => ({ s, st: heatStyle(s.count) }))
@@ -392,12 +386,7 @@ export function RouteMap({
     const P = panesRef.current;
     if (!map || !P) return;
 
-    const c = {
-      match: token('--match'),
-      sel: token('--sel'),
-      marker: token('--marker'),
-      halo: token('--bg'),
-    };
+    const c = mapPalette(theme); // theme-prop colours, no getComputedStyle race
     const activeId = hoverId ?? selectedId;
 
     // Matched: ink line + basemap-coloured halo so it reads over heat.
