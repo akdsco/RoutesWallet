@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
+import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
@@ -8,8 +9,6 @@ import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
 import {
-  BASEMAP_ORDER,
-  BASEMAPS,
   DEFAULT_BASEMAP,
   isBasemapId,
   type BasemapId,
@@ -218,31 +217,8 @@ export function App() {
           onSelect={onSelect}
         />
 
-        {/* Basemap switcher — a segmented control in the conventional
-            layers-control corner (bottom-right), clear of the legend and chips.
-            Standard is theme-aware; CyclOSM is a cycling-specific base. */}
-        <div
-          role="group"
-          aria-label="Basemap"
-          className="absolute bottom-5 right-5 z-[500] flex overflow-hidden rounded-full border border-line bg-surface text-[12px]"
-        >
-          {BASEMAP_ORDER.map((id) => {
-            const on = basemap === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setBasemap(id)}
-                className={`px-3 py-1 transition-colors ${
-                  on ? 'bg-text text-surface' : 'text-text-2 hover:text-text'
-                }`}
-              >
-                {BASEMAPS[id].label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
+        <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
 
         <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
           {(
