@@ -116,6 +116,30 @@ export const HEAT_TIERS: {
   { max: Infinity, weight: 4.4, opacity: 0.92, color: 'var(--text)' },
 ];
 
+/**
+ * PROTOTYPE: Strava-style red→amber heat ramp (faint dim-red for a lone lane,
+ * bright amber for the hottest corridors). A SINGLE palette for both light and
+ * dark, mirroring Strava (which has no theme) — opacity carries most of the
+ * faint→hot range so the reds read over both the cream and near-black basemaps.
+ * If green-lit, this replaces (or theme-tunes) the ink tiers above.
+ */
+export const HEAT_RAMP: {
+  max: number;
+  weight: number;
+  opacity: number;
+  color: string;
+}[] = [
+  { max: 1, weight: 1.3, opacity: 0.32, color: '#d11149' },
+  { max: 2, weight: 1.8, opacity: 0.44, color: '#e11d3f' },
+  { max: 3, weight: 2.3, opacity: 0.56, color: '#f0341f' },
+  { max: 5, weight: 2.9, opacity: 0.7, color: '#ff5a1f' },
+  { max: 8, weight: 3.7, opacity: 0.85, color: '#ff8a1e' },
+  { max: Infinity, weight: 4.5, opacity: 0.97, color: '#ffb020' },
+];
+
+/** Faint red used while a search is active (heat flattens under the matches). */
+export const FLAT_HEAT_RED = { weight: 1.1, opacity: 0.16, color: '#d11149' };
+
 /** Idle heat style for an overlap count (weight rises, opacity deepens). */
 export function heatStyle(count: number): HeatStyle {
   const tier =

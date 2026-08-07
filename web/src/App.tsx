@@ -206,36 +206,36 @@ export function App() {
                 y1="5"
                 x2="13"
                 y2="5"
-                stroke="var(--heat)"
+                stroke="#d11149"
                 strokeWidth="1.3"
-                strokeOpacity="0.2"
+                strokeOpacity="0.4"
               />
               <line
                 x1="13"
                 y1="5"
                 x2="26"
                 y2="5"
-                stroke="var(--heat)"
+                stroke="#f0341f"
                 strokeWidth="2.2"
-                strokeOpacity="0.42"
+                strokeOpacity="0.6"
               />
               <line
                 x1="26"
                 y1="5"
                 x2="39"
                 y2="5"
-                stroke="var(--match)"
+                stroke="#ff8a1e"
                 strokeWidth="3.2"
-                strokeOpacity="0.7"
+                strokeOpacity="0.85"
               />
               <line
                 x1="39"
                 y1="5"
                 x2="52"
                 y2="5"
-                stroke="var(--match)"
+                stroke="#ffb020"
                 strokeWidth="4.3"
-                strokeOpacity="0.9"
+                strokeOpacity="1"
               />
             </svg>
             1 → many rides
