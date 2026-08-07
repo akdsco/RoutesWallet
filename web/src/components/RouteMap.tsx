@@ -5,7 +5,7 @@ import type { Feature, FeatureCollection } from 'geojson';
 import type { Route } from '../types.ts';
 import {
   buildHeatIndex,
-  heatStyle,
+  HEAT_TIERS,
   cellSizeForZoom,
   FLAT_HEAT,
   type HeatSegment,
@@ -51,6 +51,18 @@ const ATTRIBUTION =
 /** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
 function toLatLngs(coords: number[][]): [number, number][] {
   return coords.map((p) => [p[1] ?? 0, p[0] ?? 0]);
+}
+
+/** Reduce a coordinate list to at most `maxPts` (keeping first + last), by
+ *  even stride. For the invisible fat hit lines only — never for display. */
+function decimate(coords: number[][], maxPts: number): number[][] {
+  if (coords.length <= maxPts) return coords;
+  const stride = Math.ceil(coords.length / maxPts);
+  const out: number[][] = [];
+  for (let i = 0; i < coords.length; i += stride) out.push(coords[i]!);
+  const last = coords[coords.length - 1]!;
+  if (out[out.length - 1] !== last) out.push(last);
+  return out;
 }
 
 /** Walk every [x, y] position in an arbitrarily-nested coordinate array. */
@@ -347,36 +359,45 @@ export function RouteMap({
 
     P.heat.clearLayers();
     if (fade <= 0) return;
-    const line = (
-      s: HeatSegment,
+    // Draw all segments of one style as a SINGLE multi-polyline, not one Leaflet
+    // layer per segment. The country-wide grid has tens of thousands of segments;
+    // one layer each meant Leaflet re-stroked ~65k paths on every zoom frame
+    // (the zoom "junk"). Grouped, that's a handful of canvas paths instead.
+    const drawGroup = (
+      group: HeatSegment[],
       color: string,
       weight: number,
       opacity: number
-    ) =>
-      L.polyline(
-        [
-          [s.a[1], s.a[0]],
-          [s.b[1], s.b[0]],
-        ],
-        {
-          pane: 'heat',
-          renderer: canvas,
-          color,
-          weight,
-          opacity: opacity * fade,
-          interactive: false,
-        }
-      ).addTo(P.heat);
+    ) => {
+      if (!group.length) return;
+      const lines: [number, number][][] = group.map((s) => [
+        [s.a[1], s.a[0]],
+        [s.b[1], s.b[0]],
+      ]);
+      L.polyline(lines, {
+        pane: 'heat',
+        renderer: canvas,
+        color,
+        weight,
+        opacity: opacity * fade,
+        interactive: false,
+      }).addTo(P.heat);
+    };
 
     if (matchedIds !== null) {
-      for (const s of segs)
-        line(s, pal.heat, FLAT_HEAT.weight, FLAT_HEAT.opacity);
+      drawGroup(segs, pal.heat, FLAT_HEAT.weight, FLAT_HEAT.opacity);
     } else {
-      const styled = segs
-        .map((s) => ({ s, st: heatStyle(s.count) }))
-        .sort((a, b) => a.st.weight - b.st.weight); // thin first, hot on top
-      for (const { s, st } of styled)
-        line(s, resolve(st.color), st.weight, st.opacity);
+      // Bucket segments by tier, then draw thin tiers first so hot corridors
+      // sit on top (HEAT_TIERS is ordered faint -> hot).
+      const buckets: HeatSegment[][] = HEAT_TIERS.map(() => []);
+      for (const s of segs) {
+        let i = HEAT_TIERS.findIndex((t) => s.count <= t.max);
+        if (i < 0) i = HEAT_TIERS.length - 1;
+        buckets[i]!.push(s);
+      }
+      HEAT_TIERS.forEach((t, i) =>
+        drawGroup(buckets[i]!, resolve(t.color), t.weight, t.opacity)
+      );
     }
   }, [routes, matchedIds, theme, zoom]);
 
@@ -479,7 +500,11 @@ export function RouteMap({
       ? routes.filter((r) => matchedIds.has(r.id))
       : routes;
     for (const r of interactive) {
-      const hit = L.polyline(toLatLngs(r.geometry.coordinates), {
+      // The hit line is an INVISIBLE fat (14px) line just for hover/click, so it
+      // doesn't need full resolution — decimate it. At full res the 125 lines
+      // were ~316k SVG points that Leaflet re-projected on every zoom frame (the
+      // remaining zoom stall). Displayed lines (active/matched) stay full-res.
+      const hit = L.polyline(toLatLngs(decimate(r.geometry.coordinates, 160)), {
         pane: 'hit',
         color: '#000000',
         weight: 14,
