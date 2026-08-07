@@ -12,6 +12,8 @@ import {
 } from '../lib/heat.ts';
 import { isDashed } from '../lib/source.ts';
 import { mapPalette } from '../lib/mapColors.ts';
+import { decimate } from '../lib/decimate.ts';
+import { zoomAnchorOffset } from '../lib/zoomTransform.ts';
 
 type Props = {
   routes: Route[];
@@ -51,18 +53,6 @@ const ATTRIBUTION =
 /** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
 function toLatLngs(coords: number[][]): [number, number][] {
   return coords.map((p) => [p[1] ?? 0, p[0] ?? 0]);
-}
-
-/** Reduce a coordinate list to at most `maxPts` (keeping first + last), by
- *  even stride. For the invisible fat hit lines only — never for display. */
-function decimate(coords: number[][], maxPts: number): number[][] {
-  if (coords.length <= maxPts) return coords;
-  const stride = Math.ceil(coords.length / maxPts);
-  const out: number[][] = [];
-  for (let i = 0; i < coords.length; i += stride) out.push(coords[i]!);
-  const last = coords[coords.length - 1]!;
-  if (out[out.length - 1] !== last) out.push(last);
-  return out;
 }
 
 /** Walk every [x, y] position in an arbitrarily-nested coordinate array. */
@@ -189,7 +179,7 @@ export function RouteMap({
     // re-renders), anchored under the cursor and eased toward a goal zoom. When
     // the wheel stops we commit the real zoom once (crisp re-render). This is how
     // pinch-zoom works; the map never disappears and stays at 60 fps.
-    const SENSITIVITY = 0.024; // zoom levels per px of wheel delta
+    const SENSITIVITY = 0.02; // zoom levels per px of wheel delta
     const EASE = 0.33; // fraction of the remaining distance closed per frame
     const mapPane = map.getPane('mapPane') ?? map.getContainer();
 
@@ -212,9 +202,8 @@ export function RouteMap({
       if (Math.abs(goalZoom - dispZoom) < 0.0015) dispZoom = goalZoom;
       const scale = map.getZoomScale(dispZoom, startZoom);
       const P = L.DomUtil.getPosition(mapPane) ?? L.point(0, 0);
-      const ox = anchorPx.x - (anchorPx.x - P.x) * scale;
-      const oy = anchorPx.y - (anchorPx.y - P.y) * scale;
-      L.DomUtil.setTransform(mapPane, L.point(ox, oy), scale);
+      const off = zoomAnchorOffset(anchorPx, P, scale);
+      L.DomUtil.setTransform(mapPane, L.point(off.x, off.y), scale);
       raf = dispZoom === goalZoom ? null : requestAnimationFrame(paint);
     };
 
