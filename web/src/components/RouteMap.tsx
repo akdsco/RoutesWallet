@@ -180,36 +180,53 @@ export function RouteMap({
     map.on('moveend', () => setViewTick((v) => v + 1));
 
     // Smooth, Figma-style wheel zoom. Leaflet's built-in wheel zoom fires
-    // discrete animated steps ("bump bump bump"); instead we ease the zoom
-    // toward a cursor-anchored goal every animation frame, so a trackpad glide
-    // scales the map continuously.
+    // discrete animated steps ("bump bump bump"), and re-rendering every layer
+    // per frame (setZoomAround) blows the paint budget on our heat canvas — so
+    // it juddered, or the heat had to be dropped during the glide.
     //
-    // The judder was NOT the motion (the zoom value is continuous) — it was
-    // paint: re-rendering the heat canvas (tens of thousands of segments) and
-    // the big invisible hit lines EVERY frame blows the 16 ms budget. So we
-    // detach those two heavy layers for the duration of the glide (Figma/Google
-    // Maps drop detail while you zoom) and snap them back the instant it settles.
-    const SENSITIVITY = 0.03; // zoom levels per px of wheel delta
-    const EASE = 0.22; // fraction of the remaining distance closed per frame
-    const heavy = [panes.heat, panes.hit];
-    const setGliding = (on: boolean) => {
-      for (const g of heavy) if (on) map.removeLayer(g);
-      else g.addTo(map);
-    };
-    let goalZoom = map.getZoom();
-    let anchor = map.getCenter();
-    let raf: number | null = null;
+    // Instead, during the gesture we SCALE THE WHOLE MAP PANE with a CSS
+    // transform (pure GPU — the basemap AND the heat scale together, nothing
+    // re-renders), anchored under the cursor and eased toward a goal zoom. When
+    // the wheel stops we commit the real zoom once (crisp re-render). This is how
+    // pinch-zoom works; the map never disappears and stays at 60 fps.
+    const SENSITIVITY = 0.024; // zoom levels per px of wheel delta
+    const EASE = 0.33; // fraction of the remaining distance closed per frame
+    const mapPane = map.getPane('mapPane') ?? map.getContainer();
 
-    const stepZoom = () => {
-      const cur = map.getZoom();
-      const diff = goalZoom - cur;
-      if (Math.abs(diff) < 0.006) {
-        raf = null;
-        setGliding(false);
-        return;
+    let gesturing = false;
+    let startZoom = map.getZoom();
+    let anchorPx = L.point(0, 0);
+    let anchorLatLng = map.getCenter();
+    let goalZoom = startZoom;
+    let dispZoom = startZoom;
+    let raf: number | null = null;
+    let commitTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Scale the map pane around the (fixed) cursor point for a given zoom.
+    // P = the pane's current translate (setTransform doesn't change it, so it
+    // stays the real view offset for the whole gesture). Scaling content around
+    // the cursor pixel c is: c + scale*(orig - c); with content at P + local,
+    // that's transform translate(c*(1-scale) + scale*P) scale(scale).
+    const paint = () => {
+      dispZoom += (goalZoom - dispZoom) * EASE;
+      if (Math.abs(goalZoom - dispZoom) < 0.0015) dispZoom = goalZoom;
+      const scale = map.getZoomScale(dispZoom, startZoom);
+      const P = L.DomUtil.getPosition(mapPane) ?? L.point(0, 0);
+      const ox = anchorPx.x - (anchorPx.x - P.x) * scale;
+      const oy = anchorPx.y - (anchorPx.y - P.y) * scale;
+      L.DomUtil.setTransform(mapPane, L.point(ox, oy), scale);
+      raf = dispZoom === goalZoom ? null : requestAnimationFrame(paint);
+    };
+
+    const commit = () => {
+      commitTimer = null;
+      if (raf != null) cancelAnimationFrame(raf);
+      raf = null;
+      gesturing = false;
+      if (goalZoom !== startZoom) {
+        // setZoomAround re-renders crisp at the goal and resets the transform.
+        map.setZoomAround(anchorLatLng, goalZoom, { animate: false });
       }
-      map.setZoomAround(anchor, cur + diff * EASE, { animate: false });
-      raf = requestAnimationFrame(stepZoom);
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -217,16 +234,21 @@ export function RouteMap({
       let d = e.deltaY;
       if (e.deltaMode === 1) d *= 20; // lines -> ~px
       else if (e.deltaMode === 2) d *= 400; // pages -> ~px
-      const base = raf != null ? goalZoom : map.getZoom();
+      if (!gesturing) {
+        gesturing = true;
+        startZoom = map.getZoom();
+        dispZoom = startZoom;
+        goalZoom = startZoom;
+        anchorPx = map.mouseEventToContainerPoint(e);
+        anchorLatLng = map.containerPointToLatLng(anchorPx);
+      }
       goalZoom = Math.max(
         map.getMinZoom(),
-        Math.min(map.getMaxZoom(), base - d * SENSITIVITY)
+        Math.min(map.getMaxZoom(), goalZoom - d * SENSITIVITY)
       );
-      anchor = map.mouseEventToLatLng(e); // zoom toward the cursor
-      if (raf == null) {
-        setGliding(true);
-        raf = requestAnimationFrame(stepZoom);
-      }
+      if (raf == null) raf = requestAnimationFrame(paint);
+      if (commitTimer != null) clearTimeout(commitTimer);
+      commitTimer = setTimeout(commit, 150); // commit shortly after the wheel stops
     };
     // Lives with the map (created once, guarded above) — like the map.on
     // handlers, it isn't torn down, so a StrictMode remount doesn't orphan it.
