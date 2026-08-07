@@ -166,7 +166,7 @@ export function Sidebar(props: Props) {
                 type="button"
                 aria-label="Clear search"
                 onClick={onClear}
-                className="px-1 text-[15px] text-muted hover:text-text"
+                className="-mr-1 flex h-11 w-8 items-center justify-center text-[15px] text-muted hover:text-text"
               >
                 ×
               </button>
