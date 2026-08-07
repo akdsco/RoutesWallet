@@ -15,7 +15,11 @@ export type Vec2 = { x: number; y: number };
  * Picking `offset = anchor - (anchor - pane) * scale` makes the anchor map back
  * to itself while everything else scales around it.
  */
-export function zoomAnchorOffset(anchor: Vec2, pane: Vec2, scale: number): Vec2 {
+export function zoomAnchorOffset(
+  anchor: Vec2,
+  pane: Vec2,
+  scale: number
+): Vec2 {
   return {
     x: anchor.x - (anchor.x - pane.x) * scale,
     y: anchor.y - (anchor.y - pane.y) * scale,

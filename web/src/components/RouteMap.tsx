@@ -221,7 +221,8 @@ export function RouteMap({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       let d = e.deltaY;
-      if (e.deltaMode === 1) d *= 20; // lines -> ~px
+      if (e.deltaMode === 1)
+        d *= 20; // lines -> ~px
       else if (e.deltaMode === 2) d *= 400; // pages -> ~px
       if (!gesturing) {
         gesturing = true;

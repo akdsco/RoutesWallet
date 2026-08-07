@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { zoomAnchorOffset, projectUnderZoom, type Vec2 } from './zoomTransform.ts';
+import {
+  zoomAnchorOffset,
+  projectUnderZoom,
+  type Vec2,
+} from './zoomTransform.ts';
 
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 

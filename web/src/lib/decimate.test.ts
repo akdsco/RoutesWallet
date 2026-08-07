@@ -25,21 +25,31 @@ describe('decimate', () => {
 
   it('appends the last point when the stride would skip it', () => {
     // 0..99, stride = ceil(100/10) = 10 -> 0,10,...,90 then 99 appended
-    const out = decimate(Array.from({ length: 100 }, (_, i) => i), 10);
+    const out = decimate(
+      Array.from({ length: 100 }, (_, i) => i),
+      10
+    );
     expect(out[out.length - 1]).toBe(99);
     expect(out[out.length - 2]).toBe(90);
   });
 
   it('does not duplicate the last point when the stride already lands on it', () => {
     // length 11, stride = ceil(11/6) = 2 -> 0,2,4,6,8,10 ; 10 is already last
-    const out = decimate(Array.from({ length: 11 }, (_, i) => i), 6);
+    const out = decimate(
+      Array.from({ length: 11 }, (_, i) => i),
+      6
+    );
     expect(out[out.length - 1]).toBe(10);
     expect(out.filter((n) => n === 10).length).toBe(1);
   });
 
   it('preserves relative order', () => {
-    const out = decimate(Array.from({ length: 500 }, (_, i) => i), 50);
-    for (let i = 1; i < out.length; i++) expect(out[i]!).toBeGreaterThan(out[i - 1]!);
+    const out = decimate(
+      Array.from({ length: 500 }, (_, i) => i),
+      50
+    );
+    for (let i = 1; i < out.length; i++)
+      expect(out[i]!).toBeGreaterThan(out[i - 1]!);
   });
 
   it('throws if maxPts < 2 (a line needs at least its endpoints)', () => {

@@ -16,7 +16,8 @@ const css = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf8');
 function block(selector: string): string {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const m = css.match(new RegExp(`${esc}\\s*\\{([^}]*)\\}`));
-  if (!m || m[1] === undefined) throw new Error(`CSS block not found: ${selector}`);
+  if (!m || m[1] === undefined)
+    throw new Error(`CSS block not found: ${selector}`);
   return m[1];
 }
 
