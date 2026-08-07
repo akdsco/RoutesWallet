@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
+import { Legend } from './components/Legend.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
@@ -43,12 +44,6 @@ export function App() {
 
   const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
-  // Legend heat stops (faint -> hot), matching the map ramp: light inverts to a
-  // deep red for the busiest, dark runs to bright amber. See lib/heat.ts.
-  const heatLegend =
-    theme === 'dark'
-      ? ['#7f1d1d', '#ef4444', '#f97316', '#ffb020']
-      : ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'];
 
   useEffect(() => {
     loadRoutes()
@@ -217,41 +212,7 @@ export function App() {
           })}
         </div>
 
-        <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
-            Legend
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="52" height="10" aria-hidden="true">
-              {heatLegend.map((c, i) => (
-                <line
-                  key={c}
-                  x1={i * 13}
-                  y1="5"
-                  x2={(i + 1) * 13}
-                  y2="5"
-                  stroke={c}
-                  strokeWidth={[1.3, 2.2, 3.2, 4.3][i]}
-                  strokeOpacity={[0.4, 0.6, 0.85, 1][i]}
-                />
-              ))}
-            </svg>
-            1 → many rides
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="20" height="6" aria-hidden="true">
-              <line
-                x1="0"
-                y1="3"
-                x2="20"
-                y2="3"
-                stroke="var(--sel)"
-                strokeWidth="3.6"
-              />
-            </svg>
-            selected
-          </span>
-        </div>
+        <Legend searching={searchPoint !== null} theme={theme} />
 
         {hovered && (
           <div
