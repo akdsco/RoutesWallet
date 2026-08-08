@@ -60,6 +60,28 @@ export function App() {
 
   const onHover = useCallback((id: string | null) => setHoverId(id), []);
   const onSelect = useCallback((id: string) => setSelectedId(id), []);
+  const onDeselect = useCallback(() => setSelectedId(null), []);
+
+  // Esc exits the selected route from anywhere — except inside the search
+  // field, where the innermost layer wins: it clears the field first (§E).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (document.activeElement?.id === 'q') {
+        if (query) {
+          setQuery('');
+          e.preventDefault();
+        }
+        return;
+      }
+      if (selectedId) {
+        setSelectedId(null);
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId, query]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -189,7 +211,7 @@ export function App() {
         onSubmit={(v) => void runSearch(v)}
         onClear={clearSearch}
         onSelect={onSelect}
-        onDeselect={() => setSelectedId(null)}
+        onDeselect={onDeselect}
         onHover={onHover}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onSearchFocusChange={setSearchFocused}
@@ -207,6 +229,7 @@ export function App() {
           poiTypes={poiTypes}
           onHover={onHover}
           onSelect={onSelect}
+          onDeselect={onDeselect}
         />
 
         <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
@@ -258,7 +281,11 @@ export function App() {
                 />
               ))}
             </svg>
-            1 → many rides
+            {selectedId
+              ? matches
+                ? 'other matches'
+                : 'all rides'
+              : '1 → many rides'}
           </span>
           <span className="flex items-center gap-1.5 text-[12px] text-text-2">
             <svg width="20" height="6" aria-hidden="true">
