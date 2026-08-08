@@ -31,6 +31,12 @@ test('searches near a place and filters to routes in range', async ({
   await expect(
     page.getByText('2 routes within 25 km of Cambridge')
   ).toBeAttached();
+
+  // Nearest-first: the feed lists Grantchester before Cambridge Loop, so the
+  // nearer Cambridge Loop leading the list proves the distance sort ran.
+  await expect(routeList(page).getByRole('listitem').first()).toContainText(
+    'Cambridge Loop'
+  );
 });
 
 // Load-bearing for the postcode path specifically: real geocode runs here, the
@@ -49,7 +55,11 @@ test('searches a UK postcode via the postcode geocoder', async ({ page }) => {
 test('opens the route’s existing link when a card is selected', async ({
   page,
 }) => {
-  await routeList(page).getByRole('listitem').first().click();
+  // Click the Cambridge Loop card by name, not by index — order-independent.
+  await routeList(page)
+    .getByRole('listitem')
+    .filter({ hasText: 'Cambridge Loop' })
+    .click();
 
   const link = page.getByRole('link', { name: /open in strava/i });
   await expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
@@ -73,19 +83,18 @@ test('flips the theme toggle', async ({ page }) => {
 // behaviour — the only consumer is the wheel-zoom EASE snap inside the Leaflet
 // canvas (RouteMap.tsx), which isn't driven here and can't be asserted on
 // pixels. Verified by eye; noted honestly rather than faked.
-test.describe('under prefers-reduced-motion', () => {
-  test.use({ reducedMotion: 'reduce' });
+test('under prefers-reduced-motion, boots and searches without error', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload(); // re-read the media query on a fresh mount
 
-  test('boots and completes the search journey without error', async ({
-    page,
-  }) => {
-    await expect(page.locator('.leaflet-container')).toBeVisible();
+  await expect(page.locator('.leaflet-container')).toBeVisible();
 
-    await page
-      .getByRole('textbox', { name: /find routes near a place/i })
-      .fill('Cambridge');
-    await page.keyboard.press('Enter');
+  await page
+    .getByRole('textbox', { name: /find routes near a place/i })
+    .fill('Cambridge');
+  await page.keyboard.press('Enter');
 
-    await expect(routeList(page).getByRole('listitem')).toHaveCount(2);
-  });
+  await expect(routeList(page).getByRole('listitem')).toHaveCount(2);
 });

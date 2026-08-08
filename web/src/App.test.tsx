@@ -127,6 +127,15 @@ describe('App — search', () => {
       'cam-loop',
       'grantchester',
     ]);
+
+    // Nearest-first ordering (the group is labelled "nearest first"). The
+    // fixture lists Grantchester before Cambridge Loop, so this only holds if
+    // the distance sort actually ran — it's load-bearing, not incidental.
+    const matched = within(routeList()).getAllByRole('listitem');
+    expect(within(matched[0]!).getByText('Cambridge Loop')).toBeInTheDocument();
+    expect(
+      within(matched[1]!).getByText('Grantchester Spin')
+    ).toBeInTheDocument();
   });
 
   // NB: geocode is mocked here, so the postcode *branch* (ukPostcodeKind,
@@ -270,18 +279,18 @@ describe('App — selecting a route', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    const items = within(routeList()).getAllByRole('listitem');
-    await user.click(items[0]!);
+    // Target a specific card by name, not by index — order-independent.
+    const card = within(routeList())
+      .getByText('Cambridge Loop')
+      .closest('[role="listitem"]');
+    await user.click(card as HTMLElement);
 
     const link = await screen.findByRole('link', { name: /open in strava/i });
     expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
     expect(link).toHaveAttribute('target', '_blank');
 
     // Selection propagates to the map.
-    expect(screen.getByTestId('route-map')).toHaveAttribute(
-      'data-selected',
-      'cam-loop'
-    );
+    expect(mapProps()).toHaveAttribute('data-selected', 'cam-loop');
   });
 });
 

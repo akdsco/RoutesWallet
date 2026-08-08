@@ -11,7 +11,11 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // No retries. The suite is fully stubbed + offline (see e2e/helpers.ts), so it
+  // is deterministic — a failure is a real bug, and retrying would mask exactly
+  // the flakiness this platform exists to surface. If a test ever needs a retry
+  // to pass, that is the finding, not something to paper over.
+  retries: 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
@@ -22,11 +26,11 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     port: PORT,
-    // Local only: a preview already bound to PORT is reused, skipping the
-    // build+preview above — so a STALE `dist/` from a leftover `npm run preview`
-    // (or a prior run) can be tested. If a local run looks wrong, kill anything
-    // on PORT and re-run. CI always sets CI, so it never reuses: it builds fresh.
-    reuseExistingServer: !process.env.CI,
+    // Never reuse an existing server — always build + preview fresh, so the
+    // browser can never run a stale `dist/` from a leftover preview. Local
+    // behaviour then matches CI exactly. Build is ~1s; the safety is worth it.
+    // (strictPort makes a port collision fail loudly rather than silently.)
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

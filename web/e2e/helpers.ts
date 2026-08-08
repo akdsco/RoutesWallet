@@ -3,28 +3,11 @@ import type { Page } from '@playwright/test';
 // A deterministic routes feed mirroring src/test/fixtures.ts: two routes hug
 // Cambridge (within the 25 km radius of the gazetteer point [0.1218, 52.2053]),
 // one sits by London ~70 km away. Kept small so E2E never touches the 6 MB
-// production feed or the club's real geography.
+// production feed or the club's real geography. Same deliberate order as the
+// integration fixture: the farther Cambridge route (Grantchester) comes first.
 const ROUTES_FEED = {
   type: 'FeatureCollection',
   features: [
-    {
-      type: 'Feature',
-      properties: {
-        id: 'cam-loop',
-        name: 'Cambridge Loop',
-        link: 'https://www.strava.com/routes/1',
-        distance_km: 42,
-        source: 'club-verified',
-        region: 'Cambridgeshire',
-      },
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [0.1, 52.2],
-          [0.14, 52.21],
-        ],
-      },
-    },
     {
       type: 'Feature',
       properties: {
@@ -40,6 +23,24 @@ const ROUTES_FEED = {
         coordinates: [
           [0.095, 52.176],
           [0.11, 52.19],
+        ],
+      },
+    },
+    {
+      type: 'Feature',
+      properties: {
+        id: 'cam-loop',
+        name: 'Cambridge Loop',
+        link: 'https://www.strava.com/routes/1',
+        distance_km: 42,
+        source: 'club-verified',
+        region: 'Cambridgeshire',
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [0.1, 52.2],
+          [0.14, 52.21],
         ],
       },
     },
