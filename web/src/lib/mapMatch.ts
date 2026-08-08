@@ -85,6 +85,37 @@ export function decodePolyline6(encoded: string): [number, number][] {
   return decodePolyline(encoded, 6);
 }
 
+/** Coordinate precision for the output — ~0.11 m, matching the import script. */
+const COORD_DP = 6;
+
+const round6 = (n: number): number => Number(n.toFixed(COORD_DP));
+
+/**
+ * Join a match's per-leg coordinate arrays into one line: normalise every point
+ * to 6 dp, and drop the seam point a leg shares with the previous leg's end
+ * (Valhalla repeats the joint vertex). Full resolution is preserved — this only
+ * removes exact duplicates, it never decimates.
+ */
+export function dedupeAndNormalize(
+  legs: [number, number][][]
+): [number, number][] {
+  const out: [number, number][] = [];
+  for (const leg of legs) {
+    for (const [lng, lat] of leg) {
+      const pt: [number, number] = [round6(lng), round6(lat)];
+      const prev = out[out.length - 1];
+      if (prev && prev[0] === pt[0] && prev[1] === pt[1]) continue;
+      out.push(pt);
+    }
+  }
+  return out;
+}
+
+/** Decode and assemble a match's per-leg encoded shapes into one clean line. */
+export function assembleMatchedCoords(legShapes: string[]): [number, number][] {
+  return dedupeAndNormalize(legShapes.map(decodePolyline6));
+}
+
 export type AcceptMatchInput = {
   /** The route's own recorded length, km (from `distance_km`). */
   rawKm: number;

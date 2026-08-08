@@ -5,6 +5,7 @@ import {
   isEligibleForMatch,
   GRAVEL_NAME_EXCLUSIONS,
   acceptMatch,
+  dedupeAndNormalize,
 } from './mapMatch';
 
 describe('decodePolyline', () => {
@@ -105,5 +106,52 @@ describe('acceptMatch', () => {
         { minCoverage: 0.9 }
       ).ok
     ).toBe(true);
+  });
+});
+
+describe('dedupeAndNormalize', () => {
+  it('normalises coordinates to 6 decimal places', () => {
+    const out = dedupeAndNormalize([[[-0.123456789, 51.987654321]]]);
+    expect(out).toEqual([[-0.123457, 51.987654]]);
+  });
+
+  it('joins legs and drops the duplicated seam point between them', () => {
+    const legA: [number, number][] = [
+      [0, 0],
+      [1, 1],
+      [2, 2],
+    ];
+    const legB: [number, number][] = [
+      [2, 2], // seam — same as legA's last point
+      [3, 3],
+    ];
+    expect(dedupeAndNormalize([legA, legB])).toEqual([
+      [0, 0],
+      [1, 1],
+      [2, 2],
+      [3, 3],
+    ]);
+  });
+
+  it('keeps a non-duplicate leg boundary (small gap is preserved, not merged)', () => {
+    const legA: [number, number][] = [
+      [0, 0],
+      [1, 1],
+    ];
+    const legB: [number, number][] = [
+      [1.5, 1.5],
+      [2, 2],
+    ];
+    expect(dedupeAndNormalize([legA, legB])).toEqual([
+      [0, 0],
+      [1, 1],
+      [1.5, 1.5],
+      [2, 2],
+    ]);
+  });
+
+  it('returns [] for empty input', () => {
+    expect(dedupeAndNormalize([])).toEqual([]);
+    expect(dedupeAndNormalize([[]])).toEqual([]);
   });
 });
