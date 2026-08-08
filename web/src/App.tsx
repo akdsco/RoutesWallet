@@ -24,6 +24,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [announce, setAnnounce] = useState('');
   // Cafés default OFF: OSM has ~2,900 near the routes (every town café), so they'd
   // swamp the map. Toilets/water/stations are the useful facility layer; toggle
   // cafés on to browse an area's real cafés.
@@ -82,6 +83,26 @@ export function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedId, query]);
+
+  // Announce entering/leaving the selected route (§E copy). Reads matches/place
+  // at fire time — the selectedId change re-renders with current values.
+  const prevSelForAnnounce = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelForAnnounce.current;
+    if (selectedId && selectedId !== prev) {
+      const r = routes.find((x) => x.id === selectedId);
+      if (r)
+        setAnnounce(`${r.name}. ${r.distance_km} km. Other routes dimmed.`);
+    } else if (!selectedId && prev) {
+      setAnnounce(
+        matches
+          ? `Back to ${matches.length} results within ${RADIUS_KM} km of ${place?.name ?? ''}.`
+          : 'Back to all routes.'
+      );
+    }
+    prevSelForAnnounce.current = selectedId;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -327,6 +348,10 @@ export function App() {
               : matches
                 ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
                 : ''}
+        </span>
+
+        <span className="sr-only" aria-live="polite">
+          {announce}
         </span>
       </div>
     </div>
