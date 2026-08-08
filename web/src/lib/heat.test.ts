@@ -100,4 +100,33 @@ describe('heatTierIndex', () => {
     expect(heatTierIndex(1000, 'light')).toBe(HEAT_RAMP.light.length - 1);
     expect(heatTierIndex(1000, 'dark')).toBe(HEAT_RAMP.dark.length - 1);
   });
+
+  // Breakpoints are geometric doublings [1,2,4,8,16,∞], re-derived from the real
+  // 125-route routes.geojson (TB-48). The old [1,2,3,5,8] set was tuned on
+  // synthetic data peaking ~20; real counts run 1..~69 with a long tail, so the
+  // old top tier lumped 9..69 into one colour. Doubling spreads the hot end so
+  // each tier holds a decreasing share and the hottest colour is the true spine.
+  it('maps counts onto the geometric tier boundaries [1,2,4,8,16]', () => {
+    const cases: [number, number][] = [
+      [1, 0], // lone lane
+      [2, 1],
+      [3, 2], // 3 falls in the <=4 tier
+      [4, 2],
+      [5, 3], // <=8
+      [8, 3],
+      [9, 4], // <=16
+      [16, 4],
+      [17, 5], // spine
+    ];
+    for (const [count, tier] of cases) {
+      expect(heatTierIndex(count, 'light')).toBe(tier);
+      expect(heatTierIndex(count, 'dark')).toBe(tier);
+    }
+  });
+
+  it('the two ramps share the same breakpoints (grading is theme-agnostic)', () => {
+    const maxes = (t: 'light' | 'dark') => HEAT_RAMP[t].map((x) => x.max);
+    expect(maxes('light')).toEqual(maxes('dark'));
+    expect(maxes('light')).toEqual([1, 2, 4, 8, 16, Infinity]);
+  });
 });
