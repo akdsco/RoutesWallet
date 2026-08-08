@@ -146,6 +146,9 @@ export function RouteMap({
       zoomDelta: 1, // +/- buttons & keyboard still step by a whole level
       scrollWheelZoom: false,
     }).setView([51.5072, -0.1276], 6);
+    // Drop Leaflet's "🇺🇦 Leaflet" prefix; the OSM/CARTO/OGL credit (required)
+    // stays via each tile layer's attribution.
+    map.attributionControl.setPrefix(false);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // The tile layer is created + swapped by the theme effect below (it owns the
     // basemap so a theme flip can replace the layer cleanly).
@@ -472,7 +475,10 @@ export function RouteMap({
     if (!map || !P) return;
 
     const c = mapPalette(theme); // theme-prop colours, no getComputedStyle race
-    const activeId = hoverId ?? selectedId;
+    // Selection locks the highlight: once a route is selected, hovering others
+    // (map or list) must not light them up. Only when nothing is selected does
+    // hover drive the active route.
+    const activeId = selectedId ?? hoverId;
 
     // Matched: ink line + basemap-coloured halo so it reads over heat.
     P.matched.clearLayers();

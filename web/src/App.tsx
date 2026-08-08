@@ -158,15 +158,15 @@ export function App() {
     ? [place.lng, place.lat]
     : null;
 
-  // The top-right map panel shows the hovered route as a quick preview, but
-  // falls back to the selected route so a click keeps it on screen instead of
-  // it vanishing on mouse-leave. The deselect (×) only shows when the panel is
-  // resting on the selected route (not previewing a different hover).
+  // A selected route locks the top-right panel to itself — hovering other
+  // routes must not preview them. Only when nothing is selected does hover
+  // drive the panel. The deselect (×) shows whenever the panel is the
+  // selected route.
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
   const selectedRoute = selectedId
     ? (routes.find((r) => r.id === selectedId) ?? null)
     : null;
-  const panelRoute = hovered ?? selectedRoute;
+  const panelRoute = selectedRoute ?? hovered;
   const panelIsSelected = panelRoute != null && panelRoute.id === selectedId;
 
   return (
