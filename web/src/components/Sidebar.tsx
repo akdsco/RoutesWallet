@@ -1,11 +1,13 @@
 import {
+  useEffect,
   useMemo,
   useRef,
+  useState,
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import type { Route } from '../types.ts';
+import type { Route, RouteSource } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { openLabel } from '../lib/links.ts';
 import { safeHref } from '../lib/sanitize.ts';
@@ -24,11 +26,14 @@ type Props = {
   placeLabel: string;
   groups: GroupVM[];
   selectedId: string | null;
+  /** Label for the detail panel's back row, e.g. "Back to 21 results". */
+  backLabel: string;
   theme: 'light' | 'dark';
   onQueryChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
+  onDeselect: () => void;
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
   onSearchFocusChange: (focused: boolean) => void;
@@ -39,6 +44,14 @@ const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 const badgeBase =
   'inline-flex items-center gap-1.5 rounded-[3px] px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.05em]';
 
+function trustBadge(source: RouteSource) {
+  return source === 'club-verified'
+    ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
+    : source === 'club-member'
+      ? { cls: 'border border-trust text-trust', glyph: '' }
+      : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
+}
+
 export function Sidebar(props: Props) {
   const {
     totalCount,
@@ -48,11 +61,13 @@ export function Sidebar(props: Props) {
     placeLabel,
     groups,
     selectedId,
+    backLabel,
     theme,
     onQueryChange,
     onSubmit,
     onClear,
     onSelect,
+    onDeselect,
     onHover,
     onToggleTheme,
     onSearchFocusChange,
@@ -63,33 +78,82 @@ export function Sidebar(props: Props) {
     onSubmit(query);
   }
 
-  // Route ids in render order — the axis ↑/↓/Home/End walk. The card whose id
-  // this resolves to is the list's single Tab stop (roving tabindex), so Tab
-  // enters the list once and the arrows move within it.
   const listRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const scrollTopRef = useRef(0);
+
   const orderedIds = useMemo(
     () => groups.flatMap((g) => g.items.map((i) => i.route.id)),
     [groups]
   );
-  const activeId = selectedId ?? orderedIds[0] ?? null;
+
+  // The selected route's detail replaces the list. Derive its data from the
+  // current groups (the selected route is always in the visible set).
+  const selectedItem = useMemo(
+    () =>
+      selectedId
+        ? (groups
+            .flatMap((g) => g.items)
+            .find((i) => i.route.id === selectedId) ?? null)
+        : null,
+    [groups, selectedId]
+  );
+
+  // Roving tabindex: Tab enters the list once, arrows move focus within it. The
+  // card holding focus (or the first, before any) is the single tab stop.
+  const [rovingId, setRovingId] = useState<string | null>(null);
+  const effectiveRoving =
+    rovingId && orderedIds.includes(rovingId)
+      ? rovingId
+      : (orderedIds[0] ?? null);
+
+  // Focus handoff across the list ↔ detail swap: entering focuses the back row,
+  // leaving restores the list scroll and returns focus to that route's card so
+  // arrow nav resumes where it left off.
+  const prevSelRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelRef.current;
+    if (selectedId && !prev) {
+      backRef.current?.focus();
+    } else if (!selectedId && prev) {
+      if (listRef.current) listRef.current.scrollTop = scrollTopRef.current;
+      listRef.current
+        ?.querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+        ?.focus();
+    }
+    prevSelRef.current = selectedId;
+  }, [selectedId]);
 
   function onListKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (!NAV_KEYS.has(e.key)) return; // Enter/Space handled per-card
+    if (!NAV_KEYS.has(e.key)) return; // Enter/Space activate on the card itself
     e.preventDefault(); // don't let ↑/↓ also scroll the panel
-    // Move relative to the focused card, not selectedId — on entry the first
-    // card holds focus before anything is selected.
     const focused = (
       document.activeElement as HTMLElement | null
     )?.closest<HTMLElement>('[data-route-id]');
-    const currentId = focused?.dataset.routeId ?? selectedId;
+    const currentId = focused?.dataset.routeId ?? effectiveRoving;
     const target = nextRouteId(orderedIds, currentId, e.key as NavKey);
     if (!target) return;
-    onSelect(target);
+    // Move focus only — selection (opening the detail) is Enter/Space/click.
+    // Focus fires onFocus → onHover, which mirrors the highlight on the map.
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-route-id="${target}"]`
     );
     el?.focus();
     el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  if (selectedItem) {
+    return (
+      <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
+        <RouteDetail
+          item={selectedItem}
+          backLabel={backLabel}
+          backRef={backRef}
+          theme={theme}
+          onBack={onDeselect}
+        />
+      </aside>
+    );
   }
 
   return (
@@ -179,6 +243,9 @@ export function Sidebar(props: Props) {
       <div
         ref={listRef}
         onKeyDown={onListKeyDown}
+        onScroll={(e) => {
+          scrollTopRef.current = e.currentTarget.scrollTop;
+        }}
         className="flex-1 overflow-y-auto"
         role="group"
         aria-label="Routes"
@@ -235,9 +302,12 @@ export function Sidebar(props: Props) {
                   key={r.id}
                   route={r}
                   nearKm={nearKm}
-                  selected={r.id === selectedId}
-                  tabIndex={r.id === activeId ? 0 : -1}
+                  tabIndex={r.id === effectiveRoving ? 0 : -1}
                   onSelect={onSelect}
+                  onFocusCard={(id) => {
+                    setRovingId(id);
+                    onHover(id);
+                  }}
                   onHover={onHover}
                 />
               ))}
@@ -245,6 +315,126 @@ export function Sidebar(props: Props) {
           ))}
       </div>
     </aside>
+  );
+}
+
+function RouteDetail({
+  item,
+  backLabel,
+  backRef,
+  theme,
+  onBack,
+}: {
+  item: CardVM;
+  backLabel: string;
+  backRef: React.RefObject<HTMLButtonElement>;
+  theme: 'light' | 'dark';
+  onBack: () => void;
+}) {
+  const { route: r, nearKm } = item;
+  const badge = trustBadge(r.source);
+  const pts = routeThumbnail(r.geometry.coordinates, 150, 104, 10);
+  const [sx, sy] = (pts.split(' ')[0] ?? '0,0').split(',');
+
+  return (
+    <div
+      role="region"
+      aria-label="Route detail"
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div className="border-b border-line px-3 py-2.5">
+        <button
+          ref={backRef}
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-[34px] items-center gap-2 rounded-lg bg-surface-2 px-3 text-[12.5px] font-medium text-text-2 hover:bg-line-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sel"
+        >
+          <span aria-hidden="true">←</span>
+          {backLabel}
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[18px] pt-3.5">
+        <svg
+          width="150"
+          height="104"
+          viewBox="0 0 150 104"
+          aria-hidden="true"
+          className="self-center"
+        >
+          <polyline
+            points={pts}
+            fill="none"
+            stroke="var(--sel)"
+            strokeWidth="2.4"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <circle
+            cx={sx}
+            cy={sy}
+            r="5"
+            fill="var(--sel)"
+            stroke="var(--surface)"
+            strokeWidth="2"
+          />
+        </svg>
+
+        <div className="flex flex-col gap-2">
+          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-text">
+            {r.name}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <span className="font-mono text-[14px] text-text">
+              {r.distance_km} km
+            </span>
+            <span className="h-[3px] w-[3px] rounded-full bg-muted" />
+            <span className="text-[12.5px] text-muted">
+              {r.region}
+              {nearKm != null && ` · ${nearKm.toFixed(1)} km away`}
+            </span>
+          </div>
+          <span className={`self-start ${badgeBase} ${badge.cls}`}>
+            {badge.glyph}
+            {SOURCE_META[r.source].label}
+          </span>
+        </div>
+
+        <a
+          href={safeHref(r.link)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-[9px] bg-sel text-[13.5px] font-semibold ${
+            theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
+          }`}
+        >
+          {openLabel(r.link)} ↗
+        </a>
+
+        <div className="flex flex-col gap-2.5 border-t border-line-2 pt-3">
+          {r.cafe || r.notes ? (
+            <>
+              {r.cafe && (
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[13px] leading-tight">☕</span>
+                  <span className="text-[12.5px] leading-normal text-text-2">
+                    {r.cafe}
+                  </span>
+                </div>
+              )}
+              {r.notes && (
+                <p className="text-[12.5px] leading-relaxed text-text-2">
+                  {r.notes}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-[12.5px] leading-relaxed text-muted">
+              No notes for this route.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -283,24 +473,19 @@ function Notice({
 function RouteCard({
   route: r,
   nearKm,
-  selected,
   tabIndex,
   onSelect,
+  onFocusCard,
   onHover,
 }: {
   route: Route;
   nearKm?: number;
-  selected: boolean;
   tabIndex: number;
   onSelect: (id: string) => void;
+  onFocusCard: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
-  const badge =
-    r.source === 'club-verified'
-      ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
-      : r.source === 'club-member'
-        ? { cls: 'border border-trust text-trust', glyph: '' }
-        : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
+  const badge = trustBadge(r.source);
   const select = () => onSelect(r.id);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -311,15 +496,15 @@ function RouteCard({
   return (
     <div
       role="button"
-      aria-pressed={selected}
       tabIndex={tabIndex}
       data-route-id={r.id}
-      data-sel={selected}
       onClick={select}
       onKeyDown={onKey}
+      onFocus={() => onFocusCard(r.id)}
+      onBlur={() => onHover(null)}
       onMouseEnter={() => onHover(r.id)}
       onMouseLeave={() => onHover(null)}
-      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel data-[sel=true]:bg-sel-soft data-[sel=true]:shadow-[inset_3px_0_0_var(--sel)]"
+      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
     >
       <svg
         width="52"
@@ -367,26 +552,6 @@ function RouteCard({
             </span>
           )}
         </div>
-        {selected && (
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <a
-              href={safeHref(r.link)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md bg-sel px-3 py-[7px] text-[12px] font-medium text-white"
-            >
-              {openLabel(r.link)} ↗
-            </a>
-            {r.cafe && (
-              <span className="text-[12px] text-muted">☕ {r.cafe}</span>
-            )}
-            {r.notes && (
-              <span className="text-[12px] leading-snug text-muted">
-                {r.notes}
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

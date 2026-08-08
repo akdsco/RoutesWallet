@@ -40,8 +40,16 @@ const groups: GroupVM[] = [
   },
 ];
 
-/** Stateful harness so selection actually moves as keys are pressed. */
-function Harness({ onSelect }: { onSelect?: (id: string) => void }) {
+/** Stateful harness so select ↔ detail and back ↔ list actually swap. */
+function Harness({
+  onSelect,
+  onDeselect,
+  onHover,
+}: {
+  onSelect?: (id: string) => void;
+  onDeselect?: () => void;
+  onHover?: (id: string | null) => void;
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   return (
     <Sidebar
@@ -52,6 +60,7 @@ function Harness({ onSelect }: { onSelect?: (id: string) => void }) {
       placeLabel=""
       groups={groups}
       selectedId={selectedId}
+      backLabel="Back to all routes"
       theme="light"
       onQueryChange={() => {}}
       onSubmit={() => {}}
@@ -60,7 +69,11 @@ function Harness({ onSelect }: { onSelect?: (id: string) => void }) {
         onSelect?.(id);
         setSelectedId(id);
       }}
-      onHover={() => {}}
+      onDeselect={() => {
+        onDeselect?.();
+        setSelectedId(null);
+      }}
+      onHover={(id) => onHover?.(id)}
       onToggleTheme={() => {}}
       onSearchFocusChange={() => {}}
     />
@@ -70,74 +83,79 @@ function Harness({ onSelect }: { onSelect?: (id: string) => void }) {
 const card = (name: RegExp) => screen.getByRole('button', { name });
 
 describe('Sidebar route list a11y', () => {
-  it('renders each route as a button carrying its name', () => {
+  it('renders each route as a button carrying its name, not a listitem', () => {
     render(<Harness />);
     expect(card(/Alpha Loop/)).toBeInTheDocument();
     expect(card(/Bravo Circuit/)).toBeInTheDocument();
-    // Not a listitem any more.
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
 
-  it('reflects selection via aria-pressed', async () => {
-    const user = userEvent.setup();
+  it('uses a roving tabindex: one entry point, others out of Tab order', () => {
     render(<Harness />);
-    expect(card(/Alpha Loop/)).toHaveAttribute('aria-pressed', 'false');
-    await user.click(card(/Alpha Loop/));
-    expect(card(/Alpha Loop/)).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('uses a roving tabindex: one entry point, others removed from Tab order', () => {
-    render(<Harness />);
-    // Nothing selected → the first card is the single tab stop.
     expect(card(/Alpha Loop/)).toHaveAttribute('tabindex', '0');
     expect(card(/Bravo Circuit/)).toHaveAttribute('tabindex', '-1');
     expect(card(/Charlie Traverse/)).toHaveAttribute('tabindex', '-1');
   });
 
-  it('ArrowDown/ArrowUp move selection and focus through the list', async () => {
+  it('arrows move focus and mirror the map highlight — they do not select', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
-    render(<Harness onSelect={onSelect} />);
+    const onHover = vi.fn();
+    render(<Harness onSelect={onSelect} onHover={onHover} />);
 
     card(/Alpha Loop/).focus();
     await user.keyboard('{ArrowDown}');
-    expect(onSelect).toHaveBeenLastCalledWith('b');
     expect(card(/Bravo Circuit/)).toHaveFocus();
-    expect(card(/Bravo Circuit/)).toHaveAttribute('aria-pressed', 'true');
+    expect(onHover).toHaveBeenLastCalledWith('b'); // mirrors highlight
+    expect(onSelect).not.toHaveBeenCalled(); // arrow ≠ select
 
-    await user.keyboard('{ArrowUp}');
-    expect(onSelect).toHaveBeenLastCalledWith('a');
-    expect(card(/Alpha Loop/)).toHaveFocus();
-  });
-
-  it('End jumps to the last card, Home back to the first', async () => {
-    const user = userEvent.setup();
-    render(<Harness />);
-    card(/Alpha Loop/).focus();
     await user.keyboard('{End}');
     expect(card(/Charlie Traverse/)).toHaveFocus();
     await user.keyboard('{Home}');
     expect(card(/Alpha Loop/)).toHaveFocus();
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('Enter and Space select the focused card', async () => {
+  it('Enter, Space and click select — opening the detail panel', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(<Harness onSelect={onSelect} />);
+
     card(/Bravo Circuit/).focus();
     await user.keyboard('{Enter}');
     expect(onSelect).toHaveBeenLastCalledWith('b');
-    card(/Charlie Traverse/).focus();
-    await user.keyboard(' ');
-    expect(onSelect).toHaveBeenLastCalledWith('c');
+    // The list is replaced by the detail region for the selected route.
+    expect(
+      screen.getByRole('region', { name: /route detail/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: /routes/i })
+    ).not.toBeInTheDocument();
   });
 
-  it('exposes the Open link on the selected card without nesting it in Tab twice', async () => {
+  it('the detail panel shows the Open link and a labelled back row', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(card(/Alpha Loop/));
-    const selected = card(/Alpha Loop/);
-    const link = within(selected).getByRole('link');
-    expect(link).toHaveAttribute('href', 'https://example.com/a');
+    const region = screen.getByRole('region', { name: /route detail/i });
+    expect(within(region).getByRole('link')).toHaveAttribute(
+      'href',
+      'https://example.com/a'
+    );
+    expect(
+      within(region).getByRole('button', { name: /back to all routes/i })
+    ).toBeInTheDocument();
+  });
+
+  it('focus moves to the back row on select and back to the card on exit', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(card(/Alpha Loop/));
+    const back = screen.getByRole('button', { name: /back to all routes/i });
+    expect(back).toHaveFocus();
+
+    await user.click(back);
+    // Back to the list, focus restored to the route's card.
+    expect(card(/Alpha Loop/)).toHaveFocus();
   });
 });

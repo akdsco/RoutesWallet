@@ -158,16 +158,20 @@ export function App() {
     ? [place.lng, place.lat]
     : null;
 
-  // A selected route locks the top-right panel to itself — hovering other
-  // routes must not preview them. Only when nothing is selected does hover
-  // drive the panel. The deselect (×) shows whenever the panel is the
-  // selected route.
-  const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
-  const selectedRoute = selectedId
-    ? (routes.find((r) => r.id === selectedId) ?? null)
-    : null;
-  const panelRoute = selectedRoute ?? hovered;
-  const panelIsSelected = panelRoute != null && panelRoute.id === selectedId;
+  // The top-right card is hover-preview only, and suppressed while a route is
+  // selected (the sidebar detail panel is the detail surface then, and the map
+  // highlight is locked to the selection).
+  const hovered =
+    !selectedId && hoverId
+      ? (routes.find((r) => r.id === hoverId) ?? null)
+      : null;
+
+  // Back-row copy names where exit returns to (design §E copy table).
+  const backLabel = matches
+    ? matches.length === 1
+      ? 'Back to results'
+      : `Back to ${matches.length} results`
+    : 'Back to all routes';
 
   return (
     <div className="flex h-screen">
@@ -179,11 +183,13 @@ export function App() {
         placeLabel={place?.name ?? ''}
         groups={groups}
         selectedId={selectedId}
+        backLabel={backLabel}
         theme={theme}
         onQueryChange={setQuery}
         onSubmit={(v) => void runSearch(v)}
         onClear={clearSearch}
         onSelect={onSelect}
+        onDeselect={() => setSelectedId(null)}
         onHover={onHover}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         onSearchFocusChange={setSearchFocused}
@@ -269,31 +275,19 @@ export function App() {
           </span>
         </div>
 
-        {panelRoute && (
+        {hovered && (
           <div
             role="status"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
           >
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-[14px] font-medium text-text">
-                {panelRoute.name}
-              </span>
-              {panelIsSelected && (
-                <button
-                  type="button"
-                  aria-label="Deselect route"
-                  onClick={() => setSelectedId(null)}
-                  className="-mr-1 -mt-1 flex h-7 w-7 flex-none items-center justify-center rounded text-[15px] text-muted hover:bg-surface-2 hover:text-text"
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              )}
-            </div>
+            <span className="text-[14px] font-medium text-text">
+              {hovered.name}
+            </span>
             <span className="font-mono text-[12px] text-text-2">
-              {panelRoute.distance_km} km · {panelRoute.region}
+              {hovered.distance_km} km · {hovered.region}
             </span>
             <span className="text-[12px] text-muted">
-              {SOURCE_META[panelRoute.source].blurb}
+              {SOURCE_META[hovered.source].blurb}
             </span>
           </div>
         )}
