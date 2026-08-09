@@ -112,18 +112,18 @@ export const HEAT_RAMP: Record<'light' | 'dark', HeatTier[]> = {
   light: [
     { max: 1, weight: 1.3, opacity: 0.55, color: '#f87171' },
     { max: 2, weight: 1.8, opacity: 0.66, color: '#ef4444' },
-    { max: 3, weight: 2.3, opacity: 0.76, color: '#dc2626' },
-    { max: 5, weight: 2.9, opacity: 0.85, color: '#b91c1c' },
-    { max: 8, weight: 3.7, opacity: 0.92, color: '#991b1b' },
+    { max: 4, weight: 2.3, opacity: 0.76, color: '#dc2626' },
+    { max: 8, weight: 2.9, opacity: 0.85, color: '#b91c1c' },
+    { max: 16, weight: 3.7, opacity: 0.92, color: '#991b1b' },
     { max: Infinity, weight: 4.5, opacity: 0.98, color: '#7f1d1d' },
   ],
   // Dark basemap: dim red (quiet) -> bright amber (busiest = brightest).
   dark: [
     { max: 1, weight: 1.3, opacity: 0.55, color: '#7f1d1d' },
     { max: 2, weight: 1.8, opacity: 0.66, color: '#b91c1c' },
-    { max: 3, weight: 2.3, opacity: 0.76, color: '#ef4444' },
-    { max: 5, weight: 2.9, opacity: 0.85, color: '#f97316' },
-    { max: 8, weight: 3.7, opacity: 0.92, color: '#ff8a1e' },
+    { max: 4, weight: 2.3, opacity: 0.76, color: '#ef4444' },
+    { max: 8, weight: 2.9, opacity: 0.85, color: '#f97316' },
+    { max: 16, weight: 3.7, opacity: 0.92, color: '#ff8a1e' },
     { max: Infinity, weight: 4.5, opacity: 0.99, color: '#ffb020' },
   ],
 };

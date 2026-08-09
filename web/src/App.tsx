@@ -3,15 +3,33 @@ import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Legend } from './components/Legend.tsx';
 import { RouteDetail } from './components/RouteDetail.tsx';
+import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
+import {
+  DEFAULT_BASEMAP,
+  isBasemapId,
+  type BasemapId,
+} from './lib/basemaps.ts';
 import type { Route } from './types.ts';
 
 const RADIUS_KM = 25;
+const BASEMAP_STORAGE_KEY = 'rw:basemap';
+
+/** The saved basemap choice, or the default if none/invalid/unavailable. */
+function readSavedBasemap(): BasemapId {
+  try {
+    const v = window.localStorage.getItem(BASEMAP_STORAGE_KEY);
+    if (isBasemapId(v)) return v;
+  } catch {
+    // private mode / storage disabled — fall back to the default
+  }
+  return DEFAULT_BASEMAP;
+}
 
 type Place = { lng: number; lat: number; name: string };
 
@@ -31,6 +49,17 @@ export function App() {
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
   );
+  const [basemap, setBasemap] = useState<BasemapId>(readSavedBasemap);
+
+  // Persist the basemap choice so it survives a reload (theme already persists
+  // via next-themes). Best-effort — storage may be unavailable in private mode.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(BASEMAP_STORAGE_KEY, basemap);
+    } catch {
+      /* ignore */
+    }
+  }, [basemap]);
 
   const togglePoi = useCallback(
     (t: string) =>
@@ -187,10 +216,14 @@ export function App() {
           searchPoint={searchPoint}
           radiusKm={RADIUS_KM}
           theme={theme}
+          basemap={basemap}
           poiTypes={poiTypes}
           onHover={onHover}
           onSelect={onSelect}
         />
+
+        {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
+        <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
 
         <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
           {(
