@@ -407,7 +407,8 @@ function RouteDetail({
             theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
           }`}
         >
-          {openLabel(r.link)} ↗
+          {openLabel(r.link)}
+          <span aria-hidden="true">↗</span>
         </a>
 
         <div className="flex flex-col gap-2.5 border-t border-line-2 pt-3">
