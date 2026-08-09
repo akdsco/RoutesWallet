@@ -6,6 +6,8 @@ import {
   GRAVEL_NAME_EXCLUSIONS,
   acceptMatch,
   dedupeAndNormalize,
+  chunkTrace,
+  stitchChunks,
 } from './mapMatch';
 
 describe('decodePolyline', () => {
@@ -153,5 +155,116 @@ describe('dedupeAndNormalize', () => {
   it('returns [] for empty input', () => {
     expect(dedupeAndNormalize([])).toEqual([]);
     expect(dedupeAndNormalize([[]])).toEqual([]);
+  });
+});
+
+describe('chunkTrace', () => {
+  const coords = (n: number): [number, number][] =>
+    Array.from({ length: n }, (_, i) => [i, i] as [number, number]);
+
+  it('returns a single chunk when the trace fits in one', () => {
+    const c = coords(5);
+    expect(chunkTrace(c, 5)).toEqual([c]);
+    expect(chunkTrace(c, 10)).toEqual([c]);
+  });
+
+  it('splits into chunks that SHARE a boundary point (so matches meet at seams)', () => {
+    // 5 points, size 3 => [0,1,2] and [2,3,4] — point 2 is shared.
+    const out = chunkTrace(coords(5), 3);
+    expect(out).toEqual([
+      [
+        [0, 0],
+        [1, 1],
+        [2, 2],
+      ],
+      [
+        [2, 2],
+        [3, 3],
+        [4, 4],
+      ],
+    ]);
+  });
+
+  it('covers every point across the chunks (nothing dropped)', () => {
+    const c = coords(2015);
+    const out = chunkTrace(c, 200);
+    // reconstruct by concatenating chunks and dropping the shared seam point
+    const rebuilt: [number, number][] = [];
+    for (const chunk of out) {
+      for (let i = 0; i < chunk.length; i++) {
+        if (i === 0 && rebuilt.length) continue;
+        rebuilt.push(chunk[i]!);
+      }
+    }
+    expect(rebuilt).toEqual(c);
+    expect(out.length).toBe(Math.ceil((c.length - 1) / (200 - 1)));
+  });
+
+  it('throws for size < 2', () => {
+    expect(() => chunkTrace(coords(5), 1)).toThrow();
+  });
+});
+
+describe('stitchChunks', () => {
+  it('drops the duplicated seam point between chunks (exact)', () => {
+    const a: [number, number][] = [
+      [0, 0],
+      [1, 1],
+    ];
+    const b: [number, number][] = [
+      [1, 1],
+      [2, 2],
+    ];
+    expect(stitchChunks([a, b])).toEqual([
+      [0, 0],
+      [1, 1],
+      [2, 2],
+    ]);
+  });
+
+  it('drops a near-duplicate seam point within epsilon (two independent matches)', () => {
+    const a: [number, number][] = [
+      [0, 0],
+      [1.000001, 1.000001],
+    ];
+    const b: [number, number][] = [
+      [1.000002, 1.000002], // ~within epsilon of a's last point
+      [2, 2],
+    ];
+    expect(stitchChunks([a, b], 1e-4)).toEqual([
+      [0, 0],
+      [1.000001, 1.000001],
+      [2, 2],
+    ]);
+  });
+
+  it('keeps a genuine gap at the seam (beyond epsilon — e.g. a raw-fallback chunk)', () => {
+    const a: [number, number][] = [
+      [0, 0],
+      [1, 1],
+    ];
+    const b: [number, number][] = [
+      [1.01, 1.01], // a real jog, not a duplicate
+      [2, 2],
+    ];
+    expect(stitchChunks([a, b], 1e-4)).toEqual([
+      [0, 0],
+      [1, 1],
+      [1.01, 1.01],
+      [2, 2],
+    ]);
+  });
+
+  it('never dedupes interior points, only the seam', () => {
+    const a: [number, number][] = [
+      [0, 0],
+      [0, 0], // interior exact dup is left as-is (full resolution preserved)
+      [1, 1],
+    ];
+    expect(stitchChunks([a])).toEqual([
+      [0, 0],
+      [0, 0],
+      [1, 1],
+    ]);
   });
 });

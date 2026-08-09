@@ -116,6 +116,56 @@ export function assembleMatchedCoords(legShapes: string[]): [number, number][] {
   return dedupeAndNormalize(legShapes.map(decodePolyline6));
 }
 
+/**
+ * Split a trace into contiguous chunks of at most `size` points that SHARE their
+ * boundary point (chunk N's last point == chunk N+1's first point). Matching each
+ * chunk independently sidesteps the way Valhalla `map_snap` truncates a whole
+ * route at the first unroutable spot — a bad spot then only costs its own chunk.
+ * The shared boundary means adjacent matched chunks meet at the same road point.
+ */
+export function chunkTrace(
+  coords: [number, number][],
+  size: number
+): [number, number][][] {
+  if (size < 2) throw new Error('chunkTrace: size must be >= 2');
+  if (coords.length <= size) return [coords.slice()];
+  const chunks: [number, number][][] = [];
+  const step = size - 1; // overlap of one point => shared seam
+  for (let start = 0; start < coords.length - 1; start += step) {
+    chunks.push(coords.slice(start, Math.min(start + size, coords.length)));
+  }
+  return chunks;
+}
+
+/**
+ * Concatenate per-chunk matched lines into one, dropping only the seam point a
+ * chunk shares with the previous chunk's end (the shared boundary, matched twice
+ * and landing within `epsilon` degrees). Interior points are never touched, so
+ * full resolution is preserved; a genuine gap at a raw-fallback seam is kept.
+ */
+export function stitchChunks(
+  chunks: [number, number][][],
+  epsilon = 1e-5
+): [number, number][] {
+  const out: [number, number][] = [];
+  for (const chunk of chunks) {
+    for (let i = 0; i < chunk.length; i++) {
+      const pt = chunk[i]!;
+      const prev = out[out.length - 1];
+      if (
+        i === 0 &&
+        prev &&
+        Math.abs(prev[0] - pt[0]) < epsilon &&
+        Math.abs(prev[1] - pt[1]) < epsilon
+      ) {
+        continue; // shared seam point — drop the duplicate
+      }
+      out.push(pt);
+    }
+  }
+  return out;
+}
+
 export type AcceptMatchInput = {
   /** The route's own recorded length, km (from `distance_km`). */
   rawKm: number;
