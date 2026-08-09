@@ -4,8 +4,6 @@ import { LEGEND_HEAT_STOPS } from '../lib/heat.ts';
 type Props = {
   /** true once a place search has resolved — the map shows matches + a radius. */
   searching: boolean;
-  /** true while a route is selected — everything else on the map recedes (§E). */
-  locked: boolean;
   theme: 'light' | 'dark';
 };
 
@@ -24,9 +22,7 @@ const HEAT_SEG = [
  * describes anything on screen. Same pill, same height in both modes — it grows
  * sideways, never down (the POI pills sit just below at top-68px).
  */
-export function Legend({ searching, locked, theme }: Props) {
-  // While a route is selected the other lines dim; the first key relabels so the
-  // dimming reads as intentional rather than a fault (§E).
+export function Legend({ searching, theme }: Props) {
   return (
     <div
       aria-label="Map legend"
@@ -34,7 +30,7 @@ export function Legend({ searching, locked, theme }: Props) {
     >
       {searching ? (
         <>
-          <Key label={locked ? 'other matches' : 'matched route'}>
+          <Key label="matched route">
             <Swatch>
               <line
                 x1="1"
@@ -68,7 +64,7 @@ export function Legend({ searching, locked, theme }: Props) {
         </>
       ) : (
         <>
-          <Key label={locked ? 'all rides' : '1 → many rides'}>
+          <Key label="1 → many rides">
             <svg width="52" height="10" viewBox="0 0 52 10" aria-hidden="true">
               {HEAT_SEG.map((s, i) => (
                 <line

@@ -318,11 +318,11 @@ export function App() {
           })}
         </div>
 
-        <Legend
-          searching={searchPoint !== null}
-          locked={selectedId !== null}
-          theme={theme}
-        />
+        {/* Hidden in route-preview mode: the dimmed map + detail panel already
+            say "you're focused on one route", so the legend is just noise. */}
+        {!selectedId && (
+          <Legend searching={searchPoint !== null} theme={theme} />
+        )}
 
         {/* Visual hover/focus preview only — aria-hidden so keyboard list nav
             (which mirrors the highlight here via focus) isn't double-announced
