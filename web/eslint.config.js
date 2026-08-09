@@ -37,5 +37,13 @@ export default tseslint.config(
   {
     files: ['src/**/*.test.{ts,tsx}'],
     languageOptions: { globals: globals.node },
+  },
+  // E2E harness + build config: Node-side files outside `src`. Lint them too so
+  // the test platform's own tooling isn't the one unchecked corner (non
+  // type-checked config — they're typechecked via tsconfig.e2e.json instead).
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts', 'vite.config.ts'],
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    languageOptions: { globals: globals.node },
   }
 );

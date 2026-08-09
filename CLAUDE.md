@@ -47,9 +47,16 @@ type Route = {
 
 ### How to work here
 
-- **Test-first for pure logic only** (the near-X filter, any parse/geocode helper):
-  write the failing Vitest test, then the minimum to pass. Map/UI is verified by eye
-  — say so honestly, don't fake a test.
+- **Three test layers** (see `web/` — this is the baseline):
+  - **Unit** (Vitest, `src/lib/*.test.ts`) — pure logic. Test-first: write the
+    failing test, then the minimum to pass.
+  - **Integration** (Testing Library + jsdom, `src/*.test.tsx`) — App/Sidebar
+    flows. Mock only the boundaries (`loadRoutes`, `geocode`, `RouteMap`);
+    select-by-role, assert-on-semantics.
+  - **E2E** (Playwright, `e2e/*.spec.ts`, `npm run e2e`) — critical journeys in a
+    real browser, over `vite build` + `preview`, fully stubbed + offline.
+  - Actual **map rendering / pixels** are still verified by eye — say so honestly,
+    don't fake a test.
 - Small increments, one logical change per commit, typecheck + tests green at every
   step.
 - **Drift tripwire:** any change that adds a dependency, adds a screen, or introduces
