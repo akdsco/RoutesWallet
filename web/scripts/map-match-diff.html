@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Map-match before/after — TB-46</title>
+    <!--
+      Dev-only verification tool for the map-match pipeline. NOT part of the app.
+
+      Serve web/ statically so both /public and /scripts resolve, then open this:
+        cd web && python3 -m http.server 8000
+        open http://localhost:8000/scripts/map-match-diff.html
+
+      Grey = raw (routes.raw.geojson); blue = matched (routes.geojson). Excluded /
+      fell-back routes render grey-only (their geometry is unchanged). Uses the
+      CARTO basemap the app uses so "line sits off the road" is visible at zoom.
+    -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+        display: flex;
+        height: 100vh;
+      }
+      #side {
+        width: 340px;
+        flex: none;
+        overflow: auto;
+        border-right: 1px solid #ddd;
+        padding: 12px;
+      }
+      #map {
+        flex: 1;
+      }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 8px;
+      }
+      .counts {
+        color: #444;
+        margin-bottom: 8px;
+      }
+      label.filter {
+        display: block;
+        margin-bottom: 10px;
+        color: #333;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        padding: 6px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      li:hover {
+        background: #f0f0f0;
+      }
+      .badge {
+        font-size: 11px;
+        padding: 1px 6px;
+        border-radius: 10px;
+        white-space: nowrap;
+      }
+      .matched {
+        background: #d6e9ff;
+        color: #0b4a8f;
+      }
+      .fallback {
+        background: #ffe6cc;
+        color: #8a4b00;
+      }
+      .excluded {
+        background: #eee;
+        color: #555;
+      }
+      .name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .legend {
+        margin-top: 6px;
+        color: #666;
+        font-size: 12px;
+      }
+      .swatch {
+        display: inline-block;
+        width: 22px;
+        height: 3px;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="side">
+      <h1>Map-match before/after (TB-46)</h1>
+      <div class="counts" id="counts">loading…</div>
+      <label class="filter"
+        ><input type="checkbox" id="onlyChanged" /> show only matched
+        routes</label
+      >
+      <div class="legend">
+        <div><span class="swatch" style="background: #999"></span>raw</div>
+        <div>
+          <span class="swatch" style="background: #1d6fe0"></span>matched
+          (snapped)
+        </div>
+      </div>
+      <ul id="list"></ul>
+    </div>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map('map').setView([51.9, 0.2], 9);
+      L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        { attribution: '© OpenStreetMap © CARTO', maxZoom: 20 }
+      ).addTo(map);
+
+      const rawLayer = L.layerGroup().addTo(map);
+      const matchedLayer = L.layerGroup().addTo(map);
+      const byId = {};
+
+      function coordsToLatLngs(geom) {
+        return geom.coordinates.map(([lng, lat]) => [lat, lng]);
+      }
+      function sameGeom(a, b) {
+        return JSON.stringify(a.coordinates) === JSON.stringify(b.coordinates);
+      }
+
+      Promise.all([
+        fetch('/public/routes.raw.geojson').then((r) => r.json()),
+        fetch('/public/routes.geojson').then((r) => r.json()),
+        fetch('/scripts/map-match-report.json')
+          .then((r) => r.json())
+          .catch(() => []),
+      ]).then(([raw, matched, report]) => {
+        const rawById = {};
+        for (const f of raw.features) rawById[f.properties.id] = f;
+        const repById = {};
+        for (const r of report) repById[r.id] = r;
+
+        let nMatched = 0,
+          nFallback = 0,
+          nExcluded = 0;
+        const list = document.getElementById('list');
+
+        for (const f of matched.features) {
+          const id = f.properties.id;
+          const rawF = rawById[id];
+          const rep = repById[id] || {};
+          const changed = rawF && !sameGeom(rawF.geometry, f.geometry);
+
+          const rawLine = L.polyline(coordsToLatLngs(rawF.geometry), {
+            color: '#999',
+            weight: 2,
+            opacity: 0.9,
+          });
+          rawLayer.addLayer(rawLine);
+          let matchedLine = null;
+          if (changed) {
+            matchedLine = L.polyline(coordsToLatLngs(f.geometry), {
+              color: '#1d6fe0',
+              weight: 2,
+              opacity: 0.95,
+            });
+            matchedLayer.addLayer(matchedLine);
+          }
+          byId[id] = { rawLine, matchedLine, feature: f };
+
+          const status = rep.status || (changed ? 'matched' : 'fallback');
+          if (status === 'matched') nMatched++;
+          else if (status === 'excluded') nExcluded++;
+          else nFallback++;
+
+          const li = document.createElement('li');
+          li.dataset.status = status;
+          const detail =
+            status === 'matched'
+              ? `${rep.coveredPct ?? ''}%`
+              : rep.reason || '';
+          li.innerHTML = `<span class="name">${f.properties.name}</span><span class="badge ${status}" title="${detail}">${status}</span>`;
+          li.onclick = () =>
+            map.fitBounds((matchedLine || rawLine).getBounds().pad(0.1));
+          list.appendChild(li);
+        }
+
+        document.getElementById('counts').textContent =
+          `${matched.features.length} routes — ${nMatched} matched, ${nFallback} raw fallback, ${nExcluded} excluded`;
+
+        document.getElementById('onlyChanged').onchange = (e) => {
+          const only = e.target.checked;
+          if (only) map.removeLayer(rawLayer);
+          else map.addLayer(rawLayer);
+          for (const li of list.children)
+            li.style.display =
+              only && li.dataset.status !== 'matched' ? 'none' : '';
+        };
+      });
+    </script>
+  </body>
+</html>
