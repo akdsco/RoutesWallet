@@ -4,6 +4,7 @@ import {
   cellSizeForZoom,
   heatTierIndex,
   HEAT_RAMP,
+  LEGEND_HEAT_STOPS,
 } from './heat.ts';
 import type { Route } from '../types.ts';
 
@@ -129,4 +130,17 @@ describe('heatTierIndex', () => {
     expect(maxes('light')).toEqual(maxes('dark'));
     expect(maxes('light')).toEqual([1, 2, 4, 8, 16, Infinity]);
   });
+});
+
+describe('LEGEND_HEAT_STOPS', () => {
+  // TB-54: the legend's idle heat swatch must match the drawn ramp. The ends are
+  // the source of truth — pin them so retuning HEAT_RAMP's faint/hot colour fails
+  // here loudly instead of letting the legend silently drift from the map again.
+  for (const theme of ['light', 'dark'] as const) {
+    it(`${theme}: faint + hot stops equal the ramp's endpoints`, () => {
+      const ramp = HEAT_RAMP[theme];
+      expect(LEGEND_HEAT_STOPS[theme][0]).toBe(ramp[0]!.color);
+      expect(LEGEND_HEAT_STOPS[theme][3]).toBe(ramp[ramp.length - 1]!.color);
+    });
+  }
 });

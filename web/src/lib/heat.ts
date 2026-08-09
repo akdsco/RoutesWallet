@@ -128,6 +128,20 @@ export const HEAT_RAMP: Record<'light' | 'dark', HeatTier[]> = {
   ],
 };
 
+/**
+ * Four representative stops (faint -> hot) for the map legend's idle heat swatch.
+ * Lives here, beside HEAT_RAMP, so the swatch and the drawn layer share one home
+ * and can't quietly diverge (TB-54). The ENDS are the ramp's own endpoints; the
+ * middle two are the design spec's chosen gradient. heat.test.ts pins the ends.
+ */
+export const LEGEND_HEAT_STOPS: Record<
+  'light' | 'dark',
+  [string, string, string, string]
+> = {
+  light: ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'],
+  dark: ['#7f1d1d', '#ef4444', '#f97316', '#ffb020'],
+};
+
 /** Faint tone used while a search is active (heat flattens under the matches). */
 export const FLAT_HEAT_RED: Record<
   'light' | 'dark',

@@ -1,9 +1,7 @@
 import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
-import { openLabel } from '../lib/links.ts';
-import { safeHref } from '../lib/sanitize.ts';
-import { SOURCE_META } from '../lib/source.ts';
+import { SourceBadge } from './SourceBadge.tsx';
 
 export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
@@ -25,9 +23,6 @@ type Props = {
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
 };
-
-const badgeBase =
-  'inline-flex items-center gap-1.5 rounded-[3px] px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.05em]';
 
 export function Sidebar(props: Props) {
   const {
@@ -244,12 +239,6 @@ function RouteCard({
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
-  const badge =
-    r.source === 'club-verified'
-      ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
-      : r.source === 'club-member'
-        ? { cls: 'border border-trust text-trust', glyph: '' }
-        : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
   const select = () => onSelect(r.id);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -303,10 +292,7 @@ function RouteCard({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`${badgeBase} ${badge.cls}`}>
-            {badge.glyph}
-            {SOURCE_META[r.source].label}
-          </span>
+          <SourceBadge source={r.source} />
           <span className="text-[12px] text-muted">{r.region}</span>
           {nearKm != null && (
             <span className="text-[12px] text-muted">
@@ -314,26 +300,6 @@ function RouteCard({
             </span>
           )}
         </div>
-        {selected && (
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <a
-              href={safeHref(r.link)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md bg-sel px-3 py-[7px] text-[12px] font-medium text-white"
-            >
-              {openLabel(r.link)} ↗
-            </a>
-            {r.cafe && (
-              <span className="text-[12px] text-muted">☕ {r.cafe}</span>
-            )}
-            {r.notes && (
-              <span className="text-[12px] leading-snug text-muted">
-                {r.notes}
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
+import { Legend } from './components/Legend.tsx';
+import { RouteDetail } from './components/RouteDetail.tsx';
 import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
@@ -72,12 +74,6 @@ export function App() {
 
   const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
-  // Legend heat stops (faint -> hot), matching the map ramp: light inverts to a
-  // deep red for the busiest, dark runs to bright amber. See lib/heat.ts.
-  const heatLegend =
-    theme === 'dark'
-      ? ['#7f1d1d', '#ef4444', '#f97316', '#ffb020']
-      : ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'];
 
   useEffect(() => {
     loadRoutes()
@@ -177,11 +173,20 @@ export function App() {
         ? `Within ${RADIUS_KM} km of ${place?.name ?? ''}`
         : `Shows routes passing within ${RADIUS_KM} km`;
 
-  const searchPoint: [number, number] | null = place
-    ? [place.lng, place.lat]
-    : null;
+  // Memoized so the reference only changes when the searched place does — NOT on
+  // every App re-render (e.g. a hover). RouteMap's fit-to-matches effect keys on
+  // this; an unstable array made it re-fit on any re-render, so zooming in after a
+  // search snapped the view back to the search extent (TB-52). Stable ref = fit
+  // once when the search resolves, then free zoom/pan.
+  const searchPoint = useMemo<[number, number] | null>(
+    () => (place ? [place.lng, place.lat] : null),
+    [place]
+  );
 
   const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
+  const selectedRoute = selectedId
+    ? (routes.find((r) => r.id === selectedId) ?? null)
+    : null;
 
   return (
     <div className="flex h-screen">
@@ -250,43 +255,19 @@ export function App() {
           })}
         </div>
 
-        <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
-            Legend
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="52" height="10" aria-hidden="true">
-              {heatLegend.map((c, i) => (
-                <line
-                  key={c}
-                  x1={i * 13}
-                  y1="5"
-                  x2={(i + 1) * 13}
-                  y2="5"
-                  stroke={c}
-                  strokeWidth={[1.3, 2.2, 3.2, 4.3][i]}
-                  strokeOpacity={[0.4, 0.6, 0.85, 1][i]}
-                />
-              ))}
-            </svg>
-            1 → many rides
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="20" height="6" aria-hidden="true">
-              <line
-                x1="0"
-                y1="3"
-                x2="20"
-                y2="3"
-                stroke="var(--sel)"
-                strokeWidth="3.6"
-              />
-            </svg>
-            selected
-          </span>
-        </div>
+        <Legend searching={searchPoint !== null} theme={theme} />
 
-        {hovered && (
+        {selectedRoute && (
+          <RouteDetail
+            route={selectedRoute}
+            nearKm={nearKm.get(selectedRoute.id)}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+
+        {/* Transient hover peek — suppressed while a route is selected so it
+            never collides with the pinned detail card (same top-right corner). */}
+        {hovered && !selectedRoute && (
           <div
             role="status"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
