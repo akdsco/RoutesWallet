@@ -1,15 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
+import { Legend } from './components/Legend.tsx';
+import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
+import {
+  DEFAULT_BASEMAP,
+  isBasemapId,
+  type BasemapId,
+} from './lib/basemaps.ts';
 import type { Route } from './types.ts';
 
 const RADIUS_KM = 25;
+const BASEMAP_STORAGE_KEY = 'rw:basemap';
+
+/** The saved basemap choice, or the default if none/invalid/unavailable. */
+function readSavedBasemap(): BasemapId {
+  try {
+    const v = window.localStorage.getItem(BASEMAP_STORAGE_KEY);
+    if (isBasemapId(v)) return v;
+  } catch {
+    // private mode / storage disabled — fall back to the default
+  }
+  return DEFAULT_BASEMAP;
+}
 
 type Place = { lng: number; lat: number; name: string };
 
@@ -31,6 +50,17 @@ export function App() {
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
   );
+  const [basemap, setBasemap] = useState<BasemapId>(readSavedBasemap);
+
+  // Persist the basemap choice so it survives a reload (theme already persists
+  // via next-themes). Best-effort — storage may be unavailable in private mode.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(BASEMAP_STORAGE_KEY, basemap);
+    } catch {
+      /* ignore */
+    }
+  }, [basemap]);
 
   const togglePoi = useCallback(
     (t: string) =>
@@ -45,12 +75,6 @@ export function App() {
 
   const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
-  // Legend heat stops (faint -> hot), matching the map ramp: light inverts to a
-  // deep red for the busiest, dark runs to bright amber. See lib/heat.ts.
-  const heatLegend =
-    theme === 'dark'
-      ? ['#7f1d1d', '#ef4444', '#f97316', '#ffb020']
-      : ['#f87171', '#dc2626', '#991b1b', '#7f1d1d'];
 
   useEffect(() => {
     loadRoutes()
@@ -63,14 +87,24 @@ export function App() {
   const onSelect = useCallback((id: string) => setSelectedId(id), []);
   const onDeselect = useCallback(() => setSelectedId(null), []);
 
-  // Esc exits the selected route from anywhere — except inside the search
-  // field, where the innermost layer wins: it clears the field first (§E).
+  const clearSearch = useCallback(() => {
+    setQuery('');
+    setPlace(null);
+    setMatches(null);
+    setNearKm(new Map());
+    setBanner('none');
+    setSelectedId(null);
+  }, []);
+
+  // Esc exits the selected route from anywhere — except inside the search field,
+  // where the innermost layer wins: it clears the search (query + results), so
+  // the user is never stranded in a filtered view with no visible reset (§E).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (document.activeElement?.id === 'q') {
-        if (query) {
-          setQuery('');
+        if (query || matches) {
+          clearSearch();
           e.preventDefault();
         }
         return;
@@ -82,36 +116,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedId, query]);
-
-  // Announce entering/leaving the selected route (§E copy). Reads matches/place
-  // at fire time — the selectedId change re-renders with current values.
-  const prevSelForAnnounce = useRef<string | null>(null);
-  useEffect(() => {
-    const prev = prevSelForAnnounce.current;
-    if (selectedId && selectedId !== prev) {
-      const r = routes.find((x) => x.id === selectedId);
-      if (r)
-        setAnnounce(`${r.name}. ${r.distance_km} km. Other routes dimmed.`);
-    } else if (!selectedId && prev) {
-      setAnnounce(
-        matches
-          ? `Back to ${matches.length} results within ${RADIUS_KM} km of ${place?.name ?? ''}.`
-          : 'Back to all routes.'
-      );
-    }
-    prevSelForAnnounce.current = selectedId;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
-
-  const clearSearch = useCallback(() => {
-    setQuery('');
-    setPlace(null);
-    setMatches(null);
-    setNearKm(new Map());
-    setBanner('none');
-    setSelectedId(null);
-  }, []);
+  }, [selectedId, query, matches, clearSearch]);
 
   const searchSeq = useRef(0);
   const runSearch = useCallback(
@@ -197,9 +202,15 @@ export function App() {
           ? 'Try a town, postcode or landmark'
           : `Shows routes passing within ${RADIUS_KM} km`;
 
-  const searchPoint: [number, number] | null = place
-    ? [place.lng, place.lat]
-    : null;
+  // Memoized so the reference only changes when the searched place does — NOT on
+  // every App re-render (e.g. a hover). RouteMap's fit-to-matches effect keys on
+  // this; an unstable array made it re-fit on any re-render, so zooming in after a
+  // search snapped the view back to the search extent (TB-52). Stable ref = fit
+  // once when the search resolves, then free zoom/pan.
+  const searchPoint = useMemo<[number, number] | null>(
+    () => (place ? [place.lng, place.lat] : null),
+    [place]
+  );
 
   // The top-right card is hover-preview only, and suppressed while a route is
   // selected (the sidebar detail panel is the detail surface then, and the map
@@ -215,6 +226,26 @@ export function App() {
       ? 'Back to results'
       : `Back to ${matches.length} results`
     : 'Back to all routes';
+
+  // Announce entering/leaving the selected route (§E copy). Reads matches/place
+  // at fire time — the selectedId change re-renders with current values.
+  const prevSelForAnnounce = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelForAnnounce.current;
+    if (selectedId && selectedId !== prev) {
+      const r = routes.find((x) => x.id === selectedId);
+      if (r)
+        setAnnounce(`${r.name}. ${r.distance_km} km. Other routes dimmed.`);
+    } else if (!selectedId && prev) {
+      setAnnounce(
+        matches
+          ? `Back to ${matches.length} results within ${RADIUS_KM} km of ${place?.name ?? ''}.`
+          : 'Back to all routes.'
+      );
+    }
+    prevSelForAnnounce.current = selectedId;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   return (
     <div className="flex h-screen">
@@ -247,11 +278,15 @@ export function App() {
           searchPoint={searchPoint}
           radiusKm={RADIUS_KM}
           theme={theme}
+          basemap={basemap}
           poiTypes={poiTypes}
           onHover={onHover}
           onSelect={onSelect}
           onDeselect={onDeselect}
         />
+
+        {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
+        <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
 
         <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
           {(
@@ -283,49 +318,18 @@ export function App() {
           })}
         </div>
 
-        <div className="pointer-events-none absolute left-5 top-5 z-[500] flex items-center gap-3.5 rounded-lg border border-line bg-surface px-3.5 py-2.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
-            Legend
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="52" height="10" aria-hidden="true">
-              {heatLegend.map((c, i) => (
-                <line
-                  key={c}
-                  x1={i * 13}
-                  y1="5"
-                  x2={(i + 1) * 13}
-                  y2="5"
-                  stroke={c}
-                  strokeWidth={[1.3, 2.2, 3.2, 4.3][i]}
-                  strokeOpacity={[0.4, 0.6, 0.85, 1][i]}
-                />
-              ))}
-            </svg>
-            {selectedId
-              ? matches
-                ? 'other matches'
-                : 'all rides'
-              : '1 → many rides'}
-          </span>
-          <span className="flex items-center gap-1.5 text-[12px] text-text-2">
-            <svg width="20" height="6" aria-hidden="true">
-              <line
-                x1="0"
-                y1="3"
-                x2="20"
-                y2="3"
-                stroke="var(--sel)"
-                strokeWidth="3.6"
-              />
-            </svg>
-            selected
-          </span>
-        </div>
+        <Legend
+          searching={searchPoint !== null}
+          locked={selectedId !== null}
+          theme={theme}
+        />
 
+        {/* Visual hover/focus preview only — aria-hidden so keyboard list nav
+            (which mirrors the highlight here via focus) isn't double-announced
+            on top of each card's own name. */}
         {hovered && (
           <div
-            role="status"
+            aria-hidden="true"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
           >
             <span className="text-[14px] font-medium text-text">

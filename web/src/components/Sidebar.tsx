@@ -7,12 +7,11 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import type { Route, RouteSource } from '../types.ts';
+import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
-import { openLabel } from '../lib/links.ts';
-import { safeHref } from '../lib/sanitize.ts';
-import { SOURCE_META } from '../lib/source.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
+import { RouteDetail } from './RouteDetail.tsx';
+import { SourceBadge } from './SourceBadge.tsx';
 
 export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
@@ -40,17 +39,6 @@ type Props = {
 };
 
 const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
-
-const badgeBase =
-  'inline-flex items-center gap-1.5 rounded-[3px] px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.05em]';
-
-function trustBadge(source: RouteSource) {
-  return source === 'club-verified'
-    ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
-    : source === 'club-member'
-      ? { cls: 'border border-trust text-trust', glyph: '' }
-      : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
-}
 
 export function Sidebar(props: Props) {
   const {
@@ -146,7 +134,8 @@ export function Sidebar(props: Props) {
     return (
       <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
         <RouteDetail
-          item={selectedItem}
+          route={selectedItem.route}
+          nearKm={selectedItem.nearKm}
           backLabel={backLabel}
           backRef={backRef}
           theme={theme}
@@ -318,127 +307,6 @@ export function Sidebar(props: Props) {
   );
 }
 
-function RouteDetail({
-  item,
-  backLabel,
-  backRef,
-  theme,
-  onBack,
-}: {
-  item: CardVM;
-  backLabel: string;
-  backRef: React.RefObject<HTMLButtonElement>;
-  theme: 'light' | 'dark';
-  onBack: () => void;
-}) {
-  const { route: r, nearKm } = item;
-  const badge = trustBadge(r.source);
-  const pts = routeThumbnail(r.geometry.coordinates, 150, 104, 10);
-  const [sx, sy] = (pts.split(' ')[0] ?? '0,0').split(',');
-
-  return (
-    <div
-      role="region"
-      aria-label="Route detail"
-      className="detail-enter flex min-h-0 flex-1 flex-col"
-    >
-      <div className="border-b border-line px-3 py-2.5">
-        <button
-          ref={backRef}
-          type="button"
-          onClick={onBack}
-          className="inline-flex min-h-[34px] items-center gap-2 rounded-lg bg-surface-2 px-3 text-[12.5px] font-medium text-text-2 hover:bg-line-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sel"
-        >
-          <span aria-hidden="true">←</span>
-          {backLabel}
-        </button>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[18px] pt-3.5">
-        <svg
-          width="150"
-          height="104"
-          viewBox="0 0 150 104"
-          aria-hidden="true"
-          className="self-center"
-        >
-          <polyline
-            points={pts}
-            fill="none"
-            stroke="var(--sel)"
-            strokeWidth="2.4"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <circle
-            cx={sx}
-            cy={sy}
-            r="5"
-            fill="var(--sel)"
-            stroke="var(--surface)"
-            strokeWidth="2"
-          />
-        </svg>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-text">
-            {r.name}
-          </h3>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono text-[14px] text-text">
-              {r.distance_km} km
-            </span>
-            <span className="h-[3px] w-[3px] rounded-full bg-muted" />
-            <span className="text-[12.5px] text-muted">
-              {r.region}
-              {nearKm != null && ` · ${nearKm.toFixed(1)} km away`}
-            </span>
-          </div>
-          <span className={`self-start ${badgeBase} ${badge.cls}`}>
-            {badge.glyph}
-            {SOURCE_META[r.source].label}
-          </span>
-        </div>
-
-        <a
-          href={safeHref(r.link)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-[9px] bg-sel text-[13.5px] font-semibold ${
-            theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
-          }`}
-        >
-          {openLabel(r.link)}
-          <span aria-hidden="true">↗</span>
-        </a>
-
-        <div className="flex flex-col gap-2.5 border-t border-line-2 pt-3">
-          {r.cafe || r.notes ? (
-            <>
-              {r.cafe && (
-                <div className="flex items-start gap-2.5">
-                  <span className="text-[13px] leading-tight">☕</span>
-                  <span className="text-[12.5px] leading-normal text-text-2">
-                    {r.cafe}
-                  </span>
-                </div>
-              )}
-              {r.notes && (
-                <p className="text-[12.5px] leading-relaxed text-text-2">
-                  {r.notes}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-[12.5px] leading-relaxed text-muted">
-              No notes for this route.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Notice({
   title,
   warn,
@@ -486,7 +354,6 @@ function RouteCard({
   onFocusCard: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
-  const badge = trustBadge(r.source);
   const select = () => onSelect(r.id);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -542,10 +409,7 @@ function RouteCard({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`${badgeBase} ${badge.cls}`}>
-            {badge.glyph}
-            {SOURCE_META[r.source].label}
-          </span>
+          <SourceBadge source={r.source} />
           <span className="text-[12px] text-muted">{r.region}</span>
           {nearKm != null && (
             <span className="text-[12px] text-muted">
