@@ -16,6 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Fast gate: static checks + the pure-logic unit tests, all in one job.
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10 # checks take ~1 min; fail fast if a runner ever hangs
@@ -33,10 +34,28 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
-      - run: npm test
+      - run: npm run test:unit
 
-  # Slower real-browser layer, split out so the fast `check` gate above isn't
-  # held up. Playwright builds + previews the app itself (see playwright.config).
+  # Integration layer (Testing Library + jsdom): App/Sidebar flows. Its own job
+  # so a flow regression is a distinct signal from a unit or a static failure.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run test:integration
+
+  # Slower real-browser layer, split out so the fast gates above aren't held up.
+  # Playwright builds + previews the app itself (see playwright.config).
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
