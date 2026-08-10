@@ -1,17 +1,15 @@
-// Bottom-sheet geometry + snap resolution (Claude Design spec §B). Pure maths so
+// Bottom-sheet geometry + snap resolution (Claude Design §B/§F). Pure maths so
 // it's unit-tested; the component owns pointer plumbing and the DOM transform.
+//
+// Four snaps, but which are reachable depends on mode (§F): idle/search rests at
+// peek; selecting a route floors the sheet at `detail` (peek unreachable) so you
+// never see a sliver of a route you can't name. See snapsFor().
 
-export type Snap = 'peek' | 'mid' | 'full';
+export type Snap = 'peek' | 'detail' | 'mid' | 'full';
 
-export const SNAP_ORDER: readonly Snap[] = ['peek', 'mid', 'full'];
-
-// Tunable, like the heat tiers — keep them here as named constants, not inline
-// literals, so they're retunable by eye without touching the component.
-// Peek shows the whole search header (handle + brand + search field + hint) so the
-// primary action — "find routes near a place" — is usable without expanding. Our
-// header carries a label line above the input, so this runs taller than the
-// spec's 132px sketch. Tuned by eye; see the mobile screenshots in the PR.
-export const PEEK_PX = 200;
+// Tunable, like the heat tiers — named constants, not inline literals.
+export const PEEK_PX = 132; // idle/search: results header + first card
+export const DETAIL_PX = 192; // selected entry: back row + name + distance + Open
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next
@@ -22,23 +20,36 @@ export const THROW_VELOCITY = 0.5;
 export function snapHeights(viewportPx: number): Record<Snap, number> {
   return {
     peek: PEEK_PX,
+    detail: DETAIL_PX,
     mid: Math.round(viewportPx * MID_FRACTION),
     full: Math.max(PEEK_PX, viewportPx - MAP_STRIP_PX),
   };
 }
 
 /**
- * Which snap a drag should settle to.
- * @param heightPx   current visible sheet height at release
- * @param velocity   px of visible-height change per ms; +expanding / −collapsing
- * @param heights    snap heights from {@link snapHeights}
+ * Reachable snaps, shortest→tallest, for the current mode. Selecting a route
+ * swaps peek for the taller detail floor (§F: peek is unreachable while selected).
+ */
+export function snapsFor(selected: boolean): Snap[] {
+  return selected ? ['detail', 'mid', 'full'] : ['peek', 'mid', 'full'];
+}
+
+/**
+ * Which reachable snap a drag should settle to.
+ * @param heightPx current visible sheet height at release
+ * @param velocity px of visible-height change per ms; +expanding / −collapsing
+ * @param heights  snap heights from {@link snapHeights}
+ * @param allowed  reachable snaps for the mode, from {@link snapsFor}
  */
 export function resolveSnap(
   heightPx: number,
   velocity: number,
-  heights: Record<Snap, number>
+  heights: Record<Snap, number>,
+  allowed: Snap[]
 ): Snap {
-  const ordered = SNAP_ORDER.map((s) => ({ snap: s, h: heights[s] }));
+  const ordered = allowed
+    .map((s) => ({ snap: s, h: heights[s] }))
+    .sort((a, b) => a.h - b.h);
 
   if (velocity > THROW_VELOCITY) {
     // Expanding fast: the next snap taller than where we let go (else the top).
@@ -51,14 +62,16 @@ export function resolveSnap(
     return (down ?? ordered[0]!).snap;
   }
 
-  // Otherwise settle to the nearest snap by height.
+  // Otherwise settle to the nearest reachable snap by height.
   return ordered.reduce((best, o) =>
     Math.abs(o.h - heightPx) < Math.abs(best.h - heightPx) ? o : best
   ).snap;
 }
 
-/** Tap-handle order: peek → mid → full → peek. */
-export function cycleSnap(current: Snap): Snap {
-  const i = SNAP_ORDER.indexOf(current);
-  return SNAP_ORDER[(i + 1) % SNAP_ORDER.length]!;
+/** Tap-handle order: next reachable snap, wrapping. A snap outside the current
+ *  set restarts at the first reachable one (e.g. peek→detail after selecting). */
+export function cycleSnap(current: Snap, allowed: Snap[]): Snap {
+  const i = allowed.indexOf(current);
+  if (i === -1) return allowed[0]!;
+  return allowed[(i + 1) % allowed.length]!;
 }

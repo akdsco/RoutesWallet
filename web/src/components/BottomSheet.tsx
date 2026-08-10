@@ -14,7 +14,10 @@ import {
 } from '../lib/sheet.ts';
 
 type Props = {
+  /** Current committed snap. */
   snap: Snap;
+  /** Reachable snaps for the mode (shortest→tallest), from snapsFor(). */
+  snaps: Snap[];
   onSnapChange: (s: Snap) => void;
   children: ReactNode;
 };
@@ -23,12 +26,13 @@ const EASE = 'transform 220ms cubic-bezier(.32,.72,0,1)';
 const TAP_SLOP = 6; // px of movement below which a release is a tap, not a drag
 
 /**
- * Google-Maps-style bottom sheet (Claude Design spec §B). Map-primary; the sheet
- * rests at peek / mid / full. Drag the handle to move it, or tap the handle to
- * cycle snaps — every stop is reachable without a gesture. Transform is driven
- * imperatively during a drag so the (long) route list never re-renders per frame.
+ * Google-Maps-style bottom sheet (Claude Design §B/§F). Map-primary; the sheet
+ * rests at one of the reachable snaps. Drag the handle to move it, or tap the
+ * handle to cycle snaps — every stop is reachable without a gesture. Transform is
+ * driven imperatively during a drag so the (long) route list never re-renders per
+ * frame. The reachable set depends on mode: selecting a route floors it at detail.
  */
-export function BottomSheet({ snap, onSnapChange, children }: Props) {
+export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [vh, setVh] = useState(() =>
     typeof window !== 'undefined' ? window.innerHeight : 800
@@ -52,11 +56,11 @@ export function BottomSheet({ snap, onSnapChange, children }: Props) {
 
   const heights = snapHeights(vh);
   const restY = (s: Snap) => vh - heights[s]; // translateY that leaves height[s] visible
-  const minY = restY('full'); // most open
-  const maxY = restY('peek'); // most closed
+  const shortest = snaps[0]!; // most closed reachable snap
+  const tallest = snaps[snaps.length - 1]!; // most open reachable snap
+  const minY = restY(tallest);
+  const maxY = restY(shortest);
 
-  // Rest the sheet at the committed snap whenever it (or the viewport) changes,
-  // unless a drag is currently in control of the transform.
   const drag = useRef({
     active: false,
     startPointer: 0,
@@ -68,13 +72,15 @@ export function BottomSheet({ snap, onSnapChange, children }: Props) {
   });
   const suppressClick = useRef(false);
 
+  // Rest the sheet at the committed snap whenever it (or the viewport / mode)
+  // changes, unless a drag is currently in control of the transform.
   useEffect(() => {
     const el = sheetRef.current;
     if (!el || drag.current.active) return;
     el.style.transition = ease;
     el.style.transform = `translateY(${restY(snap)}px)`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snap, vh]);
+  }, [snap, vh, snaps.join(',')]);
 
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;
@@ -114,7 +120,7 @@ export function BottomSheet({ snap, onSnapChange, children }: Props) {
       minY,
       Math.min(maxY, d.startY + (e.clientY - d.startPointer))
     );
-    const next = resolveSnap(vh - y, d.velocity, heights);
+    const next = resolveSnap(vh - y, d.velocity, heights, snaps);
     if (d.moved) {
       suppressClick.current = true; // a real drag — don't let the click cycle too
       const el = sheetRef.current;
@@ -131,17 +137,17 @@ export function BottomSheet({ snap, onSnapChange, children }: Props) {
       suppressClick.current = false;
       return;
     }
-    onSnapChange(cycleSnap(snap)); // tap (or keyboard) cycles peek -> mid -> full
+    onSnapChange(cycleSnap(snap, snaps)); // tap (or keyboard) cycles snaps
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === 'Escape' && snap === 'full') {
+    if (e.key === 'Escape' && snap === tallest && snaps.includes('mid')) {
       e.preventDefault();
       onSnapChange('mid');
     }
   };
 
-  const nextIsCollapse = cycleSnap(snap) === 'peek';
+  const nextIsCollapse = cycleSnap(snap, snaps) === shortest;
 
   return (
     <div
@@ -157,7 +163,7 @@ export function BottomSheet({ snap, onSnapChange, children }: Props) {
         aria-label={
           nextIsCollapse ? 'Collapse route list' : 'Expand route list'
         }
-        aria-expanded={snap !== 'peek'}
+        aria-expanded={snap !== shortest}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
