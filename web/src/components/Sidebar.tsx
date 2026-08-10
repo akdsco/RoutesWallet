@@ -1,15 +1,17 @@
 import {
   useEffect,
+  useMemo,
   useRef,
+  useState,
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
-import { openLabel } from '../lib/links.ts';
-import { safeHref } from '../lib/sanitize.ts';
-import { SOURCE_META } from '../lib/source.ts';
+import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
+import { RouteDetail } from './RouteDetail.tsx';
+import { SourceBadge } from './SourceBadge.tsx';
 
 export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
@@ -23,22 +25,20 @@ type Props = {
   placeLabel: string;
   groups: GroupVM[];
   selectedId: string | null;
+  /** Label for the detail panel's back row, e.g. "Back to 21 results". */
+  backLabel: string;
   theme: 'light' | 'dark';
   onQueryChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
+  onDeselect: () => void;
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
-  /** Rendered under the search field (mobile sheet uses it for the POI row). */
-  belowSearch?: ReactNode;
-  /** In the mobile sheet, selecting scrolls the card to the very top ('start')
-   *  so its expanded exit sits right under the handle; otherwise 'nearest'. */
-  pinSelectedTop?: boolean;
+  onSearchFocusChange: (focused: boolean) => void;
 };
 
-const badgeBase =
-  'inline-flex items-center gap-1.5 rounded-[3px] px-[7px] py-0.5 text-[10px] font-semibold uppercase tracking-[0.05em]';
+const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 export function Sidebar(props: Props) {
   const {
@@ -49,15 +49,16 @@ export function Sidebar(props: Props) {
     placeLabel,
     groups,
     selectedId,
+    backLabel,
     theme,
     onQueryChange,
     onSubmit,
     onClear,
     onSelect,
+    onDeselect,
     onHover,
     onToggleTheme,
-    belowSearch,
-    pinSelectedTop,
+    onSearchFocusChange,
   } = props;
 
   function submit(e: FormEvent) {
@@ -65,25 +66,87 @@ export function Sidebar(props: Props) {
     onSubmit(query);
   }
 
-  // Bring the selected route's card into view (e.g. after tapping its line on the
-  // map). In the mobile sheet we pin it to the top so its expanded "Open" exit is
-  // the first thing under the handle — no scroll, no hunt.
   const listRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const scrollTopRef = useRef(0);
+
+  const orderedIds = useMemo(
+    () => groups.flatMap((g) => g.items.map((i) => i.route.id)),
+    [groups]
+  );
+
+  // The selected route's detail replaces the list. Derive its data from the
+  // current groups (the selected route is always in the visible set).
+  const selectedItem = useMemo(
+    () =>
+      selectedId
+        ? (groups
+            .flatMap((g) => g.items)
+            .find((i) => i.route.id === selectedId) ?? null)
+        : null,
+    [groups, selectedId]
+  );
+
+  // Roving tabindex: Tab enters the list once, arrows move focus within it. The
+  // card holding focus (or the first, before any) is the single tab stop.
+  const [rovingId, setRovingId] = useState<string | null>(null);
+  const effectiveRoving =
+    rovingId && orderedIds.includes(rovingId)
+      ? rovingId
+      : (orderedIds[0] ?? null);
+
+  // Focus handoff across the list ↔ detail swap: entering focuses the back row,
+  // leaving restores the list scroll and returns focus to that route's card so
+  // arrow nav resumes where it left off.
+  const prevSelRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedId) return;
-    const card = listRef.current?.querySelector(
-      `[data-route-id="${CSS.escape(selectedId)}"]`
+    const prev = prevSelRef.current;
+    if (selectedId && !prev) {
+      backRef.current?.focus();
+    } else if (!selectedId && prev) {
+      if (listRef.current) listRef.current.scrollTop = scrollTopRef.current;
+      listRef.current
+        ?.querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+        ?.focus();
+    }
+    prevSelRef.current = selectedId;
+  }, [selectedId]);
+
+  function onListKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (!NAV_KEYS.has(e.key)) return; // Enter/Space activate on the card itself
+    e.preventDefault(); // don't let ↑/↓ also scroll the panel
+    const focused = (
+      document.activeElement as HTMLElement | null
+    )?.closest<HTMLElement>('[data-route-id]');
+    const currentId = focused?.dataset.routeId ?? effectiveRoving;
+    const target = nextRouteId(orderedIds, currentId, e.key as NavKey);
+    if (!target) return;
+    // Move focus only — selection (opening the detail) is Enter/Space/click.
+    // Focus fires onFocus → onHover, which mirrors the highlight on the map.
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-route-id="${target}"]`
     );
-    card?.scrollIntoView({
-      block: pinSelectedTop ? 'start' : 'nearest',
-      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-    });
-  }, [selectedId, pinSelectedTop]);
+    el?.focus();
+    el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  if (selectedItem) {
+    return (
+      <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
+        <RouteDetail
+          route={selectedItem.route}
+          nearKm={selectedItem.nearKm}
+          backLabel={backLabel}
+          backRef={backRef}
+          theme={theme}
+          onBack={onDeselect}
+        />
+      </aside>
+    );
+  }
 
   return (
-    <aside className="flex h-full w-full flex-none flex-col bg-surface md:w-[320px] md:border-r md:border-line lg:w-[392px]">
+    <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
       <div className="flex flex-col gap-4 border-b border-line px-6 pb-4 pt-[22px]">
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-2">
@@ -145,6 +208,8 @@ export function Sidebar(props: Props) {
               id="q"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={() => onSearchFocusChange(true)}
+              onBlur={() => onSearchFocusChange(false)}
               placeholder="e.g. Box Hill or EN11"
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
@@ -154,7 +219,7 @@ export function Sidebar(props: Props) {
                 type="button"
                 aria-label="Clear search"
                 onClick={onClear}
-                className="px-1 text-[15px] text-muted hover:text-text"
+                className="-mr-1 flex h-11 w-8 items-center justify-center text-[15px] text-muted hover:text-text"
               >
                 ×
               </button>
@@ -162,13 +227,16 @@ export function Sidebar(props: Props) {
           </div>
           <span className="min-h-4 text-[12px] text-muted">{hint}</span>
         </form>
-        {belowSearch}
       </div>
 
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto overscroll-contain"
-        role="list"
+        onKeyDown={onListKeyDown}
+        onScroll={(e) => {
+          scrollTopRef.current = e.currentTarget.scrollTop;
+        }}
+        className="flex-1 overflow-y-auto"
+        role="group"
         aria-label="Routes"
       >
         {banner === 'loading' && (
@@ -223,20 +291,17 @@ export function Sidebar(props: Props) {
                   key={r.id}
                   route={r}
                   nearKm={nearKm}
-                  selected={r.id === selectedId}
+                  tabIndex={r.id === effectiveRoving ? 0 : -1}
                   onSelect={onSelect}
+                  onFocusCard={(id) => {
+                    setRovingId(id);
+                    onHover(id);
+                  }}
                   onHover={onHover}
                 />
               ))}
             </div>
           ))}
-
-        {/* Map attribution lives in the sheet on mobile (the on-map control is
-            hidden behind it); required by OSM/CARTO terms, so it rides at the
-            bottom of the list. Desktop keeps Leaflet's own attribution control. */}
-        <p className="px-6 py-3 text-[11px] text-muted md:hidden">
-          © OpenStreetMap contributors © CARTO
-        </p>
       </div>
     </aside>
   );
@@ -277,22 +342,18 @@ function Notice({
 function RouteCard({
   route: r,
   nearKm,
-  selected,
+  tabIndex,
   onSelect,
+  onFocusCard,
   onHover,
 }: {
   route: Route;
   nearKm?: number;
-  selected: boolean;
+  tabIndex: number;
   onSelect: (id: string) => void;
+  onFocusCard: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
-  const badge =
-    r.source === 'club-verified'
-      ? { cls: 'border border-trust bg-trust-soft text-trust', glyph: '✓ ' }
-      : r.source === 'club-member'
-        ? { cls: 'border border-trust text-trust', glyph: '' }
-        : { cls: 'border border-dashed border-muted text-muted', glyph: '' };
   const select = () => onSelect(r.id);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -302,15 +363,16 @@ function RouteCard({
   };
   return (
     <div
-      role="listitem"
-      tabIndex={0}
+      role="button"
+      tabIndex={tabIndex}
       data-route-id={r.id}
-      data-sel={selected}
       onClick={select}
       onKeyDown={onKey}
+      onFocus={() => onFocusCard(r.id)}
+      onBlur={() => onHover(null)}
       onMouseEnter={() => onHover(r.id)}
       onMouseLeave={() => onHover(null)}
-      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel data-[sel=true]:bg-sel-soft data-[sel=true]:shadow-[inset_3px_0_0_var(--sel)]"
+      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
     >
       <svg
         width="52"
@@ -347,10 +409,7 @@ function RouteCard({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`${badgeBase} ${badge.cls}`}>
-            {badge.glyph}
-            {SOURCE_META[r.source].label}
-          </span>
+          <SourceBadge source={r.source} />
           <span className="text-[12px] text-muted">{r.region}</span>
           {nearKm != null && (
             <span className="text-[12px] text-muted">
@@ -358,26 +417,6 @@ function RouteCard({
             </span>
           )}
         </div>
-        {selected && (
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <a
-              href={safeHref(r.link)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-md bg-sel px-3 text-[12px] font-medium text-white md:min-h-0 md:w-auto md:justify-start md:py-[7px]"
-            >
-              {openLabel(r.link)} ↗
-            </a>
-            {r.cafe && (
-              <span className="text-[12px] text-muted">☕ {r.cafe}</span>
-            )}
-            {r.notes && (
-              <span className="text-[12px] leading-snug text-muted">
-                {r.notes}
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

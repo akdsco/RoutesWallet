@@ -13,6 +13,7 @@ import {
 } from '../lib/heat.ts';
 import { isDashed } from '../lib/source.ts';
 import { mapPalette } from '../lib/mapColors.ts';
+import { tileConfig, type BasemapId } from '../lib/basemaps.ts';
 import { decimate } from '../lib/decimate.ts';
 import { zoomAnchorOffset } from '../lib/zoomTransform.ts';
 import { escapeHtml } from '../lib/sanitize.ts';
@@ -27,10 +28,13 @@ type Props = {
   searchPoint: [number, number] | null;
   radiusKm: number;
   theme: 'light' | 'dark';
+  /** Which basemap (tile layer) to show. */
+  basemap: BasemapId;
   /** Which POI types (cafe/toilet/water/station) are toggled on. */
   poiTypes: ReadonlySet<string>;
   onHover: (id: string | null) => void;
   onSelect: (id: string) => void;
+  onDeselect: () => void;
 };
 
 const POI_ICON: Record<string, string> = {
@@ -39,18 +43,6 @@ const POI_ICON: Record<string, string> = {
   water: '💧',
   station: '🚉',
 };
-
-const TILES = {
-  // Voyager has landcover (parks/woods) baked in — the scalable way to show
-  // greenspace everywhere without a custom dataset. No dark variant yet; dark
-  // theme is dropped for the prototype (future: a basemap toggle incl. CyclOSM).
-  light:
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-} as const;
-
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 /** GeoJSON [lng, lat] pairs -> Leaflet [lat, lng]. */
 function toLatLngs(coords: number[][]): [number, number][] {
@@ -106,12 +98,18 @@ export function RouteMap({
   searchPoint,
   radiusKm,
   theme,
+  basemap,
   poiTypes,
   onHover,
   onSelect,
+  onDeselect,
 }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  // Kept in a ref so the map-click binding (set up once) always calls the
+  // latest handler without re-binding.
+  const onDeselectRef = useRef(onDeselect);
+  onDeselectRef.current = onDeselect;
   const tileRef = useRef<L.TileLayer | null>(null);
   const heatCanvasRef = useRef<L.Canvas | null>(null);
   const panesRef = useRef<Panes | null>(null);
@@ -146,6 +144,9 @@ export function RouteMap({
       zoomDelta: 1, // +/- buttons & keyboard still step by a whole level
       scrollWheelZoom: false,
     }).setView([51.5072, -0.1276], 6);
+    // Drop Leaflet's "🇺🇦 Leaflet" prefix; the OSM/CARTO/OGL credit (required)
+    // stays via each tile layer's attribution.
+    map.attributionControl.setPrefix(false);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // The tile layer is created + swapped by the theme effect below (it owns the
     // basemap so a theme flip can replace the layer cleanly).
@@ -170,6 +171,8 @@ export function RouteMap({
     heatCanvasRef.current = L.canvas({ pane: 'heat' });
     map.on('zoomend', () => setZoom(map.getZoom()));
     map.on('moveend', () => setViewTick((v) => v + 1));
+    // Click on empty map (not a route hit line) exits the selected route.
+    map.on('click', () => onDeselectRef.current());
 
     // Smooth, Figma-style wheel zoom. Leaflet's built-in wheel zoom fires
     // discrete animated steps ("bump bump bump"), and re-rendering every layer
@@ -253,24 +256,26 @@ export function RouteMap({
     mapRef.current = map;
   }, []);
 
-  // Own + swap the basemap when the theme flips. We REPLACE the whole tile layer
-  // rather than calling setUrl(): at a fractional zoom (zoomSnap:0) setUrl
-  // mis-positions the reloaded tiles so they render far from the real view
-  // ("UK over Africa"). A fresh layer recomputes tile positions from the current
-  // view; drop the old layer once the new one has painted to avoid a flash.
+  // Own + swap the basemap when the theme OR the chosen basemap changes. We
+  // REPLACE the whole tile layer rather than calling setUrl(): at a fractional
+  // zoom (zoomSnap:0) setUrl mis-positions the reloaded tiles so they render far
+  // from the real view ("UK over Africa"). A fresh layer recomputes tile
+  // positions from the current view; drop the old layer once the new one has
+  // painted to avoid a flash.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     const prev = tileRef.current;
-    const next = L.tileLayer(TILES[theme], {
-      attribution: ATTRIBUTION,
-      subdomains: 'abcd',
-      maxZoom: 20,
+    const cfg = tileConfig(basemap, theme);
+    const next = L.tileLayer(cfg.url, {
+      attribution: cfg.attribution,
+      subdomains: cfg.subdomains,
+      maxZoom: cfg.maxZoom,
       keepBuffer: 4, // hold more off-screen tiles so panning shows fewer gaps
     }).addTo(map);
     tileRef.current = next;
     if (prev) next.once('load', () => map.removeLayer(prev));
-  }, [theme]);
+  }, [theme, basemap]);
 
   // Load the designated-areas scenery once (AONBs + National Parks).
   useEffect(() => {
@@ -472,26 +477,44 @@ export function RouteMap({
     if (!map || !P) return;
 
     const c = mapPalette(theme); // theme-prop colours, no getComputedStyle race
-    const activeId = hoverId ?? selectedId;
+    // Selection locks the highlight: once a route is selected, hovering others
+    // (map or list) must not light them up. Only when nothing is selected does
+    // hover drive the active route.
+    const activeId = selectedId ?? hoverId;
+    // Locked = a route is selected. Everything else recedes so the selection
+    // reads as singular (design §E: emphasis by subtraction). The selected line
+    // itself gains no extra ink — it's already the heaviest thing on the map.
+    const locked = selectedId != null;
 
-    // Matched: ink line + basemap-coloured halo so it reads over heat.
+    // While locked, dim the whole heat layer in idle mode (matched mode already
+    // flattens it). Pane-level opacity fades cleanly without a canvas redraw.
+    const heatPane = map.getPane('heat');
+    if (heatPane) {
+      heatPane.style.transition = 'opacity 160ms';
+      heatPane.style.opacity = locked && !matchedIds ? '0.3' : '1';
+    }
+
+    // Matched: ink line + basemap-coloured halo so it reads over heat. When
+    // locked, they recede to a thin faint line (1.6px @40%, no halo).
     P.matched.clearLayers();
     if (matchedIds) {
       for (const r of routes) {
         if (!matchedIds.has(r.id) || r.id === activeId) continue;
         const ll = toLatLngs(r.geometry.coordinates);
-        L.polyline(ll, {
-          pane: 'matched',
-          color: c.halo,
-          weight: 6,
-          opacity: 0.8,
-          interactive: false,
-        }).addTo(P.matched);
+        if (!locked) {
+          L.polyline(ll, {
+            pane: 'matched',
+            color: c.halo,
+            weight: 6,
+            opacity: 0.8,
+            interactive: false,
+          }).addTo(P.matched);
+        }
         L.polyline(ll, {
           pane: 'matched',
           color: c.match,
-          weight: 2.4,
-          opacity: 1,
+          weight: locked ? 1.6 : 2.4,
+          opacity: locked ? 0.4 : 1,
           dashArray: isDashed(r.source) ? '7 5' : undefined,
           interactive: false,
         }).addTo(P.matched);
@@ -542,7 +565,7 @@ export function RouteMap({
         color: c.marker,
         weight: 1.4,
         dashArray: '6 7',
-        opacity: 0.75,
+        opacity: locked ? 0.45 : 0.75,
         fillColor: c.marker,
         fillOpacity: 0.05,
         interactive: false,
@@ -577,7 +600,13 @@ export function RouteMap({
       });
       hit.on('mouseover', () => onHover(r.id));
       hit.on('mouseout', () => onHover(null));
-      hit.on('click', () => onSelect(r.id));
+      hit.on('click', (e) => {
+        // Don't let the click also reach the map (which would deselect).
+        L.DomEvent.stopPropagation(e);
+        // Clicking the selected line again exits; clicking another switches.
+        if (r.id === selectedId) onDeselect();
+        else onSelect(r.id);
+      });
       hit.addTo(P.hit);
     }
   }, [
@@ -590,6 +619,7 @@ export function RouteMap({
     theme,
     onHover,
     onSelect,
+    onDeselect,
   ]);
 
   // Fit to everything once, when routes first load.
@@ -601,32 +631,46 @@ export function RouteMap({
     didInitialFit.current = true;
   }, [routes]);
 
+  // Fit to the current context: the matched set (+ search marker) when a search
+  // is active, else every route. Shared by the search effect and the deselect
+  // zoom-out so the two can't drift apart.
+  const fitToContext = (map: L.Map) => {
+    const pts: [number, number][] = [];
+    if (searchPoint && matchedIds) {
+      for (const r of routes)
+        if (matchedIds.has(r.id))
+          pts.push(...toLatLngs(r.geometry.coordinates));
+      pts.push([searchPoint[1], searchPoint[0]]);
+    } else {
+      for (const r of routes) pts.push(...toLatLngs(r.geometry.coordinates));
+    }
+    if (pts.length)
+      map.fitBounds(L.latLngBounds(pts).pad(searchPoint ? 0.25 : 0.2));
+  };
+
   // Fit to the matches (+ marker) when a search runs; back to all when cleared.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    if (searchPoint && matchedIds) {
-      const pts: [number, number][] = [];
-      for (const r of routes) {
-        if (matchedIds.has(r.id))
-          pts.push(...toLatLngs(r.geometry.coordinates));
-      }
-      pts.push([searchPoint[1], searchPoint[0]]);
-      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.25));
-    } else if (!searchPoint && routes.length) {
-      const pts = routes.flatMap((r) => toLatLngs(r.geometry.coordinates));
-      if (pts.length) map.fitBounds(L.latLngBounds(pts).pad(0.2));
-    }
+    if (map) fitToContext(map);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchPoint]);
 
-  // Fit to a route when it's explicitly selected (not on hover).
+  // Fit to a route when it's explicitly selected (not on hover); on deselect,
+  // zoom back out to the current context.
+  const prevSelectedId = useRef<string | null>(null);
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedId) return;
-    const r = routes.find((x) => x.id === selectedId);
-    if (r)
-      map.fitBounds(L.latLngBounds(toLatLngs(r.geometry.coordinates)).pad(0.3));
+    if (!map) return;
+    if (selectedId) {
+      const r = routes.find((x) => x.id === selectedId);
+      if (r)
+        map.fitBounds(
+          L.latLngBounds(toLatLngs(r.geometry.coordinates)).pad(0.3)
+        );
+    } else if (prevSelectedId.current) {
+      fitToContext(map);
+    }
+    prevSelectedId.current = selectedId;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 

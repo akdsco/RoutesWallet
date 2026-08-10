@@ -1,0 +1,13 @@
+{
+  // Typecheck the E2E harness too. The base tsconfig only includes `src` +
+  // `vite.config.ts`, so without this the Playwright files ship un-typechecked
+  // (esbuild runs them at test time with no type checking). Same strict options
+  // as the app; just a different file set.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Playwright, not Vitest: drop the unit suite's `vitest/globals` (its global
+    // `test`/`expect` collide with @playwright/test's imported ones).
+    "types": ["node"]
+  },
+  "include": ["e2e", "playwright.config.ts"]
+}
