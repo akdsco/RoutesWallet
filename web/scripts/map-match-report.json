@@ -1,0 +1,850 @@
+[
+  {
+    "id": "3079343783499010458",
+    "name": "Girona - just Girona",
+    "status": "matched",
+    "detail": "3/3 cores, ≤48m off",
+    "ptsBefore": 874,
+    "ptsAfter": 1758
+  },
+  {
+    "id": "3201967356322605690",
+    "name": "45km Epping road and gravel (road tyre friendly)",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3184659551268110850",
+    "name": "HVCC Strade Bambini ’23",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3216146985168511308",
+    "name": "Hub Velo CC Intro ride",
+    "status": "matched",
+    "detail": "4/4 cores, ≤48m off",
+    "ptsBefore": 1053,
+    "ptsAfter": 2364
+  },
+  {
+    "id": "3204515753949897566",
+    "name": "Calpe: warm up ride to Calpe",
+    "status": "matched",
+    "detail": "5/5 cores, ≤47m off",
+    "ptsBefore": 1494,
+    "ptsAfter": 2491
+  },
+  {
+    "id": "3201973658083085946",
+    "name": "Epping climbs and lanes",
+    "status": "matched",
+    "detail": "4/4 cores, ≤58m off",
+    "ptsBefore": 1165,
+    "ptsAfter": 2524
+  },
+  {
+    "id": "3201965982621599986",
+    "name": "Epping climbs and lanes 55km",
+    "status": "matched",
+    "detail": "4/4 cores, ≤57m off",
+    "ptsBefore": 1069,
+    "ptsAfter": 2571
+  },
+  {
+    "id": "3183465726032069206",
+    "name": "Hub Velo BBQ ride back",
+    "status": "fallback",
+    "reason": "strays 123m from drawn line"
+  },
+  {
+    "id": "3204552069455963892",
+    "name": "Essex 62km lanes (\"Essex Best Lanes\")",
+    "status": "matched",
+    "detail": "5/5 cores, ≤50m off",
+    "ptsBefore": 1212,
+    "ptsAfter": 2559
+  },
+  {
+    "id": "3184658088769683970",
+    "name": "HVCC Xmas Off road ’22",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3190987802749537692",
+    "name": "Short Essex loop 65km",
+    "status": "matched",
+    "detail": "5/5 cores, ≤47m off",
+    "ptsBefore": 1304,
+    "ptsAfter": 2669
+  },
+  {
+    "id": "3079342060196589978",
+    "name": "Girona - Els Angels - 70km",
+    "status": "matched",
+    "detail": "7/7 cores, ≤47m off",
+    "ptsBefore": 1834,
+    "ptsAfter": 3400
+  },
+  {
+    "id": "3201972150403640562",
+    "name": "Ethos Bros 70km",
+    "status": "matched",
+    "detail": "5/5 cores, ≤47m off",
+    "ptsBefore": 1383,
+    "ptsAfter": 2751
+  },
+  {
+    "id": "3201963604432709874",
+    "name": "Epping climbs and lanes 70km",
+    "status": "fallback",
+    "reason": "strays 506m from drawn line"
+  },
+  {
+    "id": "3201957407326261964",
+    "name": "Strade Bambini - 70km",
+    "status": "excluded",
+    "reason": "named-offroad"
+  },
+  {
+    "id": "3204528875241500404",
+    "name": "Ice route 70km",
+    "status": "fallback",
+    "reason": "strays 67m from drawn line"
+  },
+  {
+    "id": "3204545204394940148",
+    "name": "60k Ethos Bros ride",
+    "status": "matched",
+    "detail": "5/5 cores, ≤50m off",
+    "ptsBefore": 1438,
+    "ptsAfter": 2896
+  },
+  {
+    "id": "3209588169966859800",
+    "name": "Calpe: Bernia",
+    "status": "fallback",
+    "reason": "strays 62m from drawn line"
+  },
+  {
+    "id": "3197144979781559406",
+    "name": "HVCC Strade ’24 GRAVEL Corta",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3183462435979848414",
+    "name": "Hub Velo BBQ ride out",
+    "status": "matched",
+    "detail": "6/6 cores, ≤48m off",
+    "ptsBefore": 1591,
+    "ptsAfter": 2755
+  },
+  {
+    "id": "3202367592094417138",
+    "name": "Moreton 80km",
+    "status": "matched",
+    "detail": "6/6 cores, ≤48m off",
+    "ptsBefore": 1653,
+    "ptsAfter": 3060
+  },
+  {
+    "id": "3201972934999082226",
+    "name": "Tawney Lane and Navestock",
+    "status": "matched",
+    "detail": "6/6 cores, ≤47m off",
+    "ptsBefore": 1657,
+    "ptsAfter": 3289
+  },
+  {
+    "id": "3204548205011555650",
+    "name": "Essex 80k",
+    "status": "fallback",
+    "reason": "strays 67m from drawn line"
+  },
+  {
+    "id": "3204556804655646452",
+    "name": "Essex 80km lanes",
+    "status": "matched",
+    "detail": "6/6 cores, ≤48m off",
+    "ptsBefore": 1636,
+    "ptsAfter": 3140
+  },
+  {
+    "id": "3201962371990249082",
+    "name": "Blackmore 80km (with gravel section)",
+    "status": "excluded",
+    "reason": "named-offroad"
+  },
+  {
+    "id": "3204517420223941890",
+    "name": "Ice Route 80km",
+    "status": "matched",
+    "detail": "6/6 cores, ≤48m off",
+    "ptsBefore": 1620,
+    "ptsAfter": 3129
+  },
+  {
+    "id": "3201968352973324530",
+    "name": "Blackmore 85km",
+    "status": "matched",
+    "detail": "6/6 cores, ≤48m off",
+    "ptsBefore": 1719,
+    "ptsAfter": 3411
+  },
+  {
+    "id": "3209584649168997346",
+    "name": "Calpe: Coll de Rates (shorter)",
+    "status": "fallback",
+    "reason": "strays 95m from drawn line"
+  },
+  {
+    "id": "3184662757535348226",
+    "name": "HVCC RotFL ’22",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3209590609844720610",
+    "name": "Calpe: Vall d'Ebo (shorter)",
+    "status": "fallback",
+    "reason": "strays 95m from drawn line"
+  },
+  {
+    "id": "3202754050120527416",
+    "name": "Fyfield and Norton Heath",
+    "status": "matched",
+    "detail": "7/7 cores, ≤57m off",
+    "ptsBefore": 2030,
+    "ptsAfter": 3613
+  },
+  {
+    "id": "3201920331414205050",
+    "name": "Matching Green 90km",
+    "status": "matched",
+    "detail": "7/7 cores, ≤49m off",
+    "ptsBefore": 1865,
+    "ptsAfter": 3720
+  },
+  {
+    "id": "3197143653716776046",
+    "name": "HVCC Strade ’24 GRAVEL Lunga",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3204539529753347394",
+    "name": "95km to Southend on Sea (train back from Westcliff)",
+    "status": "matched",
+    "detail": "6/6 cores, ≤49m off",
+    "ptsBefore": 1792,
+    "ptsAfter": 3262
+  },
+  {
+    "id": "3204519631427918580",
+    "name": "The perfect Essex 100km",
+    "status": "matched",
+    "detail": "7/7 cores, ≤49m off",
+    "ptsBefore": 2015,
+    "ptsAfter": 3687
+  },
+  {
+    "id": "3201958260394047730",
+    "name": "Herts and Essex loop - via Mayfield Bakery",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2129,
+    "ptsAfter": 4165
+  },
+  {
+    "id": "3202528426772628816",
+    "name": "Hatfield Heath and Cammas Hall",
+    "status": "matched",
+    "detail": "7/7 cores, ≤49m off",
+    "ptsBefore": 1969,
+    "ptsAfter": 3771
+  },
+  {
+    "id": "3184906898810317398",
+    "name": "HVCC Strade ’22",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3079342604144001064",
+    "name": "Girona - Reservoir route 100km",
+    "status": "matched",
+    "detail": "9/9 cores, ≤51m off",
+    "ptsBefore": 2524,
+    "ptsAfter": 4358
+  },
+  {
+    "id": "3184631982146745162",
+    "name": "HVCC Strade ’20",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3204538028651446594",
+    "name": "Hertfordshire 100km (in and out via Barnet)",
+    "status": "fallback",
+    "reason": "strays 74m from drawn line"
+  },
+  {
+    "id": "3204523993828168542",
+    "name": "Herts and Essex classic",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2139,
+    "ptsAfter": 4074
+  },
+  {
+    "id": "3184652977006709250",
+    "name": "HVCC Strade ’21",
+    "status": "excluded",
+    "reason": "gravel"
+  },
+  {
+    "id": "3204572159218875124",
+    "name": "High Easter 105km (fast, smooth roads)",
+    "status": "matched",
+    "detail": "8/8 cores, ≤49m off",
+    "ptsBefore": 2157,
+    "ptsAfter": 4017
+  },
+  {
+    "id": "3204574509833881922",
+    "name": "Hertfordshire 105km (Country Bumpkin cafe)",
+    "status": "fallback",
+    "reason": "strays 287m from drawn line"
+  },
+  {
+    "id": "3204526553597880052",
+    "name": "Shorter Kent (105km)",
+    "status": "fallback",
+    "reason": "strays 103m from drawn line"
+  },
+  {
+    "id": "3201977709586957554",
+    "name": "Better route to Brighton",
+    "status": "fallback",
+    "reason": "strays 74m from drawn line"
+  },
+  {
+    "id": "3201975070557470412",
+    "name": "Viper Loop",
+    "status": "fallback",
+    "reason": "strays 92m from drawn line"
+  },
+  {
+    "id": "3204557716680616692",
+    "name": "Pretty Hertfordshire 105km (Welwyn and Ware)",
+    "status": "fallback",
+    "reason": "strays 114m from drawn line"
+  },
+  {
+    "id": "3201956630776509132",
+    "name": "Ware and Hertfordshire",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2199,
+    "ptsAfter": 4365
+  },
+  {
+    "id": "3204540864880481012",
+    "name": "105km Writtle Run",
+    "status": "matched",
+    "detail": "7/7 cores, ≤48m off",
+    "ptsBefore": 2082,
+    "ptsAfter": 3756
+  },
+  {
+    "id": "3204527976497380610",
+    "name": "Herts and Essex reversed",
+    "status": "matched",
+    "detail": "8/8 cores, ≤57m off",
+    "ptsBefore": 2275,
+    "ptsAfter": 4289
+  },
+  {
+    "id": "3204546779281047874",
+    "name": "110km Rodings (Ethos Bros cafe stop)",
+    "status": "matched",
+    "detail": "8/8 cores, ≤57m off",
+    "ptsBefore": 2309,
+    "ptsAfter": 4182
+  },
+  {
+    "id": "3202756021100382184",
+    "name": "High Easter and Great Dunmow",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2251,
+    "ptsAfter": 4138
+  },
+  {
+    "id": "3202758196059143736",
+    "name": "To Hertford (Herts out, Essex back)",
+    "status": "fallback",
+    "reason": "strays 90m from drawn line"
+  },
+  {
+    "id": "3204559190437721410",
+    "name": "Spokes Cycles (Out Essex, back Herts)",
+    "status": "fallback",
+    "reason": "strays 287m from drawn line"
+  },
+  {
+    "id": "3204558547477861698",
+    "name": "Fast Essex",
+    "status": "fallback",
+    "reason": "strays 95m from drawn line"
+  },
+  {
+    "id": "3204535445943175924",
+    "name": "High Easter and the Rodings (110km)",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2318,
+    "ptsAfter": 4158
+  },
+  {
+    "id": "3204549983316133726",
+    "name": "Surrey Hills - 110km",
+    "status": "fallback",
+    "reason": "strays 123m from drawn line"
+  },
+  {
+    "id": "3204536300630232926",
+    "name": "London to Cambridge via Saffron Walden",
+    "status": "fallback",
+    "reason": "strays 128m from drawn line"
+  },
+  {
+    "id": "3201965196886808268",
+    "name": "Writtle 115km",
+    "status": "matched",
+    "detail": "8/8 cores, ≤48m off",
+    "ptsBefore": 2285,
+    "ptsAfter": 4571
+  },
+  {
+    "id": "3204554860445090548",
+    "name": "Classic Kent climbs",
+    "status": "fallback",
+    "reason": "strays 74m from drawn line"
+  },
+  {
+    "id": "3204518948476266754",
+    "name": "Puckeridge and Standon",
+    "status": "matched",
+    "detail": "9/9 cores, ≤51m off",
+    "ptsBefore": 2533,
+    "ptsAfter": 4379
+  },
+  {
+    "id": "3209586606086860770",
+    "name": "Calpe: Coll de Rates (longer)",
+    "status": "fallback",
+    "reason": "strays 74m from drawn line"
+  },
+  {
+    "id": "3183461969320485598",
+    "name": "Hanningfield 120km (summer route)",
+    "status": "fallback",
+    "reason": "strays 68m from drawn line"
+  },
+  {
+    "id": "3202892147588373996",
+    "name": "Kent Hills 125km",
+    "status": "fallback",
+    "reason": "strays 111m from drawn line"
+  },
+  {
+    "id": "3204563741571977538",
+    "name": "Cold Christmas 125km",
+    "status": "matched",
+    "detail": "9/9 cores, ≤48m off",
+    "ptsBefore": 2542,
+    "ptsAfter": 4721
+  },
+  {
+    "id": "3204569991383160670",
+    "name": "Kent lanes and hills 125 km (Tulip Tree cafe)",
+    "status": "fallback",
+    "reason": "strays 134m from drawn line"
+  },
+  {
+    "id": "3209590228579325464",
+    "name": "Calpe: Vall d'Ebo (longer)",
+    "status": "matched",
+    "detail": "11/11 cores, ≤51m off",
+    "ptsBefore": 3182,
+    "ptsAfter": 6843
+  },
+  {
+    "id": "3079342336351775784",
+    "name": "Girona - Reservoir route 130km",
+    "status": "matched",
+    "detail": "12/12 cores, ≤51m off",
+    "ptsBefore": 3413,
+    "ptsAfter": 6049
+  },
+  {
+    "id": "3079667353139599052",
+    "name": "Kent Kruiser 130km (Tulip Tree cafe)",
+    "status": "fallback",
+    "reason": "strays 84m from drawn line"
+  },
+  {
+    "id": "3010657297375309316",
+    "name": "Ride of the Falling Leaves - 130km Road",
+    "status": "matched",
+    "detail": "9/9 cores, ≤49m off",
+    "ptsBefore": 2633,
+    "ptsAfter": 4754
+  },
+  {
+    "id": "3204520983078610676",
+    "name": "Whitstable and Canterbury",
+    "status": "fallback",
+    "reason": "strays 111m from drawn line"
+  },
+  {
+    "id": "3204532522020851550",
+    "name": "Alternative Kent climbs",
+    "status": "matched",
+    "detail": "10/10 cores, ≤49m off",
+    "ptsBefore": 2834,
+    "ptsAfter": 5991
+  },
+  {
+    "id": "3201979088858775244",
+    "name": "Danbury and the Hanningfields (summer only)",
+    "status": "matched",
+    "detail": "9/9 cores, ≤50m off",
+    "ptsBefore": 2681,
+    "ptsAfter": 4927
+  },
+  {
+    "id": "3211292591104556578",
+    "name": "Kent Hills 135km",
+    "status": "matched",
+    "detail": "10/10 cores, ≤49m off",
+    "ptsBefore": 2842,
+    "ptsAfter": 5995
+  },
+  {
+    "id": "3204551589109824244",
+    "name": "Surrey Hills - 140km",
+    "status": "fallback",
+    "reason": "strays 81m from drawn line"
+  },
+  {
+    "id": "3079342816085636506",
+    "name": "Girona - Queen Stage 144km",
+    "status": "fallback",
+    "reason": "strays 88m from drawn line"
+  },
+  {
+    "id": "3204521515842061150",
+    "name": "Madlon but shorter and hillier",
+    "status": "matched",
+    "detail": "10/10 cores, ≤49m off",
+    "ptsBefore": 2828,
+    "ptsAfter": 5133
+  },
+  {
+    "id": "3081620076152192080",
+    "name": "Girona - coastal route 145km",
+    "status": "matched",
+    "detail": "13/13 cores, ≤48m off",
+    "ptsBefore": 3707,
+    "ptsAfter": 7054
+  },
+  {
+    "id": "3263971201383731902",
+    "name": "Saffron Waldon 145km",
+    "status": "matched",
+    "detail": "10/10 cores, ≤52m off",
+    "ptsBefore": 2983,
+    "ptsAfter": 5355
+  },
+  {
+    "id": "3204523061155578612",
+    "name": "Blue Egg shorter (145km)",
+    "status": "matched",
+    "detail": "11/11 cores, ≤48m off",
+    "ptsBefore": 3043,
+    "ptsAfter": 5353
+  },
+  {
+    "id": "3204561811014468340",
+    "name": "Maldon and back (standard version)",
+    "status": "matched",
+    "detail": "11/11 cores, ≤48m off",
+    "ptsBefore": 3118,
+    "ptsAfter": 5776
+  },
+  {
+    "id": "3204534862087715678",
+    "name": "Nicest Blue Egg route",
+    "status": "fallback",
+    "reason": "strays 69m from drawn line"
+  },
+  {
+    "id": "3204533829916456692",
+    "name": "Herts and Essex big loop",
+    "status": "matched",
+    "detail": "10/10 cores, ≤56m off",
+    "ptsBefore": 2756,
+    "ptsAfter": 6476
+  },
+  {
+    "id": "3201959755424225996",
+    "name": "Blue Egg clockwise",
+    "status": "matched",
+    "detail": "11/11 cores, ≤51m off",
+    "ptsBefore": 3035,
+    "ptsAfter": 5514
+  },
+  {
+    "id": "3222677812687541118",
+    "name": "Maldon but Longer (155km)",
+    "status": "matched",
+    "detail": "11/11 cores, ≤48m off",
+    "ptsBefore": 3191,
+    "ptsAfter": 5627
+  },
+  {
+    "id": "3204561066807479618",
+    "name": "Ronde Chelmsford",
+    "status": "fallback",
+    "reason": "strays 68m from drawn line"
+  },
+  {
+    "id": "3209589147203246000",
+    "name": "Calpe: Port de Tudons",
+    "status": "fallback",
+    "reason": "strays 215m from drawn line"
+  },
+  {
+    "id": "3263976557363723518",
+    "name": "Broadstairs 175km",
+    "status": "fallback",
+    "reason": "strays 87m from drawn line"
+  },
+  {
+    "id": "3204530392385988446",
+    "name": "Dungeness and Ashford",
+    "status": "fallback",
+    "reason": "strays 74m from drawn line"
+  },
+  {
+    "id": "3204563503815099124",
+    "name": "Cambridge and back",
+    "status": "fallback",
+    "reason": "strays 79m from drawn line"
+  },
+  {
+    "id": "3204465578248334332",
+    "name": "Suffolk on Solstice 210km",
+    "status": "matched",
+    "detail": "15/15 cores, ≤52m off",
+    "ptsBefore": 4212,
+    "ptsAfter": 7076
+  },
+  {
+    "id": "25638449",
+    "name": "Ben's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "26996183",
+    "name": "Ben's route 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3350198298978213200",
+    "name": "Liam's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3350198114604924192",
+    "name": "Liam's route 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3350198024428549456",
+    "name": "Liam's route 3",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3294368693114638772",
+    "name": "Olympic Park loop",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3271140384563011136",
+    "name": "Werdah's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3363511855755724288",
+    "name": "Cambridge and back",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3173328768066496006",
+    "name": "Mikhail's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3316495209240021996",
+    "name": "A nice one",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3242511642648143130",
+    "name": "Stephen's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3242510331007417594",
+    "name": "Stephen's route 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3381382287677301048",
+    "name": "Alex's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "2966327850229451176",
+    "name": "Alex's route 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3385599455671336484",
+    "name": "Dave's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3330161168374230750",
+    "name": "Pete's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3209589800981216792",
+    "name": "Calpe club route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3451329242498909498",
+    "name": "Best Epping lanes (60km)",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "2843241467817430312",
+    "name": "To Littlehampton",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3352294908981362862",
+    "name": "Tia's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3409439368048807298",
+    "name": "Shaz's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "2834464110993444400",
+    "name": "Ben's route 3",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3491478660522434798",
+    "name": "Westwell Vineyard Ride",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3186997693880742610",
+    "name": "Windsor & Streatley Hill",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3254193844739337198",
+    "name": "Liam's route 4",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3497701952685183844",
+    "name": "Werdah's route 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3095999570917069866",
+    "name": "Dartmoor 2",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3091289881967869970",
+    "name": "West Country ultra",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "3518252709018486354",
+    "name": "William's route",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "rwgps-50433954",
+    "name": "Girona (Tia’s favourite)",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "rwgps-39193814",
+    "name": "Wadhurst–Uckfield audax",
+    "status": "excluded",
+    "reason": "untyped"
+  },
+  {
+    "id": "garmin-451746090",
+    "name": "Girona (Tia’s Garmin fave)",
+    "status": "excluded",
+    "reason": "untyped"
+  }
+]
