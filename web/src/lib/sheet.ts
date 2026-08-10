@@ -9,7 +9,11 @@ export type Snap = 'peek' | 'detail' | 'mid' | 'full';
 
 // Tunable, like the heat tiers — named constants, not inline literals.
 export const PEEK_PX = 132; // idle/search: results header + first card
-export const DETAIL_PX = 192; // selected entry: back row + name + distance + Open
+// Selected entry snap. §F sketched 192, but that predated our RouteDetail, which
+// carries the 44px sheet handle + a back row + name + meta + an always-present
+// trust badge (§7) + a 48px Open. §F requires Open visible without scrolling at
+// the entry snap, so the floor is sized to our real content (measured by eye).
+export const DETAIL_PX = 260;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next

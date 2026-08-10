@@ -203,6 +203,14 @@ export function RouteList({
             ))}
           </div>
         ))}
+
+      {/* Attribution rides the list end on mobile (§F): the on-map Leaflet
+          control is hidden behind the sheet there. Desktop keeps that control. */}
+      {banner === 'none' && (
+        <p className="px-6 py-3 text-[11px] text-muted md:hidden">
+          © OpenStreetMap contributors © CARTO
+        </p>
+      )}
     </div>
   );
 }

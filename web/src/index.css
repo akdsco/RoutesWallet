@@ -164,6 +164,17 @@ body {
   }
 }
 
+/* Mobile (<768px): the bottom sheet owns the lower screen, so the zoom control
+   and its dev z-badge would sit behind it. Pinch-zoom is native; keyboard +/−
+   still works on the focused map. Leaflet's attribution moves into the sheet
+   (RouteList list-end), so hide the on-map control there. */
+@media (max-width: 767px) {
+  .leaflet-control-zoom,
+  .leaflet-control-attribution {
+    display: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
 }
