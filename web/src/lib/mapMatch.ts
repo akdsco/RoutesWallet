@@ -166,6 +166,146 @@ export function stitchChunks(
   return out;
 }
 
+export type MarginChunk = {
+  /** Points sent to the matcher: the core PLUS a context margin each side. */
+  input: [number, number][];
+  /** Index (within `input`) of the first core point to keep after trimming. */
+  coreStart: number;
+  /** Index (within `input`) of the last core point to keep after trimming. */
+  coreEnd: number;
+};
+
+/**
+ * Split a trace into non-overlapping CORE windows of `core` points, each carrying
+ * a context `margin` of extra points on both sides for the matcher. The cores
+ * tile the whole trace exactly; the margins overlap. Matching each padded chunk
+ * but keeping only its core means every core point has surrounding context, which
+ * stops the matcher inventing detours near a chunk's edge. Trim back with
+ * `coreFromMatch`.
+ */
+export function chunkWithMargins(
+  coords: [number, number][],
+  core: number,
+  margin: number
+): MarginChunk[] {
+  if (core < 2) throw new Error('chunkWithMargins: core must be >= 2');
+  const n = coords.length;
+  if (n <= core)
+    return [{ input: coords.slice(), coreStart: 0, coreEnd: n - 1 }];
+  const out: MarginChunk[] = [];
+  for (let cs = 0; cs < n; cs += core) {
+    const ce = Math.min(cs + core, n) - 1; // core input range [cs..ce]
+    const is = Math.max(0, cs - margin); // padded start
+    const ie = Math.min(n - 1, ce + margin); // padded end
+    out.push({
+      input: coords.slice(is, ie + 1),
+      coreStart: cs - is,
+      coreEnd: ce - is,
+    });
+    if (ce === n - 1) break;
+  }
+  return out;
+}
+
+/** Index of the point in `shape` nearest (planar) to `target`. */
+function nearestIndex(
+  shape: [number, number][],
+  target: [number, number]
+): number {
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < shape.length; i++) {
+    const dx = shape[i]![0] - target[0];
+    const dy = shape[i]![1] - target[1];
+    const d = dx * dx + dy * dy;
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Trim a matched `shape` (full road geometry) down to the portion covering a
+ * chunk's core, using `matched` (the matcher's per-input-point snapped positions,
+ * `null` where a point didn't match). Returns the road geometry between the
+ * snapped core-start and core-end points — the margins are discarded so stitched
+ * cores tile without overlap. Full resolution is preserved (a slice of the road
+ * geometry). Returns [] if no core point matched.
+ */
+export function coreFromMatch(
+  shape: [number, number][],
+  matched: ([number, number] | null)[],
+  coreStart: number,
+  coreEnd: number
+): [number, number][] {
+  if (shape.length === 0) return [];
+  let s = coreStart;
+  while (s <= coreEnd && !matched[s]) s++;
+  let e = coreEnd;
+  while (e >= coreStart && !matched[e]) e--;
+  if (s > e) return [];
+  let a = nearestIndex(shape, matched[s]!);
+  let b = nearestIndex(shape, matched[e]!);
+  if (a > b) [a, b] = [b, a];
+  return dedupeAndNormalize([shape.slice(a, b + 1)]);
+}
+
+const EARTH_R = 6371000;
+const toRad = (x: number): number => (x * Math.PI) / 180;
+
+/** Great-circle metres between two [lng, lat] points (build-time QA only). */
+function haversine(p: [number, number], q: [number, number]): number {
+  const dLat = toRad(q[1] - p[1]);
+  const dLng = toRad(q[0] - p[0]);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(p[1])) * Math.cos(toRad(q[1])) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_R * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * How far the matched line wanders from the raw (drawn) line, in metres — the
+ * max over matched points of the distance to the nearest raw point. A grid index
+ * keeps it fast. This over-reads by up to ~half the raw point spacing, so it is a
+ * gross-detour BACKSTOP (a mis-snap onto a parallel road reads far higher than a
+ * clean snap), not a precise measure. Build-time QA gate only.
+ */
+export function maxStrayMeters(
+  matched: [number, number][],
+  raw: [number, number][]
+): number {
+  const CELL = 0.004; // ~300 m grid cells
+  const key = (x: number, y: number): string =>
+    `${Math.round(x / CELL)},${Math.round(y / CELL)}`;
+  const grid = new Map<string, [number, number][]>();
+  for (const q of raw) {
+    const k = key(q[0], q[1]);
+    let arr = grid.get(k);
+    if (!arr) grid.set(k, (arr = []));
+    arr.push(q);
+  }
+  let worst = 0;
+  for (const p of matched) {
+    const cx = Math.round(p[0] / CELL);
+    const cy = Math.round(p[1] / CELL);
+    let mn = Infinity;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const arr = grid.get(`${cx + dx},${cy + dy}`);
+        if (!arr) continue;
+        for (const q of arr) {
+          const d = haversine(p, q);
+          if (d < mn) mn = d;
+        }
+      }
+    }
+    if (mn > worst) worst = mn;
+  }
+  return worst;
+}
+
 export type AcceptMatchInput = {
   /** The route's own recorded length, km (from `distance_km`). */
   rawKm: number;

@@ -131,6 +131,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       const map = L.map('map').setView([51.9, 0.2], 9);
+      window.__map = map; // exposed for scripted spot-checks
       L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         { attribution: '© OpenStreetMap © CARTO', maxZoom: 20 }
@@ -185,7 +186,12 @@
             });
             matchedLayer.addLayer(matchedLine);
           }
-          byId[id] = { rawLine, matchedLine, feature: f };
+          byId[id] = {
+            rawLine,
+            matchedLine,
+            feature: f,
+            name: f.properties.name,
+          };
 
           const status = rep.status || (changed ? 'matched' : 'fallback');
           if (status === 'matched') nMatched++;
@@ -206,6 +212,19 @@
 
         document.getElementById('counts').textContent =
           `${matched.features.length} routes — ${nMatched} matched, ${nFallback} raw fallback, ${nExcluded} excluded`;
+
+        // Scripted spot-check: show only the named route (raw + matched), zoom to it.
+        window.__byId = byId;
+        window.__focus = (needle) => {
+          const hit = Object.values(byId).find((r) => r.name.includes(needle));
+          rawLayer.clearLayers();
+          matchedLayer.clearLayers();
+          if (!hit) return null;
+          rawLayer.addLayer(hit.rawLine);
+          if (hit.matchedLine) matchedLayer.addLayer(hit.matchedLine);
+          map.fitBounds((hit.matchedLine || hit.rawLine).getBounds().pad(0.1));
+          return hit.name;
+        };
 
         document.getElementById('onlyChanged').onchange = (e) => {
           const only = e.target.checked;

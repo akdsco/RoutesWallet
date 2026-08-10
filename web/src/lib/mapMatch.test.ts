@@ -8,6 +8,9 @@ import {
   dedupeAndNormalize,
   chunkTrace,
   stitchChunks,
+  chunkWithMargins,
+  coreFromMatch,
+  maxStrayMeters,
 } from './mapMatch';
 
 describe('decodePolyline', () => {
@@ -266,5 +269,109 @@ describe('stitchChunks', () => {
       [0, 0],
       [1, 1],
     ]);
+  });
+});
+
+describe('chunkWithMargins', () => {
+  const coords = (n: number): [number, number][] =>
+    Array.from({ length: n }, (_, i) => [i, i] as [number, number]);
+
+  it('returns one full-range chunk when the trace fits in the core', () => {
+    const c = coords(5);
+    expect(chunkWithMargins(c, 300, 80)).toEqual([
+      { input: c, coreStart: 0, coreEnd: 4 },
+    ]);
+  });
+
+  it('cores tile the whole trace with no overlap and no gap', () => {
+    const c = coords(1000);
+    const chunks = chunkWithMargins(c, 300, 80);
+    // reconstruct by concatenating each chunk's core slice
+    const rebuilt: [number, number][] = [];
+    for (const ch of chunks) {
+      rebuilt.push(...ch.input.slice(ch.coreStart, ch.coreEnd + 1));
+    }
+    expect(rebuilt).toEqual(c);
+  });
+
+  it('adds a context margin on both sides where the trace allows', () => {
+    const c = coords(1000);
+    const chunks = chunkWithMargins(c, 300, 80);
+    // first chunk: no left margin, right margin present
+    expect(chunks[0]!.coreStart).toBe(0);
+    expect(chunks[0]!.input.length).toBe(300 + 80);
+    // a middle chunk: margin on both sides
+    expect(chunks[1]!.coreStart).toBe(80);
+    expect(chunks[1]!.input.length).toBe(80 + 300 + 80);
+  });
+
+  it('throws for core < 2', () => {
+    expect(() => chunkWithMargins(coords(10), 1, 5)).toThrow();
+  });
+});
+
+describe('coreFromMatch', () => {
+  // A straight matched road shape from lng 0..10 (11 dense points).
+  const shape = (): [number, number][] =>
+    Array.from({ length: 11 }, (_, i) => [i, 0] as [number, number]);
+
+  it('returns the shape slice between the snapped core-start and core-end', () => {
+    const matched: ([number, number] | null)[] = [
+      [0, 0],
+      [2, 0], // coreStart
+      [5, 0],
+      [8, 0], // coreEnd
+      [10, 0],
+    ];
+    // core is input indices 1..3 => snapped [2,0]..[8,0] => shape[2..8]
+    expect(coreFromMatch(shape(), matched, 1, 3)).toEqual([
+      [2, 0],
+      [3, 0],
+      [4, 0],
+      [5, 0],
+      [6, 0],
+      [7, 0],
+      [8, 0],
+    ]);
+  });
+
+  it('skips inward past unmatched points at the core boundary', () => {
+    const matched: ([number, number] | null)[] = [null, [3, 0], [6, 0], null];
+    // coreStart 0 is unmatched -> use idx1 [3,0]; coreEnd 3 unmatched -> use idx2 [6,0]
+    expect(coreFromMatch(shape(), matched, 0, 3)).toEqual([
+      [3, 0],
+      [4, 0],
+      [5, 0],
+      [6, 0],
+    ]);
+  });
+
+  it('returns [] when no core point matched', () => {
+    expect(coreFromMatch(shape(), [null, null, null], 0, 2)).toEqual([]);
+    expect(coreFromMatch([], [[0, 0]], 0, 0)).toEqual([]);
+  });
+});
+
+describe('maxStrayMeters', () => {
+  it('is ~0 when the matched line equals the raw line', () => {
+    const line: [number, number][] = [
+      [0, 51],
+      [0.001, 51],
+      [0.002, 51],
+    ];
+    expect(maxStrayMeters(line, line)).toBeLessThan(1);
+  });
+
+  it('reports a large stray when the matched line jumps to a parallel road', () => {
+    const raw: [number, number][] = [
+      [0, 51],
+      [0.001, 51],
+      [0.002, 51],
+    ];
+    // ~0.001 deg latitude north ~= 111 m off the raw line
+    const strayed: [number, number][] = [[0.001, 51.001]];
+    const d = maxStrayMeters(strayed, raw);
+    expect(d).toBeGreaterThan(80);
+    expect(d).toBeLessThan(140);
   });
 });

@@ -3,13 +3,19 @@
  *
  * Snaps the club's ROAD routes onto the road network so their lines sit
  * pixel-perfect on the map. Runs OFFLINE at import time against the public
- * FOSSGIS Valhalla instance (`trace_route`, bicycle profile) — the app itself
- * stays static and keyless. Gravel / off-road routes are never touched, and any
- * segment that fails the quality gate falls back to the raw geometry.
+ * FOSSGIS Valhalla instance (`trace_attributes`, bicycle profile, map_snap) —
+ * the app itself stays static and keyless. Gravel / off-road routes are never
+ * touched, and any segment that fails the quality gate falls back to raw.
  *
- * Valhalla `map_snap` truncates a whole route at the first unroutable spot, so
- * each route is matched in CHUNKS (see chunkTrace/stitchChunks): a bad spot only
- * costs its own chunk, which falls back to raw while the rest stays snapped.
+ * WHY trace_attributes + margin chunks:
+ *  - map_snap truncates a whole route at the first unroutable spot, so we chunk.
+ *  - matching a bare chunk lets the matcher invent a detour near the chunk's
+ *    edge (it lacks context there). So each chunk carries an overlap MARGIN of
+ *    context points on both sides, and we keep only its CORE after matching
+ *    (chunkWithMargins + coreFromMatch). trace_attributes returns matched_points
+ *    (one per input point), which is what lets us trim to the core exactly.
+ *  - a gross-detour backstop (maxStrayMeters) reverts any route whose snapped
+ *    line still wanders too far from the drawn line.
  *
  * RUN (from web/):
  *   npx vite-node scripts/map-match.ts            # fresh run, all eligible routes
@@ -32,11 +38,12 @@ import type { Feature, FeatureCollection, LineString } from 'geojson';
 import {
   isEligibleForMatch,
   GRAVEL_NAME_EXCLUSIONS,
-  assembleMatchedCoords,
+  decodePolyline6,
   dedupeAndNormalize,
-  chunkTrace,
+  chunkWithMargins,
+  coreFromMatch,
   stitchChunks,
-  acceptMatch,
+  maxStrayMeters,
 } from '../src/lib/mapMatch';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -45,12 +52,19 @@ const ROUTES = resolve(PUBLIC, 'routes.geojson');
 const RAW = resolve(PUBLIC, 'routes.raw.geojson');
 const REPORT = resolve(HERE, 'map-match-report.json');
 
-const VALHALLA = 'https://valhalla1.openstreetmap.de/trace_route';
+const VALHALLA = 'https://valhalla1.openstreetmap.de/trace_attributes';
 const SLEEP_MS = 1300; // ~1 req/s, FOSSGIS fair use
 const REQUEST_TIMEOUT_MS = 60_000;
-const CHUNK_SIZE = 300; // points per chunk
-const MIN_CHUNK_COVERAGE = 0.95; // a chunk must match nearly end-to-end
+const CORE = 300; // core points kept per chunk
+const MARGIN = 80; // context points added each side for matching
+const MIN_CONFIDENCE = 0.5; // per-chunk map-match confidence floor
 const MIN_MATCHED_FRACTION = 0.6; // else keep the whole route raw
+// Stray gate. The point-to-point metric over-reads by ~half the raw spacing
+// (~24 m), so a clean "few metres onto the road" nudge reads ~44-49 m while a
+// mis-snap onto a neighbouring road reads ~74 m+. 60 m sits in that gap: keep the
+// small on-road nudges (the ticket's actual goal), revert every big mover — a
+// mis-snap OR a large correction — to the vetted raw line. See TB-46 notes.
+const MAX_STRAY_M = 60;
 const CHECKPOINT_EVERY = 3; // routes between checkpoint writes
 
 const sleep = (ms: number): Promise<void> =>
@@ -67,13 +81,7 @@ type RouteFeature = Feature<LineString, Props>;
 type RouteFC = FeatureCollection<LineString, Props>;
 
 type Disposition =
-  | {
-      status: 'matched';
-      mode: 'single' | 'chunked';
-      detail: string;
-      ptsBefore: number;
-      ptsAfter: number;
-    }
+  | { status: 'matched'; detail: string; ptsBefore: number; ptsAfter: number }
   | { status: 'fallback'; reason: string }
   | { status: 'excluded'; reason: 'gravel' | 'named-offroad' | 'untyped' };
 
@@ -86,16 +94,13 @@ function excludeReason(p: Props): 'gravel' | 'named-offroad' | 'untyped' {
   return 'untyped';
 }
 
-type TraceResponse = {
-  trip?: {
-    status?: number;
-    summary?: { length?: number };
-    locations?: { original_index?: number }[];
-    legs?: { shape?: string }[];
-  };
+type AttrResponse = {
+  shape?: string;
+  confidence_score?: number;
+  matched_points?: { lat?: number; lon?: number; type?: string }[];
 };
 
-async function callValhalla(coords: number[][]): Promise<TraceResponse> {
+async function callValhalla(coords: number[][]): Promise<AttrResponse> {
   const body = JSON.stringify({
     shape: coords.map(([lng, lat]) => ({ lat, lon: lng })),
     costing: 'bicycle',
@@ -111,15 +116,15 @@ async function callValhalla(coords: number[][]): Promise<TraceResponse> {
       signal: ac.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as TraceResponse;
+    return (await res.json()) as AttrResponse;
   } finally {
     clearTimeout(timer);
   }
 }
 
 /** Call Valhalla (one retry on a transient failure), then pause for fair use. */
-async function trace(coords: number[][]): Promise<TraceResponse | null> {
-  let out: TraceResponse | null = null;
+async function trace(coords: number[][]): Promise<AttrResponse | null> {
+  let out: AttrResponse | null = null;
   try {
     out = await callValhalla(coords);
   } catch {
@@ -134,82 +139,67 @@ async function trace(coords: number[][]): Promise<TraceResponse | null> {
   return out;
 }
 
-/** Coverage of a single trace response: fraction of input points matched. */
-function coverageOf(resp: TraceResponse, inputPts: number): number {
-  const idx = Math.max(
-    ...(resp.trip?.locations ?? []).map((l) => l.original_index ?? 0)
-  );
-  return (idx + 1) / inputPts;
-}
-
 type MatchResult = { row: Disposition; coords?: [number, number][] };
 
-/** Match one eligible route. Returns its disposition and, on success, new coords. */
-async function matchRoute(
-  coords: [number, number][],
-  rawKm: number
-): Promise<MatchResult> {
-  // Short routes fit in one request — use the strict single-shot gate.
-  if (coords.length <= CHUNK_SIZE) {
-    const resp = await trace(coords);
-    if (!resp?.trip || resp.trip.status !== 0 || !resp.trip.legs?.length) {
-      return { row: { status: 'fallback', reason: 'no route' } };
-    }
-    const coveredFraction = coverageOf(resp, coords.length);
-    const matchedKm = resp.trip.summary?.length ?? 0;
-    const gate = acceptMatch({ rawKm, matchedKm, coveredFraction });
-    if (!gate.ok)
-      return { row: { status: 'fallback', reason: gate.reason ?? 'gate' } };
-    const line = assembleMatchedCoords(
-      resp.trip.legs.map((l) => l.shape ?? '')
-    );
-    if (line.length < 2)
-      return { row: { status: 'fallback', reason: 'empty shape' } };
-    return {
-      row: {
-        status: 'matched',
-        mode: 'single',
-        detail: `${(coveredFraction * 100).toFixed(0)}% cover`,
-        ptsBefore: coords.length,
-        ptsAfter: line.length,
-      },
-      coords: line,
-    };
-  }
-
-  // Long routes: match chunk-by-chunk, fall back per-chunk, then stitch.
-  const chunks = chunkTrace(coords, CHUNK_SIZE);
+/** Match one eligible route chunk-by-chunk with context margins, then stitch. */
+async function matchRoute(coords: [number, number][]): Promise<MatchResult> {
+  const chunks = chunkWithMargins(coords, CORE, MARGIN);
   const lines: [number, number][][] = [];
-  let matchedChunks = 0;
+  let matchedCores = 0;
+
   for (const chunk of chunks) {
-    const resp = await trace(chunk);
-    const legs = resp?.trip?.status === 0 ? resp.trip.legs : undefined;
-    if (legs?.length && coverageOf(resp!, chunk.length) >= MIN_CHUNK_COVERAGE) {
-      const line = assembleMatchedCoords(legs.map((l) => l.shape ?? ''));
-      if (line.length >= 2) {
-        lines.push(line);
-        matchedChunks++;
-        continue;
-      }
+    const rawCore = dedupeAndNormalize([
+      chunk.input.slice(chunk.coreStart, chunk.coreEnd + 1),
+    ]);
+    const resp = await trace(chunk.input);
+    if (
+      !resp?.shape ||
+      !resp.matched_points ||
+      (resp.confidence_score ?? 0) < MIN_CONFIDENCE
+    ) {
+      lines.push(rawCore); // this core stays as drawn
+      continue;
     }
-    lines.push(dedupeAndNormalize([chunk])); // raw fallback for this chunk
+    const shape = decodePolyline6(resp.shape);
+    const matched = resp.matched_points.map((m): [number, number] | null =>
+      m &&
+      m.type !== 'unmatched' &&
+      typeof m.lon === 'number' &&
+      typeof m.lat === 'number'
+        ? [m.lon, m.lat]
+        : null
+    );
+    const core = coreFromMatch(shape, matched, chunk.coreStart, chunk.coreEnd);
+    if (core.length < 2) {
+      lines.push(rawCore);
+      continue;
+    }
+    lines.push(core);
+    matchedCores++;
   }
 
-  const matchedFraction = matchedChunks / chunks.length;
-  if (matchedFraction < MIN_MATCHED_FRACTION) {
+  if (matchedCores / chunks.length < MIN_MATCHED_FRACTION) {
     return {
       row: {
         status: 'fallback',
-        reason: `only ${matchedChunks}/${chunks.length} chunks matched`,
+        reason: `only ${matchedCores}/${chunks.length} cores matched`,
       },
     };
   }
   const stitched = stitchChunks(lines);
+  if (stitched.length < 2)
+    return { row: { status: 'fallback', reason: 'empty matched shape' } };
+
+  const stray = Math.round(maxStrayMeters(stitched, coords));
+  if (stray > MAX_STRAY_M) {
+    return {
+      row: { status: 'fallback', reason: `strays ${stray}m from drawn line` },
+    };
+  }
   return {
     row: {
       status: 'matched',
-      mode: 'chunked',
-      detail: `${matchedChunks}/${chunks.length} chunks`,
+      detail: `${matchedCores}/${chunks.length} cores, ≤${stray}m off`,
       ptsBefore: coords.length,
       ptsAfter: stitched.length,
     },
@@ -291,10 +281,7 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const { row, coords } = await matchRoute(
-      rawF.geometry.coordinates,
-      p.distance_km
-    );
+    const { row, coords } = await matchRoute(rawF.geometry.coordinates);
     if (coords) outF.geometry.coordinates = coords;
     report.push({ id: p.id, name: p.name, ...row });
     if (row.status === 'matched') matchedN++;
