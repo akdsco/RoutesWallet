@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { RouteMap } from './components/RouteMap.tsx';
 import { Legend } from './components/Legend.tsx';
-import { RouteDetail } from './components/RouteDetail.tsx';
 import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
@@ -43,6 +42,8 @@ export function App() {
   const [banner, setBanner] = useState<Banner>('none');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [announce, setAnnounce] = useState('');
   // Cafés default OFF: OSM has ~2,900 near the routes (every town café), so they'd
   // swamp the map. Toilets/water/stations are the useful facility layer; toggle
   // cafés on to browse an area's real cafés.
@@ -84,6 +85,7 @@ export function App() {
 
   const onHover = useCallback((id: string | null) => setHoverId(id), []);
   const onSelect = useCallback((id: string) => setSelectedId(id), []);
+  const onDeselect = useCallback(() => setSelectedId(null), []);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -93,6 +95,28 @@ export function App() {
     setBanner('none');
     setSelectedId(null);
   }, []);
+
+  // Esc exits the selected route from anywhere — except inside the search field,
+  // where the innermost layer wins: it clears the search (query + results), so
+  // the user is never stranded in a filtered view with no visible reset (§E).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (document.activeElement?.id === 'q') {
+        if (query || matches) {
+          clearSearch();
+          e.preventDefault();
+        }
+        return;
+      }
+      if (selectedId) {
+        setSelectedId(null);
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId, query, matches, clearSearch]);
 
   const searchSeq = useRef(0);
   const runSearch = useCallback(
@@ -166,12 +190,17 @@ export function App() {
       ? 'empty'
       : banner;
 
+  // Precedence mirrors the design spec: a failure or an active search always
+  // wins; otherwise focusing the input swaps the static line for a prompt on
+  // what to type. Kept club-agnostic (no hardcoded place names) for multi-club.
   const hint =
     banner === 'geofail'
       ? 'Place not recognised'
       : matches
         ? `Within ${RADIUS_KM} km of ${place?.name ?? ''}`
-        : `Shows routes passing within ${RADIUS_KM} km`;
+        : searchFocused
+          ? 'Try a town, postcode or landmark'
+          : `Shows routes passing within ${RADIUS_KM} km`;
 
   // Memoized so the reference only changes when the searched place does — NOT on
   // every App re-render (e.g. a hover). RouteMap's fit-to-matches effect keys on
@@ -183,10 +212,40 @@ export function App() {
     [place]
   );
 
-  const hovered = hoverId ? routes.find((r) => r.id === hoverId) : null;
-  const selectedRoute = selectedId
-    ? (routes.find((r) => r.id === selectedId) ?? null)
-    : null;
+  // The top-right card is hover-preview only, and suppressed while a route is
+  // selected (the sidebar detail panel is the detail surface then, and the map
+  // highlight is locked to the selection).
+  const hovered =
+    !selectedId && hoverId
+      ? (routes.find((r) => r.id === hoverId) ?? null)
+      : null;
+
+  // Back-row copy names where exit returns to (design §E copy table).
+  const backLabel = matches
+    ? matches.length === 1
+      ? 'Back to results'
+      : `Back to ${matches.length} results`
+    : 'Back to all routes';
+
+  // Announce entering/leaving the selected route (§E copy). Reads matches/place
+  // at fire time — the selectedId change re-renders with current values.
+  const prevSelForAnnounce = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelForAnnounce.current;
+    if (selectedId && selectedId !== prev) {
+      const r = routes.find((x) => x.id === selectedId);
+      if (r)
+        setAnnounce(`${r.name}. ${r.distance_km} km. Other routes dimmed.`);
+    } else if (!selectedId && prev) {
+      setAnnounce(
+        matches
+          ? `Back to ${matches.length} results within ${RADIUS_KM} km of ${place?.name ?? ''}.`
+          : 'Back to all routes.'
+      );
+    }
+    prevSelForAnnounce.current = selectedId;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   return (
     <div className="flex h-screen">
@@ -198,13 +257,16 @@ export function App() {
         placeLabel={place?.name ?? ''}
         groups={groups}
         selectedId={selectedId}
+        backLabel={backLabel}
         theme={theme}
         onQueryChange={setQuery}
         onSubmit={(v) => void runSearch(v)}
         onClear={clearSearch}
         onSelect={onSelect}
+        onDeselect={onDeselect}
         onHover={onHover}
         onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        onSearchFocusChange={setSearchFocused}
       />
 
       <div className="relative flex-1">
@@ -220,12 +282,19 @@ export function App() {
           poiTypes={poiTypes}
           onHover={onHover}
           onSelect={onSelect}
+          onDeselect={onDeselect}
         />
 
         {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
         <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
 
-        <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
+        {/* Sits below the legend normally; slides up into its place in preview
+            mode, where the legend is hidden. */}
+        <div
+          className={`absolute left-5 z-[500] flex items-center gap-1.5 ${
+            selectedId ? 'top-5' : 'top-[68px]'
+          }`}
+        >
           {(
             [
               ['cafe', '☕', 'Cafés'],
@@ -255,21 +324,18 @@ export function App() {
           })}
         </div>
 
-        <Legend searching={searchPoint !== null} theme={theme} />
-
-        {selectedRoute && (
-          <RouteDetail
-            route={selectedRoute}
-            nearKm={nearKm.get(selectedRoute.id)}
-            onClose={() => setSelectedId(null)}
-          />
+        {/* Hidden in route-preview mode: the dimmed map + detail panel already
+            say "you're focused on one route", so the legend is just noise. */}
+        {!selectedId && (
+          <Legend searching={searchPoint !== null} theme={theme} />
         )}
 
-        {/* Transient hover peek — suppressed while a route is selected so it
-            never collides with the pinned detail card (same top-right corner). */}
-        {hovered && !selectedRoute && (
+        {/* Visual hover/focus preview only — aria-hidden so keyboard list nav
+            (which mirrors the highlight here via focus) isn't double-announced
+            on top of each card's own name. */}
+        {hovered && (
           <div
-            role="status"
+            aria-hidden="true"
             className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
           >
             <span className="text-[14px] font-medium text-text">
@@ -292,6 +358,10 @@ export function App() {
               : matches
                 ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
                 : ''}
+        </span>
+
+        <span className="sr-only" aria-live="polite">
+          {announce}
         </span>
       </div>
     </div>

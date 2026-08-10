@@ -7,13 +7,17 @@ test.beforeEach(async ({ page }) => {
 });
 
 const routeList = (page: import('@playwright/test').Page) =>
-  page.getByRole('list', { name: 'Routes' });
+  page.getByRole('group', { name: 'Routes' });
+// Cards are role=button now (a11y); count them by their stable data-route-id so
+// a notice's "Show all routes" button never inflates the count.
+const routeCards = (page: import('@playwright/test').Page) =>
+  routeList(page).locator('[data-route-id]');
 
 test('loads the map and lists the club routes', async ({ page }) => {
   // Leaflet actually initialises in a real browser (jsdom can't prove this).
   await expect(page.locator('.leaflet-container')).toBeVisible();
 
-  await expect(routeList(page).getByRole('listitem')).toHaveCount(3);
+  await expect(routeCards(page)).toHaveCount(3);
   await expect(page.getByText('Cambridge Loop')).toBeVisible();
   await expect(page.getByText('3 routes')).toBeVisible();
 });
@@ -26,7 +30,7 @@ test('searches near a place and filters to routes in range', async ({
     .fill('Cambridge');
   await page.keyboard.press('Enter');
 
-  await expect(routeList(page).getByRole('listitem')).toHaveCount(2);
+  await expect(routeCards(page)).toHaveCount(2);
   await expect(page.getByText('London Orbital')).toHaveCount(0);
   await expect(
     page.getByText('2 routes within 25 km of Cambridge')
@@ -34,9 +38,7 @@ test('searches near a place and filters to routes in range', async ({
 
   // Nearest-first: the feed lists Grantchester before Cambridge Loop, so the
   // nearer Cambridge Loop leading the list proves the distance sort ran.
-  await expect(routeList(page).getByRole('listitem').first()).toContainText(
-    'Cambridge Loop'
-  );
+  await expect(routeCards(page).first()).toContainText('Cambridge Loop');
 });
 
 // Load-bearing for the postcode path specifically: real geocode runs here, the
@@ -49,19 +51,19 @@ test('searches a UK postcode via the postcode geocoder', async ({ page }) => {
     .fill('CB2 1TN');
   await page.keyboard.press('Enter');
 
-  await expect(routeList(page).getByRole('listitem')).toHaveCount(2);
+  await expect(routeCards(page)).toHaveCount(2);
 });
 
 test('opens the route’s existing link when a card is selected', async ({
   page,
 }) => {
   // Click the Cambridge Loop card by name, not by index — order-independent.
-  await routeList(page)
-    .getByRole('listitem')
-    .filter({ hasText: 'Cambridge Loop' })
-    .click();
+  await routeCards(page).filter({ hasText: 'Cambridge Loop' }).click();
 
-  const link = page.getByRole('link', { name: /open in strava/i });
+  // Selecting opens the detail panel (§E), which owns the Open link.
+  const link = page
+    .getByRole('region', { name: /route detail/i })
+    .getByRole('link', { name: /open in strava/i });
   await expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
   await expect(link).toHaveAttribute('target', '_blank');
 });
@@ -96,5 +98,5 @@ test('under prefers-reduced-motion, boots and searches without error', async ({
     .fill('Cambridge');
   await page.keyboard.press('Enter');
 
-  await expect(routeList(page).getByRole('listitem')).toHaveCount(2);
+  await expect(routeCards(page)).toHaveCount(2);
 });

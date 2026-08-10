@@ -1,6 +1,16 @@
-import { type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
+import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
+import { RouteDetail } from './RouteDetail.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
 
 export type CardVM = { route: Route; nearKm?: number };
@@ -15,14 +25,20 @@ type Props = {
   placeLabel: string;
   groups: GroupVM[];
   selectedId: string | null;
+  /** Label for the detail panel's back row, e.g. "Back to 21 results". */
+  backLabel: string;
   theme: 'light' | 'dark';
   onQueryChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onClear: () => void;
   onSelect: (id: string) => void;
+  onDeselect: () => void;
   onHover: (id: string | null) => void;
   onToggleTheme: () => void;
+  onSearchFocusChange: (focused: boolean) => void;
 };
+
+const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 export function Sidebar(props: Props) {
   const {
@@ -33,18 +49,100 @@ export function Sidebar(props: Props) {
     placeLabel,
     groups,
     selectedId,
+    backLabel,
     theme,
     onQueryChange,
     onSubmit,
     onClear,
     onSelect,
+    onDeselect,
     onHover,
     onToggleTheme,
+    onSearchFocusChange,
   } = props;
 
   function submit(e: FormEvent) {
     e.preventDefault();
     onSubmit(query);
+  }
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLButtonElement>(null);
+  const scrollTopRef = useRef(0);
+
+  const orderedIds = useMemo(
+    () => groups.flatMap((g) => g.items.map((i) => i.route.id)),
+    [groups]
+  );
+
+  // The selected route's detail replaces the list. Derive its data from the
+  // current groups (the selected route is always in the visible set).
+  const selectedItem = useMemo(
+    () =>
+      selectedId
+        ? (groups
+            .flatMap((g) => g.items)
+            .find((i) => i.route.id === selectedId) ?? null)
+        : null,
+    [groups, selectedId]
+  );
+
+  // Roving tabindex: Tab enters the list once, arrows move focus within it. The
+  // card holding focus (or the first, before any) is the single tab stop.
+  const [rovingId, setRovingId] = useState<string | null>(null);
+  const effectiveRoving =
+    rovingId && orderedIds.includes(rovingId)
+      ? rovingId
+      : (orderedIds[0] ?? null);
+
+  // Focus handoff across the list ↔ detail swap: entering focuses the back row,
+  // leaving restores the list scroll and returns focus to that route's card so
+  // arrow nav resumes where it left off.
+  const prevSelRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevSelRef.current;
+    if (selectedId && !prev) {
+      backRef.current?.focus();
+    } else if (!selectedId && prev) {
+      if (listRef.current) listRef.current.scrollTop = scrollTopRef.current;
+      listRef.current
+        ?.querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+        ?.focus();
+    }
+    prevSelRef.current = selectedId;
+  }, [selectedId]);
+
+  function onListKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (!NAV_KEYS.has(e.key)) return; // Enter/Space activate on the card itself
+    e.preventDefault(); // don't let ↑/↓ also scroll the panel
+    const focused = (
+      document.activeElement as HTMLElement | null
+    )?.closest<HTMLElement>('[data-route-id]');
+    const currentId = focused?.dataset.routeId ?? effectiveRoving;
+    const target = nextRouteId(orderedIds, currentId, e.key as NavKey);
+    if (!target) return;
+    // Move focus only — selection (opening the detail) is Enter/Space/click.
+    // Focus fires onFocus → onHover, which mirrors the highlight on the map.
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-route-id="${target}"]`
+    );
+    el?.focus();
+    el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  if (selectedItem) {
+    return (
+      <aside className="flex h-full w-[392px] flex-none flex-col border-r border-line bg-surface">
+        <RouteDetail
+          route={selectedItem.route}
+          nearKm={selectedItem.nearKm}
+          backLabel={backLabel}
+          backRef={backRef}
+          theme={theme}
+          onBack={onDeselect}
+        />
+      </aside>
+    );
   }
 
   return (
@@ -110,6 +208,8 @@ export function Sidebar(props: Props) {
               id="q"
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
+              onFocus={() => onSearchFocusChange(true)}
+              onBlur={() => onSearchFocusChange(false)}
               placeholder="e.g. Box Hill or EN11"
               autoComplete="off"
               className="min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
@@ -119,7 +219,7 @@ export function Sidebar(props: Props) {
                 type="button"
                 aria-label="Clear search"
                 onClick={onClear}
-                className="px-1 text-[15px] text-muted hover:text-text"
+                className="-mr-1 flex h-11 w-8 items-center justify-center text-[15px] text-muted hover:text-text"
               >
                 ×
               </button>
@@ -129,7 +229,16 @@ export function Sidebar(props: Props) {
         </form>
       </div>
 
-      <div className="flex-1 overflow-y-auto" role="list" aria-label="Routes">
+      <div
+        ref={listRef}
+        onKeyDown={onListKeyDown}
+        onScroll={(e) => {
+          scrollTopRef.current = e.currentTarget.scrollTop;
+        }}
+        className="flex-1 overflow-y-auto"
+        role="group"
+        aria-label="Routes"
+      >
         {banner === 'loading' && (
           <div className="py-2">
             {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -182,8 +291,12 @@ export function Sidebar(props: Props) {
                   key={r.id}
                   route={r}
                   nearKm={nearKm}
-                  selected={r.id === selectedId}
+                  tabIndex={r.id === effectiveRoving ? 0 : -1}
                   onSelect={onSelect}
+                  onFocusCard={(id) => {
+                    setRovingId(id);
+                    onHover(id);
+                  }}
                   onHover={onHover}
                 />
               ))}
@@ -229,14 +342,16 @@ function Notice({
 function RouteCard({
   route: r,
   nearKm,
-  selected,
+  tabIndex,
   onSelect,
+  onFocusCard,
   onHover,
 }: {
   route: Route;
   nearKm?: number;
-  selected: boolean;
+  tabIndex: number;
   onSelect: (id: string) => void;
+  onFocusCard: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
   const select = () => onSelect(r.id);
@@ -248,14 +363,16 @@ function RouteCard({
   };
   return (
     <div
-      role="listitem"
-      tabIndex={0}
-      data-sel={selected}
+      role="button"
+      tabIndex={tabIndex}
+      data-route-id={r.id}
       onClick={select}
       onKeyDown={onKey}
+      onFocus={() => onFocusCard(r.id)}
+      onBlur={() => onHover(null)}
       onMouseEnter={() => onHover(r.id)}
       onMouseLeave={() => onHover(null)}
-      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel data-[sel=true]:bg-sel-soft data-[sel=true]:shadow-[inset_3px_0_0_var(--sel)]"
+      className="flex cursor-pointer items-start gap-3.5 border-b border-line-2 px-6 py-3.5 transition-colors hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
     >
       <svg
         width="52"

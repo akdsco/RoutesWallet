@@ -56,7 +56,14 @@ async function renderLoaded() {
   return utils;
 }
 
-const routeList = () => screen.getByRole('list', { name: 'Routes' });
+const routeList = () => screen.getByRole('group', { name: 'Routes' });
+// Route cards are role=button now (a11y: real buttons, not listitems). The list
+// group can also hold a "Show all routes" button in notice states, so match the
+// cards by their stable data-route-id rather than role alone.
+const routeCards = () =>
+  within(routeList())
+    .queryAllByRole('button')
+    .filter((b) => b.hasAttribute('data-route-id'));
 const searchBox = () =>
   screen.getByRole('textbox', { name: /find routes near a place/i });
 const mapProps = () => screen.getByTestId('route-map');
@@ -79,7 +86,7 @@ describe('App — loading + listing', () => {
   it('shows all routes grouped by region once data loads', async () => {
     await renderLoaded();
 
-    const items = within(routeList()).getAllByRole('listitem');
+    const items = routeCards();
     expect(items).toHaveLength(sampleRoutes.length);
 
     // Grouping is the idle-list behaviour: each region gets a section header on
@@ -97,7 +104,7 @@ describe('App — loading + listing', () => {
     renderApp();
 
     expect(await screen.findByText('No routes yet')).toBeInTheDocument();
-    expect(within(routeList()).queryAllByRole('listitem')).toHaveLength(0);
+    expect(routeCards()).toHaveLength(0);
   });
 });
 
@@ -110,9 +117,7 @@ describe('App — search', () => {
     await user.type(searchBox(), 'Cambridge{Enter}');
 
     // London Orbital (~70 km away) drops out; the two Cambridge routes remain.
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
     expect(screen.getByText('Cambridge Loop')).toBeInTheDocument();
     expect(screen.queryByText('London Orbital')).not.toBeInTheDocument();
 
@@ -131,7 +136,7 @@ describe('App — search', () => {
     // Nearest-first ordering (the group is labelled "nearest first"). The
     // fixture lists Grantchester before Cambridge Loop, so this only holds if
     // the distance sort actually ran — it's load-bearing, not incidental.
-    const matched = within(routeList()).getAllByRole('listitem');
+    const matched = routeCards();
     expect(within(matched[0]!).getByText('Cambridge Loop')).toBeInTheDocument();
     expect(
       within(matched[1]!).getByText('Grantchester Spin')
@@ -150,9 +155,7 @@ describe('App — search', () => {
 
     await user.type(searchBox(), 'CB2 1TN{Enter}');
 
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
     expect(geocodeMock).toHaveBeenCalledWith('CB2 1TN');
   });
 
@@ -172,7 +175,7 @@ describe('App — search', () => {
     expect(
       screen.getAllByText('No routes within 25 km of Girona')
     ).toHaveLength(2);
-    expect(within(routeList()).queryAllByRole('listitem')).toHaveLength(0);
+    expect(routeCards()).toHaveLength(0);
   });
 
   it('warns when the place cannot be geocoded', async () => {
@@ -223,16 +226,14 @@ describe('App — search', () => {
       fast.resolve(CAMBRIDGE);
       await Promise.resolve();
     });
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
 
     // The stale seq-1 query now resolves to a far point; the guard must drop it.
     await act(async () => {
       slow.resolve(GIRONA);
       await Promise.resolve();
     });
-    expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2);
+    expect(routeCards()).toHaveLength(2);
   });
 
   it('does not search before the routes have loaded', async () => {
@@ -251,9 +252,7 @@ describe('App — search', () => {
       gate.resolve(sampleRoutes);
       await Promise.resolve();
     });
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(3)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(3));
   });
 
   it('clears the search and restores the full list', async () => {
@@ -262,32 +261,35 @@ describe('App — search', () => {
     await renderLoaded();
 
     await user.type(searchBox(), 'Cambridge{Enter}');
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(2)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
 
     await user.click(screen.getByRole('button', { name: /clear search/i }));
 
-    await waitFor(() =>
-      expect(within(routeList()).getAllByRole('listitem')).toHaveLength(3)
-    );
+    await waitFor(() => expect(routeCards()).toHaveLength(3));
   });
 });
 
 describe('App — selecting a route', () => {
-  it('reveals the open-in link with the route’s href when a card is chosen', async () => {
+  it('opens the detail panel with the route’s Open link when a card is chosen', async () => {
     const user = userEvent.setup();
     await renderLoaded();
 
     // Target a specific card by name, not by index — order-independent.
     const card = within(routeList())
       .getByText('Cambridge Loop')
-      .closest('[role="listitem"]');
+      .closest('[data-route-id]');
     await user.click(card as HTMLElement);
 
-    const link = await screen.findByRole('link', { name: /open in strava/i });
+    // Selecting replaces the list with the detail region (§E), which owns the
+    // single Open exit for the route.
+    const detail = await screen.findByRole('region', { name: /route detail/i });
+    const link = within(detail).getByRole('link', { name: /open in strava/i });
     expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
     expect(link).toHaveAttribute('target', '_blank');
+    // The list is gone while the detail is shown.
+    expect(
+      screen.queryByRole('group', { name: 'Routes' })
+    ).not.toBeInTheDocument();
 
     // Selection propagates to the map.
     expect(mapProps()).toHaveAttribute('data-selected', 'cam-loop');
