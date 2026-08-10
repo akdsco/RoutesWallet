@@ -288,7 +288,13 @@ export function App() {
         {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
         <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
 
-        <div className="absolute left-5 top-[68px] z-[500] flex items-center gap-1.5">
+        {/* Sits below the legend normally; slides up into its place in preview
+            mode, where the legend is hidden. */}
+        <div
+          className={`absolute left-5 z-[500] flex items-center gap-1.5 ${
+            selectedId ? 'top-5' : 'top-[68px]'
+          }`}
+        >
           {(
             [
               ['cafe', '☕', 'Cafés'],
