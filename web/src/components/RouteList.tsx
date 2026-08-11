@@ -25,6 +25,10 @@ type Props = {
   /** Label for the detail panel's back row, e.g. "Back to 21 results". */
   backLabel: string;
   theme: 'light' | 'dark';
+  /** Plain-text credit for the ACTIVE basemap — shown at the list end on mobile,
+   *  where the on-map Leaflet attribution is hidden behind the sheet (§F). Omit on
+   *  desktop (the Leaflet control carries it there). */
+  mapAttribution?: string;
   onClear: () => void;
   onSelect: (id: string) => void;
   onDeselect: () => void;
@@ -47,6 +51,7 @@ export function RouteList({
   selectedId,
   backLabel,
   theme,
+  mapAttribution,
   onClear,
   onSelect,
   onDeselect,
@@ -205,10 +210,13 @@ export function RouteList({
         ))}
 
       {/* Attribution rides the list end on mobile (§F): the on-map Leaflet
-          control is hidden behind the sheet there. Desktop keeps that control. */}
-      {banner === 'none' && (
+          control is hidden behind the sheet there. Shown in every list state
+          (not just the populated one); in the detail view the always-present
+          basemap popover carries the per-style credit. Desktop keeps the Leaflet
+          control (this is md:hidden and only passed on mobile). */}
+      {mapAttribution && (
         <p className="px-6 py-3 text-[11px] text-muted md:hidden">
-          © OpenStreetMap contributors © CARTO
+          {mapAttribution}
         </p>
       )}
     </div>

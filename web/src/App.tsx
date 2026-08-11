@@ -15,6 +15,7 @@ import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
 import {
+  BASEMAPS,
   DEFAULT_BASEMAP,
   isBasemapId,
   type BasemapId,
@@ -262,7 +263,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // Mobile sheet choreography (§F). Selecting → detail (192); on exit, restore the
+  // Mobile sheet choreography (§F). Selecting → the detail snap; on exit, restore the
   // snap the user had before selecting. A resolved search → mid so the answer
   // (incl. "no matches") is visible without a gesture.
   const snapBeforeSelect = useRef<Snap>('peek');
@@ -281,10 +282,14 @@ export function App() {
     prevSelForSnap.current = selectedId;
   }, [selectedId, isDesktop]);
 
+  // Keyed on the search result only, NOT selectedId — a search always clears the
+  // selection first (runSearch), so when this fires selectedId is already null.
+  // Listing selectedId here would re-run it on *deselect* and clobber the
+  // choreography effect's snap-restore (it would force mid over the prior snap).
   useEffect(() => {
-    if (isDesktop || selectedId) return;
+    if (isDesktop) return;
     if (matches || banner === 'nomatch' || banner === 'geofail') setSnap('mid');
-  }, [matches, banner, isDesktop, selectedId]);
+  }, [matches, banner, isDesktop]);
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
@@ -366,7 +371,7 @@ export function App() {
                 aria-pressed={on}
                 title={label}
                 onClick={() => togglePoi(t)}
-                className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                className={`flex flex-none items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
                   on
                     ? 'border-line bg-surface text-text'
                     : 'border-line bg-surface/60 text-muted opacity-60'
@@ -467,6 +472,7 @@ export function App() {
               selectedId={selectedId}
               backLabel={backLabel}
               theme={theme}
+              mapAttribution={BASEMAPS[basemap].credit}
               onClear={clearSearch}
               onSelect={onSelect}
               onDeselect={onDeselect}

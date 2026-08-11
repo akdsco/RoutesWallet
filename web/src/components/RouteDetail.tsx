@@ -54,7 +54,8 @@ export function RouteDetail({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[18px] pt-3.5 max-md:gap-2.5 max-md:pt-3">
         {/* On mobile the map behind the sheet is the route preview, so this
             in-panel thumbnail is redundant — hiding it lets the name + Open exit
-            fit the 192px detail snap (§F). Desktop keeps it. */}
+            fit the detail snap (DETAIL_PX in sheet.ts) so Open stays visible
+            without scrolling (§F). Desktop keeps it. */}
         <svg
           width="150"
           height="104"
