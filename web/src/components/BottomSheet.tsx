@@ -74,12 +74,16 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const suppressClick = useRef(false);
 
   // Rest the sheet at the committed snap whenever it (or the viewport / mode)
-  // changes, unless a drag is currently in control of the transform.
+  // changes, unless a drag is currently in control of the transform. The FIRST
+  // placement is instant (no transition) so the sheet simply appears at peek on
+  // load instead of sliding up from the bottom edge; later changes animate.
+  const didInit = useRef(false);
   useEffect(() => {
     const el = sheetRef.current;
     if (!el || drag.current.active) return;
-    el.style.transition = ease;
+    el.style.transition = didInit.current ? ease : 'none';
     el.style.transform = `translateY(${restY(snap)}px)`;
+    didInit.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap, vh, snaps.join(',')]);
 
