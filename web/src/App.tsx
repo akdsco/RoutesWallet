@@ -342,10 +342,11 @@ export function App() {
         />
 
         {/* POI chips: below the legend normally; slide up in desktop preview mode
-            (legend hidden). On mobile they sit below the floating search bar and
-            are hidden entirely while a route is selected (§F). */}
+            (legend hidden). On mobile they sit below the floating search bar as a
+            full-width, horizontally-scrolling row (§F) so the 4th chip never spills
+            off the page — and are hidden entirely while a route is selected. */}
         <div
-          className={`absolute left-5 z-[500] flex items-center gap-1.5 ${
+          className={`absolute z-[500] flex items-center gap-1.5 md:left-5 max-md:inset-x-0 max-md:overflow-x-auto max-md:px-5 ${
             selectedId ? 'top-5 max-md:hidden' : 'top-[68px]'
           }`}
         >

@@ -83,6 +83,11 @@ body,
 #root {
   margin: 0;
   height: 100%;
+  /* This is a full-screen map app — the page itself must never scroll sideways.
+     Map pans internally (Leaflet), the sheet is fixed, overlay rows scroll on
+     their own. `clip` (not `hidden`) so it never creates a scroll container that
+     could break the sheet's sticky group headers. Belt to the per-overlay fixes. */
+  overflow-x: clip;
 }
 
 body {
