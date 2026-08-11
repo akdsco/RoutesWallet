@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
 } from 'react';
@@ -12,13 +13,15 @@ import {
   settleVelocity,
   type Snap,
 } from '../lib/sheet.ts';
-import { useViewportHeight } from '../lib/useViewportHeight.ts';
 
 type Props = {
   /** Current committed snap. */
   snap: Snap;
   /** Reachable snaps for the mode (shortest→tallest), from snapsFor(). */
   snaps: Snap[];
+  /** Viewport height (px) — shared with App so both measure the sheet identically
+   *  (one resize subscription, no dvh-vs-innerHeight drift). */
+  vh: number;
   onSnapChange: (s: Snap) => void;
   children: ReactNode;
 };
@@ -33,9 +36,14 @@ const TAP_SLOP = 6; // px of movement below which a release is a tap, not a drag
  * driven imperatively during a drag so the (long) route list never re-renders per
  * frame. The reachable set depends on mode: selecting a route floors it at detail.
  */
-export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
+export function BottomSheet({
+  snap,
+  snaps,
+  vh,
+  onSnapChange,
+  children,
+}: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const vh = useViewportHeight();
 
   const reduceMotion =
     typeof window !== 'undefined' &&
@@ -58,7 +66,11 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
     velocity: 0, // px of height-change per ms; + = expanding
     moved: false,
   });
-  const suppressClick = useRef(false);
+  // Timestamp of the last drag-end. A drag emits a trailing click the browser
+  // fires ~immediately; we ignore a click within this window so a drag doesn't
+  // also cycle. A LATER activation (tap, keyboard, or an AT/screen-reader click,
+  // which is why cycling lives in onClick not onPointerUp) is well outside it.
+  const dragEndAt = useRef(-Infinity);
 
   // Rest the sheet at the committed snap whenever it (or the viewport / mode)
   // changes, unless a drag is currently in control of the transform. The FIRST
@@ -77,9 +89,6 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;
     if (!el) return;
-    // Clear any suppress flag left armed by a prior drag whose trailing click the
-    // browser swallowed (common on touch) — otherwise it would eat this tap.
-    suppressClick.current = false;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -115,6 +124,7 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
     const d = drag.current;
     if (!d.active) return;
     d.active = false;
+    if (!d.moved) return; // a tap — the click event cycles (see onClick)
     const y = Math.max(
       minY,
       Math.min(maxY, d.startY + (e.clientY - d.startPointer))
@@ -123,26 +133,26 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
     // the user meant to settle here, not throw (settleVelocity zeroes it).
     const velocity = settleVelocity(e.timeStamp - d.lastTime, d.velocity);
     const next = resolveSnap(vh - y, velocity, heights, snaps);
-    if (d.moved) {
-      suppressClick.current = true; // a real drag — don't let the click cycle too
-      const el = sheetRef.current;
-      if (el) {
-        el.style.transition = ease;
-        el.style.transform = `translateY(${restY(next)}px)`;
-      }
+    dragEndAt.current = e.timeStamp; // ignore the trailing click this drag emits
+    const el = sheetRef.current;
+    if (el) {
+      el.style.transition = ease;
+      el.style.transform = `translateY(${restY(next)}px)`;
     }
     onSnapChange(next);
   };
 
-  const onClick = () => {
-    if (suppressClick.current) {
-      suppressClick.current = false;
-      return;
-    }
-    onSnapChange(cycleSnap(snap, snaps)); // tap (or keyboard) cycles snaps
+  // Tap / mouse / keyboard / screen-reader activation all arrive here as a click
+  // (that's why cycling lives in onClick, not onPointerUp — AT dispatches a click,
+  // not pointer events). Only the trailing click of a just-finished drag is ignored.
+  const onClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (e.timeStamp - dragEndAt.current < 250) return;
+    onSnapChange(cycleSnap(snap, snaps));
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    // Enter/Space already reach onClick via the button's native activation; here
+    // we only add Esc-from-the-top → mid.
     if (e.key === 'Escape' && snap === tallest && snaps.includes('mid')) {
       e.preventDefault();
       onSnapChange('mid');

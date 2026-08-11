@@ -6,6 +6,10 @@ type Props = {
   /** Container (the "card") classes — lets the mobile floating bar restyle it
    *  (elevated surface, flex-1) while desktop keeps the inset field look. */
   className?: string;
+  /** Accessible name for the input. Desktop wraps it in a visible <label>; the
+   *  mobile floating bar has no visible label, so it passes this so the field
+   *  isn't announced as unlabelled (WCAG 3.3.2 / 4.1.2). */
+  ariaLabel?: string;
 };
 
 const DEFAULT_FIELD =
@@ -21,6 +25,7 @@ export function SearchField({
   onClear,
   onFocusChange,
   className,
+  ariaLabel,
 }: Props) {
   return (
     <div className={className ?? DEFAULT_FIELD}>
@@ -43,6 +48,7 @@ export function SearchField({
       </svg>
       <input
         id="q"
+        aria-label={ariaLabel}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onFocus={() => onFocusChange(true)}

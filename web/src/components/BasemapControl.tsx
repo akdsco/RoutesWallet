@@ -119,6 +119,9 @@ export function BasemapControl({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(0);
+  // Mobile: open the popover downward (over the sheet) when the button rides near
+  // the top (full snap) and there isn't room for it above.
+  const [dropDown, setDropDown] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -129,6 +132,12 @@ export function BasemapControl({
 
   const openMenu = () => {
     setFocusIdx(activeIdx);
+    if (mobile) {
+      // ~300px covers header + two options (+ caveat). If less room than that sits
+      // above the trigger, open downward over the sheet instead of clipping off-top.
+      const top = triggerRef.current?.getBoundingClientRect().top ?? 0;
+      setDropDown(top < 300);
+    }
     setOpen(true);
   };
   const closeMenu = (refocus = true) => {
@@ -197,7 +206,8 @@ export function BasemapControl({
       ref={rootRef}
       className={
         mobile
-          ? 'absolute left-3 z-[600] transition-[bottom] duration-200'
+          ? // z above the sheet (z-1000) so a downward popover overlays it at full
+            'absolute left-3 z-[1100] transition-[bottom] duration-200'
           : 'absolute bottom-6 right-5 z-[600]'
       }
       style={mobile ? { bottom: bottomCss } : undefined}
@@ -207,7 +217,9 @@ export function BasemapControl({
           role="menu"
           aria-label="Map style"
           onKeyDown={onMenuKey}
-          className={`absolute bottom-full mb-2 overflow-hidden rounded-lg border border-line bg-surface ${
+          className={`absolute overflow-hidden rounded-lg border border-line bg-surface ${
+            mobile && dropDown ? 'top-full mt-2' : 'bottom-full mb-2'
+          } ${
             mobile ? 'left-0 w-[min(280px,100vw-24px)]' : 'right-0 w-[300px]'
           }`}
         >

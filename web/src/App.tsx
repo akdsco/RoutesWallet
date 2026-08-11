@@ -290,7 +290,9 @@ export function App() {
   // choreography effect's snap-restore (it would force mid over the prior snap).
   useEffect(() => {
     if (isDesktop) return;
-    if (matches || banner === 'nomatch' || banner === 'geofail') setSnap('mid');
+    // A no-match search sets matches to [] (truthy), so `matches` already covers
+    // it; only a geocode failure (matches → null) needs its own term.
+    if (matches || banner === 'geofail') setSnap('mid');
   }, [matches, banner, isDesktop]);
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -338,20 +340,16 @@ export function App() {
         {/* Basemap switcher: bottom-right popover on desktop (spec C); on mobile a
             44px layers button, bottom-left, riding 12px above the sheet's current
             top edge (§F) — positioned in px from the same viewport height the sheet
-            uses, so the two never detach when the URL bar shows. Hidden at the full
-            snap: there the button would ride near the top and its upward popover
-            would clip off-screen (and the map is only a 132px strip anyway). */}
-        {(isDesktop || snap !== 'full') && (
-          <BasemapControl
-            basemap={basemap}
-            theme={theme}
-            onChange={setBasemap}
-            mobile={!isDesktop}
-            bottomCss={
-              isDesktop ? undefined : `${snapHeights(vh)[snap] + 12}px`
-            }
-          />
-        )}
+            uses, so the two never detach when the URL bar shows. The popover flips
+            to open downward (over the sheet, z above it) when the button rides near
+            the top at the full snap. */}
+        <BasemapControl
+          basemap={basemap}
+          theme={theme}
+          onChange={setBasemap}
+          mobile={!isDesktop}
+          bottomCss={isDesktop ? undefined : `${snapHeights(vh)[snap] + 12}px`}
+        />
 
         {/* POI chips: below the legend normally; slide up in desktop preview mode
             (legend hidden). On mobile they sit below the floating search bar as a
@@ -453,6 +451,7 @@ export function App() {
               onQueryChange={setQuery}
               onClear={clearSearch}
               onFocusChange={setSearchFocused}
+              ariaLabel="Find routes near a place"
               className="flex h-12 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-within:border-sel"
             />
             <button
@@ -470,7 +469,7 @@ export function App() {
             </button>
           </form>
 
-          <BottomSheet snap={snap} snaps={snaps} onSnapChange={setSnap}>
+          <BottomSheet snap={snap} snaps={snaps} vh={vh} onSnapChange={setSnap}>
             <RouteList
               query={query}
               banner={displayBanner}

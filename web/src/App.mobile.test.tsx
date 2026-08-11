@@ -48,7 +48,10 @@ async function renderLoaded() {
 }
 
 const sheet = () => screen.getByRole('dialog', { name: 'Routes' });
-const searchBox = () => screen.getByRole('textbox');
+// Queried by accessible NAME: the mobile floating bar has no visible <label>, so
+// this also guards that the field carries an aria-label (not just a placeholder).
+const searchBox = () =>
+  screen.getByRole('textbox', { name: /find routes near a place/i });
 const routeCards = () =>
   within(sheet())
     .queryAllByRole('button')
@@ -90,6 +93,18 @@ describe('App — mobile layout (§F)', () => {
     expect(snapOf()).toBe('full');
     await user.click(handle());
     expect(snapOf()).toBe('peek');
+  });
+
+  it('Enter and Space on the handle cycle snaps (keyboard, non-gesture path)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    expect(snapOf()).toBe('peek');
+    handle().focus();
+    await user.keyboard('{Enter}');
+    expect(snapOf()).toBe('mid');
+    await user.keyboard('[Space]');
+    expect(snapOf()).toBe('full');
   });
 
   it('Escape at the full snap returns to mid', async () => {
