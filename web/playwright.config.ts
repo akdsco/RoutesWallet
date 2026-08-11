@@ -44,6 +44,14 @@ export default defineConfig({
       },
       testMatch: '**/mobile.spec.ts',
     },
+    // WebKit (iPhone 15) — the engine parity that matters: the horizontal-overflow
+    // bug these tests guard was iOS/WebKit-specific and did NOT reproduce in
+    // Chromium. This runs the same mobile spec on Safari's engine.
+    {
+      name: 'mobile-webkit',
+      use: { ...devices['iPhone 15'] },
+      testMatch: '**/mobile.spec.ts',
+    },
   ],
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
