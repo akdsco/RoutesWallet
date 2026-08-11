@@ -12,12 +12,14 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
 
-// next-themes reads the OS preference through matchMedia; jsdom has no such API,
-// so stub a stable "light" media query. Individual tests drive the theme via the
-// toggle rather than the OS, so a fixed default is all we need.
+// jsdom has no matchMedia. Two consumers rely on it: next-themes reads
+// `(prefers-color-scheme: dark)` — keep that false (light default; tests drive the
+// theme via the toggle), and the responsive layout reads `(min-width: …)` — answer
+// those true so integration tests exercise the DESKTOP layout by default. The
+// mobile bottom-sheet layout is covered by its own unit tests + E2E / by eye.
 if (!window.matchMedia) {
   window.matchMedia = (query: string): MediaQueryList => ({
-    matches: false,
+    matches: query.includes('min-width'),
     media: query,
     onchange: null,
     addListener: () => {},

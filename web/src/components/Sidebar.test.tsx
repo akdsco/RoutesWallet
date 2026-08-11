@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { LineString } from 'geojson';
 import { Sidebar, type GroupVM } from './Sidebar.tsx';
@@ -103,7 +103,9 @@ describe('Sidebar route list a11y', () => {
     const onHover = vi.fn();
     render(<Harness onSelect={onSelect} onHover={onHover} />);
 
-    card(/Alpha Loop/).focus();
+    // Direct focus() fires the card's onFocus → roving-tabindex state update;
+    // wrap it so React flushes inside act (the list nav is what's under test).
+    act(() => card(/Alpha Loop/).focus());
     await user.keyboard('{ArrowDown}');
     expect(card(/Bravo Circuit/)).toHaveFocus();
     expect(onHover).toHaveBeenLastCalledWith('b'); // mirrors highlight
@@ -121,7 +123,7 @@ describe('Sidebar route list a11y', () => {
     const onSelect = vi.fn();
     render(<Harness onSelect={onSelect} />);
 
-    card(/Bravo Circuit/).focus();
+    act(() => card(/Bravo Circuit/).focus());
     await user.keyboard('{Enter}');
     expect(onSelect).toHaveBeenLastCalledWith('b');
     // The list is replaced by the detail region for the selected route.

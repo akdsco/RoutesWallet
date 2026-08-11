@@ -40,7 +40,7 @@ export function RouteDetail({
       aria-label="Route detail"
       className="detail-enter flex min-h-0 flex-1 flex-col"
     >
-      <div className="border-b border-line px-3 py-2.5">
+      <div className="border-b border-line px-3 py-2.5 max-md:py-2">
         <button
           ref={backRef}
           type="button"
@@ -51,13 +51,17 @@ export function RouteDetail({
           {backLabel}
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[18px] pt-3.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-[18px] pt-3.5 max-md:gap-2.5 max-md:pt-3">
+        {/* On mobile the map behind the sheet is the route preview, so this
+            in-panel thumbnail is redundant — hiding it lets the name + Open exit
+            fit the detail snap (DETAIL_PX in sheet.ts) so Open stays visible
+            without scrolling (§F). Desktop keeps it. */}
         <svg
           width="150"
           height="104"
           viewBox="0 0 150 104"
           aria-hidden="true"
-          className="self-center"
+          className="self-center max-md:hidden"
         >
           <polyline
             points={pts}
@@ -78,7 +82,7 @@ export function RouteDetail({
         </svg>
 
         <div className="flex flex-col gap-2">
-          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-text">
+          <h3 className="text-[17px] font-semibold tracking-[-0.01em] text-text max-md:text-[15px]">
             {r.name}
           </h3>
           <div className="flex flex-wrap items-center gap-2.5">
@@ -100,7 +104,7 @@ export function RouteDetail({
           href={safeHref(r.link)}
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-[9px] bg-sel text-[13.5px] font-semibold ${
+          className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-[9px] bg-sel text-[13.5px] font-semibold max-md:min-h-12 max-md:w-full ${
             theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
           }`}
         >

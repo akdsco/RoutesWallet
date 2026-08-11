@@ -679,7 +679,7 @@ export function RouteMap({
       <div ref={elRef} className="absolute inset-0" />
       {/* Current zoom level, by the +/- control. Updates when the zoom settles
           (the smooth glide keeps the map's real zoom fixed until it commits). */}
-      <div className="pointer-events-none absolute bottom-[22px] left-[58px] z-[500] rounded-md border border-line bg-surface/90 px-2 py-0.5 font-mono text-[11px] text-text-2">
+      <div className="pointer-events-none absolute bottom-[22px] left-[58px] z-[500] rounded-md border border-line bg-surface/90 px-2 py-0.5 font-mono text-[11px] text-text-2 max-md:hidden">
         z{zoom.toFixed(1)}
       </div>
     </>

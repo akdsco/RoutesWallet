@@ -22,7 +22,37 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    // Desktop suite (app.spec.ts). Ignores the mobile spec so its queries (which
+    // assume the sidebar layout) never run under a phone viewport.
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: '**/mobile.spec.ts',
+    },
+    // Mobile suite (mobile.spec.ts) — a phone viewport under the 768px breakpoint,
+    // with touch, so the bottom-sheet layout + gestures run in a real browser.
+    // NOTE: this is Chromium; the horizontal-overflow bug that prompted these
+    // tests was iOS/WebKit-specific. A WebKit ('iPhone 15') project would add true
+    // engine parity — a worthwhile follow-up once webkit is in the CI image.
+    {
+      name: 'mobile-chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 390, height: 844 },
+        hasTouch: true,
+      },
+      testMatch: '**/mobile.spec.ts',
+    },
+    // WebKit (iPhone 15) — the engine parity that matters: the horizontal-overflow
+    // bug these tests guard was iOS/WebKit-specific and did NOT reproduce in
+    // Chromium. This runs the same mobile spec on Safari's engine.
+    {
+      name: 'mobile-webkit',
+      use: { ...devices['iPhone 15'] },
+      testMatch: '**/mobile.spec.ts',
+    },
+  ],
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     port: PORT,

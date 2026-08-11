@@ -5,6 +5,9 @@ type Props = {
   /** true once a place search has resolved — the map shows matches + a radius. */
   searching: boolean;
   theme: 'light' | 'dark';
+  /** Extra positioning classes — mobile drops the legend below the search bar +
+   *  POI row (it clears the top-left corner the floating search now owns). */
+  className?: string;
 };
 
 // Four segments across the 52px swatch, thickening + solidifying faint -> hot.
@@ -22,11 +25,11 @@ const HEAT_SEG = [
  * describes anything on screen. Same pill, same height in both modes — it grows
  * sideways, never down (the POI pills sit just below at top-68px).
  */
-export function Legend({ searching, theme }: Props) {
+export function Legend({ searching, theme, className }: Props) {
   return (
     <div
       aria-label="Map legend"
-      className="absolute left-5 top-5 z-[500] flex h-[34px] items-center gap-4 rounded-lg border border-line bg-surface px-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]"
+      className={`absolute left-5 top-5 z-[500] flex h-[34px] items-center gap-4 rounded-lg border border-line bg-surface px-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] ${className ?? ''}`}
     >
       {searching ? (
         <>

@@ -4,12 +4,19 @@ import { RouteMap } from './components/RouteMap.tsx';
 import { Legend } from './components/Legend.tsx';
 import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
+import { SearchField } from './components/SearchField.tsx';
+import { RouteList } from './components/RouteList.tsx';
+import { BottomSheet } from './components/BottomSheet.tsx';
+import { useMediaQuery } from './lib/useMediaQuery.ts';
+import { useViewportHeight } from './lib/useViewportHeight.ts';
+import { snapsFor, snapHeights, type Snap } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
 import { groupByRegion } from './lib/grouping.ts';
 import { SOURCE_META } from './lib/source.ts';
 import {
+  BASEMAPS,
   DEFAULT_BASEMAP,
   isBasemapId,
   type BasemapId,
@@ -61,6 +68,17 @@ export function App() {
       /* ignore */
     }
   }, [basemap]);
+
+  // Below 768px the sidebar splits: the search floats over a full-screen map and
+  // the list/detail live in a draggable bottom sheet (Claude Design §F).
+  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const vh = useViewportHeight();
+  const [snap, setSnap] = useState<Snap>('peek');
+  const snapRef = useRef<Snap>(snap);
+  snapRef.current = snap;
+  // Selecting a route floors the sheet at `detail` (peek unreachable); idle/search
+  // rest at peek. See snapsFor().
+  const snaps = snapsFor(!!selectedId);
 
   const togglePoi = useCallback(
     (t: string) =>
@@ -247,29 +265,63 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  return (
-    <div className="flex h-screen">
-      <Sidebar
-        totalCount={routes.length}
-        query={query}
-        hint={hint}
-        banner={displayBanner}
-        placeLabel={place?.name ?? ''}
-        groups={groups}
-        selectedId={selectedId}
-        backLabel={backLabel}
-        theme={theme}
-        onQueryChange={setQuery}
-        onSubmit={(v) => void runSearch(v)}
-        onClear={clearSearch}
-        onSelect={onSelect}
-        onDeselect={onDeselect}
-        onHover={onHover}
-        onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        onSearchFocusChange={setSearchFocused}
-      />
+  // Mobile sheet choreography (§F). Selecting → the detail snap; on exit, restore the
+  // snap the user had before selecting. A resolved search → mid so the answer
+  // (incl. "no matches") is visible without a gesture.
+  const snapBeforeSelect = useRef<Snap>('peek');
+  const prevSelForSnap = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isDesktop) {
+      const prev = prevSelForSnap.current;
+      if (selectedId && !prev) {
+        snapBeforeSelect.current =
+          snapRef.current === 'detail' ? 'peek' : snapRef.current;
+        setSnap('detail');
+      } else if (!selectedId && prev) {
+        setSnap(snapBeforeSelect.current);
+      }
+    }
+    prevSelForSnap.current = selectedId;
+  }, [selectedId, isDesktop]);
 
-      <div className="relative flex-1">
+  // Keyed on the search result only, NOT selectedId — a search always clears the
+  // selection first (runSearch), so when this fires selectedId is already null.
+  // Listing selectedId here would re-run it on *deselect* and clobber the
+  // choreography effect's snap-restore (it would force mid over the prior snap).
+  useEffect(() => {
+    if (isDesktop) return;
+    // A no-match search sets matches to [] (truthy), so `matches` already covers
+    // it; only a geocode failure (matches → null) needs its own term.
+    if (matches || banner === 'geofail') setSnap('mid');
+  }, [matches, banner, isDesktop]);
+
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+
+  return (
+    <div className={isDesktop ? 'flex h-screen' : 'relative h-dvh w-full'}>
+      {isDesktop && (
+        <Sidebar
+          totalCount={routes.length}
+          query={query}
+          hint={hint}
+          banner={displayBanner}
+          placeLabel={place?.name ?? ''}
+          groups={groups}
+          selectedId={selectedId}
+          backLabel={backLabel}
+          theme={theme}
+          onQueryChange={setQuery}
+          onSubmit={(v) => void runSearch(v)}
+          onClear={clearSearch}
+          onSelect={onSelect}
+          onDeselect={onDeselect}
+          onHover={onHover}
+          onToggleTheme={toggleTheme}
+          onSearchFocusChange={setSearchFocused}
+        />
+      )}
+
+      <div className={isDesktop ? 'relative flex-1' : 'absolute inset-0'}>
         <RouteMap
           routes={routes}
           matchedIds={matchedIds}
@@ -285,14 +337,27 @@ export function App() {
           onDeselect={onDeselect}
         />
 
-        {/* Basemap switcher — bottom-right popover (v2 design, spec C). */}
-        <BasemapControl basemap={basemap} theme={theme} onChange={setBasemap} />
+        {/* Basemap switcher: bottom-right popover on desktop (spec C); on mobile a
+            44px layers button, bottom-left, riding 12px above the sheet's current
+            top edge (§F) — positioned in px from the same viewport height the sheet
+            uses, so the two never detach when the URL bar shows. The popover flips
+            to open downward (over the sheet, z above it) when the button rides near
+            the top at the full snap. */}
+        <BasemapControl
+          basemap={basemap}
+          theme={theme}
+          onChange={setBasemap}
+          mobile={!isDesktop}
+          bottomCss={isDesktop ? undefined : `${snapHeights(vh)[snap] + 12}px`}
+        />
 
-        {/* Sits below the legend normally; slides up into its place in preview
-            mode, where the legend is hidden. */}
+        {/* POI chips: below the legend normally; slide up in desktop preview mode
+            (legend hidden). On mobile they sit below the floating search bar as a
+            full-width, horizontally-scrolling row (§F) so the 4th chip never spills
+            off the page — and are hidden entirely while a route is selected. */}
         <div
-          className={`absolute left-5 z-[500] flex items-center gap-1.5 ${
-            selectedId ? 'top-5' : 'top-[68px]'
+          className={`absolute z-[500] flex items-center gap-1.5 md:left-5 max-md:inset-x-0 max-md:overflow-x-auto max-md:px-5 ${
+            selectedId ? 'top-5 max-md:hidden' : 'top-[68px]'
           }`}
         >
           {(
@@ -311,7 +376,7 @@ export function App() {
                 aria-pressed={on}
                 title={label}
                 onClick={() => togglePoi(t)}
-                className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                className={`flex flex-none items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
                   on
                     ? 'border-line bg-surface text-text'
                     : 'border-line bg-surface/60 text-muted opacity-60'
@@ -327,16 +392,20 @@ export function App() {
         {/* Hidden in route-preview mode: the dimmed map + detail panel already
             say "you're focused on one route", so the legend is just noise. */}
         {!selectedId && (
-          <Legend searching={searchPoint !== null} theme={theme} />
+          <Legend
+            searching={searchPoint !== null}
+            theme={theme}
+            className="max-md:top-[112px]"
+          />
         )}
 
         {/* Visual hover/focus preview only — aria-hidden so keyboard list nav
             (which mirrors the highlight here via focus) isn't double-announced
-            on top of each card's own name. */}
+            on top of each card's own name. Cut on mobile (no hover; §F). */}
         {hovered && (
           <div
             aria-hidden="true"
-            className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5"
+            className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5 max-md:hidden"
           >
             <span className="text-[14px] font-medium text-text">
               {hovered.name}
@@ -364,6 +433,60 @@ export function App() {
           {announce}
         </span>
       </div>
+
+      {!isDesktop && (
+        <>
+          {/* Floating search bar over the map — present at every snap and in
+              every mode (§F). The theme toggle rides beside the field: it governs
+              the whole interface, so it belongs in chrome, not on the map. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void runSearch(query);
+            }}
+            className="absolute inset-x-3 top-3 z-[600] flex items-center gap-2"
+          >
+            <SearchField
+              query={query}
+              onQueryChange={setQuery}
+              onClear={clearSearch}
+              onFocusChange={setSearchFocused}
+              ariaLabel="Find routes near a place"
+              className="flex h-12 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-within:border-sel"
+            />
+            <button
+              type="button"
+              aria-pressed={theme === 'dark'}
+              aria-label={
+                theme === 'dark'
+                  ? 'Switch to light theme'
+                  : 'Switch to dark theme'
+              }
+              onClick={toggleTheme}
+              className="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-line bg-surface text-[15px] text-text-2 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+            >
+              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+            </button>
+          </form>
+
+          <BottomSheet snap={snap} snaps={snaps} vh={vh} onSnapChange={setSnap}>
+            <RouteList
+              query={query}
+              banner={displayBanner}
+              placeLabel={place?.name ?? ''}
+              groups={groups}
+              selectedId={selectedId}
+              backLabel={backLabel}
+              theme={theme}
+              mapAttribution={BASEMAPS[basemap].credit}
+              onClear={clearSearch}
+              onSelect={onSelect}
+              onDeselect={onDeselect}
+              onHover={onHover}
+            />
+          </BottomSheet>
+        </>
+      )}
     </div>
   );
 }
