@@ -79,7 +79,10 @@ jobs:
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.pw.outputs.version }}
+          # Browser set is part of the key: adding/removing a browser (e.g. webkit)
+          # busts the cache so the binaries actually download, instead of a stale
+          # chromium-only cache hitting and skipping the install.
+          key: ${{ runner.os }}-playwright-${{ steps.pw.outputs.version }}-chromium-webkit
       - if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium webkit
       - if: steps.pw-cache.outputs.cache-hit == 'true'
