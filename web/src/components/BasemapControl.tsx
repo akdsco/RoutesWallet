@@ -11,6 +11,11 @@ type Props = {
   basemap: BasemapId;
   theme: 'light' | 'dark';
   onChange: (id: BasemapId) => void;
+  /** Mobile (§F): a 44px icon-only layers button, bottom-left, riding the sheet. */
+  mobile?: boolean;
+  /** Mobile only — CSS `bottom` for the root so it sits above the sheet's current
+   *  top edge (see sheetHeightCss + 12px in App). */
+  bottomCss?: string;
 };
 
 /** Three-layer stack — the conventional "map layers" glyph on the trigger. */
@@ -105,7 +110,13 @@ function BasemapThumb({ id }: { id: BasemapId }) {
  * The popover per-option credit sits alongside, never replaces, the legal
  * attribution in the map's bottom bar (that stays owned by Leaflet / RouteMap).
  */
-export function BasemapControl({ basemap, theme, onChange }: Props) {
+export function BasemapControl({
+  basemap,
+  theme,
+  onChange,
+  mobile = false,
+  bottomCss,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -182,13 +193,23 @@ export function BasemapControl({ basemap, theme, onChange }: Props) {
   };
 
   return (
-    <div ref={rootRef} className="absolute bottom-6 right-5 z-[600]">
+    <div
+      ref={rootRef}
+      className={
+        mobile
+          ? 'absolute left-3 z-[600] transition-[bottom] duration-200'
+          : 'absolute bottom-6 right-5 z-[600]'
+      }
+      style={mobile ? { bottom: bottomCss } : undefined}
+    >
       {open && (
         <div
           role="menu"
           aria-label="Map style"
           onKeyDown={onMenuKey}
-          className="absolute bottom-full right-0 mb-2 w-[300px] overflow-hidden rounded-lg border border-line bg-surface"
+          className={`absolute bottom-full mb-2 overflow-hidden rounded-lg border border-line bg-surface ${
+            mobile ? 'left-0 w-[min(280px,100vw-24px)]' : 'right-0 w-[300px]'
+          }`}
         >
           <div className="border-b border-line px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
             Map style
@@ -257,12 +278,17 @@ export function BasemapControl({ basemap, theme, onChange }: Props) {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={mobile ? `Map style: ${active.label}` : undefined}
         onClick={() => (open ? closeMenu(false) : openMenu())}
         onKeyDown={onTriggerKey}
-        className="flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-[13px] font-medium text-text"
+        className={
+          mobile
+            ? 'flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-surface text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)]'
+            : 'flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-[13px] font-medium text-text'
+        }
       >
         <LayersIcon />
-        {active.label}
+        {!mobile && active.label}
       </button>
 
       {/* Announce the choice (and any caveat) to assistive tech, like the legend. */}

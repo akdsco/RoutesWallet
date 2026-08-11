@@ -8,7 +8,7 @@ import { SearchField } from './components/SearchField.tsx';
 import { RouteList } from './components/RouteList.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { useMediaQuery } from './lib/useMediaQuery.ts';
-import { snapsFor, type Snap } from './lib/sheet.ts';
+import { snapsFor, sheetHeightCss, type Snap } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -328,15 +328,18 @@ export function App() {
           onDeselect={onDeselect}
         />
 
-        {/* Basemap switcher — bottom-right popover (v2 design, spec C). Mobile
-            moves to a bottom-left layers button (§F) — added next increment. */}
-        {isDesktop && (
-          <BasemapControl
-            basemap={basemap}
-            theme={theme}
-            onChange={setBasemap}
-          />
-        )}
+        {/* Basemap switcher: bottom-right popover on desktop (spec C); on mobile a
+            44px layers button, bottom-left, riding 12px above the sheet's current
+            top edge (§F). */}
+        <BasemapControl
+          basemap={basemap}
+          theme={theme}
+          onChange={setBasemap}
+          mobile={!isDesktop}
+          bottomCss={
+            isDesktop ? undefined : `calc(${sheetHeightCss(snap)} + 12px)`
+          }
+        />
 
         {/* POI chips: below the legend normally; slide up in desktop preview mode
             (legend hidden). On mobile they sit below the floating search bar and
