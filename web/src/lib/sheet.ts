@@ -19,6 +19,15 @@ export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next
 // snap in the drag direction; slower settles to the nearest.
 export const THROW_VELOCITY = 0.5;
+// If the last drag sample is older than this at release, the finger paused —
+// its velocity is stale, so we treat the release as a settle, not a throw.
+export const STALE_MOVE_MS = 80;
+
+/** Velocity to resolve a release with: the sampled value, unless the finger
+ *  paused (last move older than STALE_MOVE_MS), in which case 0 (settle). */
+export function settleVelocity(gapMs: number, velocity: number): number {
+  return gapMs > STALE_MOVE_MS ? 0 : velocity;
+}
 
 /** Visible sheet height (px) at each snap, for a given viewport height. */
 export function snapHeights(viewportPx: number): Record<Snap, number> {

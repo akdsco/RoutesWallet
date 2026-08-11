@@ -10,6 +10,7 @@ import {
   snapHeights,
   resolveSnap,
   cycleSnap,
+  settleVelocity,
   type Snap,
 } from '../lib/sheet.ts';
 
@@ -125,9 +126,8 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
       Math.min(maxY, d.startY + (e.clientY - d.startPointer))
     );
     // If the finger paused before lifting, the last-sampled velocity is stale —
-    // the user meant to settle here, not throw. Treat a >80ms gap as v=0 so
-    // resolveSnap picks the nearest snap instead of flinging to the next one.
-    const velocity = e.timeStamp - d.lastTime > 80 ? 0 : d.velocity;
+    // the user meant to settle here, not throw (settleVelocity zeroes it).
+    const velocity = settleVelocity(e.timeStamp - d.lastTime, d.velocity);
     const next = resolveSnap(vh - y, velocity, heights, snaps);
     if (d.moved) {
       suppressClick.current = true; // a real drag — don't let the click cycle too

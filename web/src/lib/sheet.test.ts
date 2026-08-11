@@ -3,11 +3,13 @@ import {
   PEEK_PX,
   DETAIL_PX,
   MAP_STRIP_PX,
+  STALE_MOVE_MS,
   snapHeights,
   snapsFor,
   resolveSnap,
   cycleSnap,
   sheetHeightCss,
+  settleVelocity,
   type Snap,
 } from './sheet.ts';
 
@@ -97,6 +99,20 @@ describe('sheetHeightCss — the sheet visible height as a CSS length (for the m
 
   it('full leaves the map strip in dvh', () => {
     expect(sheetHeightCss('full')).toBe(`calc(100dvh - ${MAP_STRIP_PX}px)`);
+  });
+});
+
+describe('settleVelocity — a paused release must not throw (design §F drag)', () => {
+  it('keeps the sampled velocity when the finger was still moving', () => {
+    expect(settleVelocity(16, 1.5)).toBe(1.5);
+    expect(settleVelocity(STALE_MOVE_MS, -1.2)).toBe(-1.2);
+  });
+
+  it('zeroes the velocity when the finger paused before lifting (stale sample)', () => {
+    // Flick fast, hold ~300ms, then lift → the last sample is stale, so settle
+    // nearest rather than fling to the next snap.
+    expect(settleVelocity(300, 1.5)).toBe(0);
+    expect(settleVelocity(STALE_MOVE_MS + 1, 2)).toBe(0);
   });
 });
 
