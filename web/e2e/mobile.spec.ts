@@ -21,8 +21,15 @@ async function sheetTop(page: Page): Promise<number> {
   const box = await sheet(page).boundingBox();
   return box!.y;
 }
-/** Wait out the 220ms snap transition before measuring geometry. */
-const settle = (page: Page) => page.waitForTimeout(300);
+/** Poll until the sheet has settled with its top ~`target` px — rides out the
+ *  snap transition without a fixed sleep, so it's deterministic across engines
+ *  and CI-runner speeds (a fixed wait flaked on the slower WebKit CI runner). */
+const settleAt = (page: Page, target: number, tol = 8) =>
+  expect
+    .poll(async () => Math.abs((await sheetTop(page)) - target), {
+      timeout: 2000,
+    })
+    .toBeLessThanOrEqual(tol);
 
 test('the page never scrolls sideways at phone widths', async ({ page }) => {
   await expect(cards(page).first()).toBeVisible();
@@ -50,18 +57,14 @@ test('the sheet rests at peek, rises to mid via the handle, detail on select', a
 }) => {
   await expect(cards(page).first()).toBeVisible();
   const h = page.viewportSize()!.height;
-  const near = (a: number, b: number, tol = 8) =>
-    expect(Math.abs(a - b), `top ${a} ≈ ${b}`).toBeLessThanOrEqual(tol);
 
-  await near(await sheetTop(page), h - 132); // peek
+  await settleAt(page, h - 132); // peek
 
   await handle(page).click();
-  await settle(page);
-  await near(await sheetTop(page), h - Math.round(h * 0.56)); // mid
+  await settleAt(page, h - Math.round(h * 0.56)); // mid
 
   await cards(page).first().click();
-  await settle(page);
-  await near(await sheetTop(page), h - 260); // detail (DETAIL_PX)
+  await settleAt(page, h - 260); // detail (DETAIL_PX)
 });
 
 test('search then select surfaces the Open exit fully in view (no scroll)', async ({
@@ -86,17 +89,15 @@ test('deselecting restores the pre-selection snap', async ({ page }) => {
   await expect(cards(page)).toHaveCount(2); // auto-snapped to mid
 
   await handle(page).click(); // mid → full
-  await settle(page);
-  const full = await sheetTop(page);
+  await settleAt(page, 132); // full: top = vh − (vh − 132) = 132, whatever vh is
 
   await cards(page).first().click(); // → detail
-  await settle(page);
   await detail(page)
     .getByRole('button', { name: /back to/i })
     .click();
-  await settle(page);
 
-  expect(Math.abs((await sheetTop(page)) - full)).toBeLessThanOrEqual(8);
+  // Restored to full (132), NOT collapsed to mid — the old choreography bug.
+  await settleAt(page, 132);
 });
 
 // NOTE — the raw finger-DRAG (pointerdown → move → release) is verified by eye on
