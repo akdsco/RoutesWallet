@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
 
@@ -14,14 +14,17 @@ vi.mock('./components/RouteMap.tsx', () => ({
 
 import { App } from './App.tsx';
 import { loadRoutes } from './lib/routes-data.ts';
-import { sampleRoutes } from './test/fixtures.ts';
+import { geocode } from './lib/geocode.ts';
+import { sampleRoutes, CAMBRIDGE } from './test/fixtures.ts';
 
 const loadRoutesMock = vi.mocked(loadRoutes);
+const geocodeMock = vi.mocked(geocode);
 
 // Force the mobile layout: min-width queries answer false (the shared setup
 // answers them true for the desktop-by-default suite).
 beforeEach(() => {
   loadRoutesMock.mockReset();
+  geocodeMock.mockReset();
   window.matchMedia = (query: string): MediaQueryList => ({
     matches: false,
     media: query,
@@ -45,39 +48,76 @@ async function renderLoaded() {
 }
 
 const sheet = () => screen.getByRole('dialog', { name: 'Routes' });
+const searchBox = () => screen.getByRole('textbox');
 const routeCards = () =>
   within(sheet())
     .queryAllByRole('button')
     .filter((b) => b.hasAttribute('data-route-id'));
+
+// The handle button. Its (aria-expanded, aria-label) pair identifies the snap:
+//   peek → (false, Expand) · mid → (true, Expand) · full → (true, Collapse)
+// while selected the sheet shows the detail region instead of the list.
+const handle = () =>
+  within(sheet()).getByRole('button', { name: /route list/i });
+function snapOf(): 'peek' | 'mid' | 'full' {
+  const h = handle();
+  const expanded = h.getAttribute('aria-expanded') === 'true';
+  const collapse = /collapse/i.test(h.getAttribute('aria-label') ?? '');
+  if (!expanded) return 'peek';
+  return collapse ? 'full' : 'mid';
+}
 
 describe('App — mobile layout (§F)', () => {
   it('renders the bottom sheet + a floating search, and no desktop sidebar', async () => {
     await renderLoaded();
 
     expect(sheet()).toBeInTheDocument();
-    // The desktop sidebar (an <aside>) must not be present on mobile.
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
-    // Search floats (single textbox), with the theme toggle beside it.
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(searchBox()).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /switch to (dark|light) theme/i })
     ).toBeInTheDocument();
   });
 
-  it('the handle is a button that cycles snaps (non-gesture path)', async () => {
+  it('the handle is a button that cycles snaps peek → mid → full → peek', async () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    const handle = within(sheet()).getByRole('button', {
-      name: /expand route list/i,
-    });
-    // Idle rests at peek → not expanded; a tap cycles peek → mid.
-    expect(handle).toHaveAttribute('aria-expanded', 'false');
-    await user.click(handle);
-    expect(handle).toHaveAttribute('aria-expanded', 'true');
+    expect(snapOf()).toBe('peek');
+    await user.click(handle());
+    expect(snapOf()).toBe('mid');
+    await user.click(handle());
+    expect(snapOf()).toBe('full');
+    await user.click(handle());
+    expect(snapOf()).toBe('peek');
   });
 
-  it('selecting a route shows the detail panel in the sheet with the Open exit', async () => {
+  it('Escape at the full snap returns to mid', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(handle()); // mid
+    await user.click(handle()); // full
+    expect(snapOf()).toBe('full');
+
+    handle().focus();
+    await user.keyboard('{Escape}');
+    expect(snapOf()).toBe('mid');
+  });
+
+  it('a resolved search snaps the sheet to mid', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+    expect(snapOf()).toBe('peek');
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(snapOf()).toBe('mid');
+  });
+
+  it('selecting a route shows the detail panel with the Open exit; back returns to the list', async () => {
     const user = userEvent.setup();
     await renderLoaded();
 
@@ -87,26 +127,82 @@ describe('App — mobile layout (§F)', () => {
     expect(
       within(detail).getByRole('button', { name: /back to/i })
     ).toBeInTheDocument();
-    // The exit — the one action the product exists to deliver — is present.
-    expect(within(detail).getByRole('link')).toBeInTheDocument();
-    // Selection reflected to the map.
+    expect(within(detail).getByRole('link')).toBeInTheDocument(); // the exit
     expect(screen.getByTestId('route-map')).toHaveAttribute(
       'data-selected',
       sampleRoutes[0]!.id
     );
-  });
 
-  it('back from the detail returns to the list', async () => {
-    const user = userEvent.setup();
-    await renderLoaded();
-
-    await user.click(routeCards()[0]!);
-    const detail = screen.getByRole('region', { name: 'Route detail' });
     await user.click(within(detail).getByRole('button', { name: /back to/i }));
-
     expect(
       screen.queryByRole('region', { name: 'Route detail' })
     ).not.toBeInTheDocument();
     expect(routeCards().length).toBeGreaterThan(0);
+  });
+
+  it('deselecting restores the pre-selection snap (full), not mid', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Cambridge{Enter}'); // → mid
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    await user.click(handle()); // mid → full
+    expect(snapOf()).toBe('full');
+
+    await user.click(routeCards()[0]!); // → detail
+    await user.click(
+      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
+        'button',
+        { name: /back to/i }
+      )
+    );
+
+    expect(snapOf()).toBe('full'); // restored, would be 'mid' under the old bug
+  });
+
+  it('hides the legend while a route is selected, and shows it again on exit', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    expect(screen.queryByLabelText('Map legend')).toBeInTheDocument();
+
+    await user.click(routeCards()[0]!);
+    expect(screen.queryByLabelText('Map legend')).not.toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
+        'button',
+        { name: /back to/i }
+      )
+    );
+    expect(screen.queryByLabelText('Map legend')).toBeInTheDocument();
+  });
+
+  it('keeps the theme toggle reachable while a route is selected', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(routeCards()[0]!);
+    expect(
+      screen.getByRole('button', { name: /switch to (dark|light) theme/i })
+    ).toBeInTheDocument();
+  });
+
+  it('shows the active basemap credit in the sheet and updates it on switch', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    // Default (Standard) credit rides the list end.
+    expect(
+      within(sheet()).getByText(/© CARTO · © OpenStreetMap/)
+    ).toBeInTheDocument();
+
+    // Switch to CyclOSM via the mobile layers button + popover.
+    await user.click(screen.getByRole('button', { name: /map style/i }));
+    await user.click(screen.getByRole('menuitemradio', { name: /cyclosm/i }));
+
+    expect(within(sheet()).getByText(/CyclOSM/)).toBeInTheDocument();
+    expect(within(sheet()).queryByText(/CARTO/)).not.toBeInTheDocument();
   });
 });
