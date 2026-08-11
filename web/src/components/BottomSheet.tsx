@@ -85,7 +85,11 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;
     if (!el) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // jsdom / environments without pointer capture — drag still works via events
+    }
     el.style.transition = 'none';
     drag.current = {
       active: true,
