@@ -1,7 +1,6 @@
 import {
   useEffect,
   useRef,
-  useState,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
@@ -13,6 +12,7 @@ import {
   settleVelocity,
   type Snap,
 } from '../lib/sheet.ts';
+import { useViewportHeight } from '../lib/useViewportHeight.ts';
 
 type Props = {
   /** Current committed snap. */
@@ -35,25 +35,12 @@ const TAP_SLOP = 6; // px of movement below which a release is a tap, not a drag
  */
 export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const [vh, setVh] = useState(() =>
-    typeof window !== 'undefined' ? window.innerHeight : 800
-  );
+  const vh = useViewportHeight();
 
   const reduceMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ease = reduceMotion ? 'none' : EASE;
-
-  // Track the visual viewport so the snap maths follow the mobile URL bar.
-  useEffect(() => {
-    const onResize = () => setVh(window.innerHeight);
-    window.addEventListener('resize', onResize);
-    window.visualViewport?.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.visualViewport?.removeEventListener('resize', onResize);
-    };
-  }, []);
 
   const heights = snapHeights(vh);
   const restY = (s: Snap) => vh - heights[s]; // translateY that leaves height[s] visible
@@ -90,6 +77,9 @@ export function BottomSheet({ snap, snaps, onSnapChange, children }: Props) {
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;
     if (!el) return;
+    // Clear any suppress flag left armed by a prior drag whose trailing click the
+    // browser swallowed (common on touch) — otherwise it would eat this tap.
+    suppressClick.current = false;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {

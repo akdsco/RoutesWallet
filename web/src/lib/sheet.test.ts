@@ -8,7 +8,6 @@ import {
   snapsFor,
   resolveSnap,
   cycleSnap,
-  sheetHeightCss,
   settleVelocity,
   type Snap,
 } from './sheet.ts';
@@ -46,7 +45,7 @@ describe('snapsFor — the reachable snaps depend on selection (design §F)', ()
     expect(snapsFor(false)).toEqual<Snap[]>(['peek', 'mid', 'full']);
   });
 
-  it('selected floors at detail (192px); peek is unreachable', () => {
+  it('selected floors at detail; peek is unreachable', () => {
     expect(snapsFor(true)).toEqual<Snap[]>(['detail', 'mid', 'full']);
   });
 });
@@ -84,21 +83,6 @@ describe('resolveSnap — a fast throw jumps to the next reachable snap in the d
 
   it('idle: downward throw already at peek clamps to peek', () => {
     expect(resolveSnap(H.peek, -2, H, IDLE)).toBe('peek');
-  });
-});
-
-describe('sheetHeightCss — the sheet visible height as a CSS length (for the mobile layers button riding the sheet edge)', () => {
-  it('fixed snaps are px', () => {
-    expect(sheetHeightCss('peek')).toBe(`${PEEK_PX}px`);
-    expect(sheetHeightCss('detail')).toBe(`${DETAIL_PX}px`);
-  });
-
-  it('mid is a dvh fraction', () => {
-    expect(sheetHeightCss('mid')).toBe('56dvh');
-  });
-
-  it('full leaves the map strip in dvh', () => {
-    expect(sheetHeightCss('full')).toBe(`calc(100dvh - ${MAP_STRIP_PX}px)`);
   });
 });
 

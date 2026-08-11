@@ -88,22 +88,3 @@ export function cycleSnap(current: Snap, allowed: Snap[]): Snap {
   if (i === -1) return allowed[0]!;
   return allowed[(i + 1) % allowed.length]!;
 }
-
-/**
- * The sheet's visible height for a snap, as a CSS length — so the mobile basemap
- * "layers" button can sit 12px above the sheet's current top edge and ride it
- * (§F) with a plain CSS transition, no per-frame JS. dvh for the viewport-relative
- * snaps, px for the fixed ones.
- */
-export function sheetHeightCss(snap: Snap): string {
-  switch (snap) {
-    case 'peek':
-      return `${PEEK_PX}px`;
-    case 'detail':
-      return `${DETAIL_PX}px`;
-    case 'mid':
-      return `${Math.round(MID_FRACTION * 100)}dvh`;
-    case 'full':
-      return `calc(100dvh - ${MAP_STRIP_PX}px)`;
-  }
-}

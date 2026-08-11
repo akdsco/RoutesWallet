@@ -8,7 +8,8 @@ import { SearchField } from './components/SearchField.tsx';
 import { RouteList } from './components/RouteList.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { useMediaQuery } from './lib/useMediaQuery.ts';
-import { snapsFor, sheetHeightCss, type Snap } from './lib/sheet.ts';
+import { useViewportHeight } from './lib/useViewportHeight.ts';
+import { snapsFor, snapHeights, type Snap } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -71,6 +72,7 @@ export function App() {
   // Below 768px the sidebar splits: the search floats over a full-screen map and
   // the list/detail live in a draggable bottom sheet (Claude Design §F).
   const isDesktop = useMediaQuery('(min-width: 768px)');
+  const vh = useViewportHeight();
   const [snap, setSnap] = useState<Snap>('peek');
   const snapRef = useRef<Snap>(snap);
   snapRef.current = snap;
@@ -335,16 +337,21 @@ export function App() {
 
         {/* Basemap switcher: bottom-right popover on desktop (spec C); on mobile a
             44px layers button, bottom-left, riding 12px above the sheet's current
-            top edge (§F). */}
-        <BasemapControl
-          basemap={basemap}
-          theme={theme}
-          onChange={setBasemap}
-          mobile={!isDesktop}
-          bottomCss={
-            isDesktop ? undefined : `calc(${sheetHeightCss(snap)} + 12px)`
-          }
-        />
+            top edge (§F) — positioned in px from the same viewport height the sheet
+            uses, so the two never detach when the URL bar shows. Hidden at the full
+            snap: there the button would ride near the top and its upward popover
+            would clip off-screen (and the map is only a 132px strip anyway). */}
+        {(isDesktop || snap !== 'full') && (
+          <BasemapControl
+            basemap={basemap}
+            theme={theme}
+            onChange={setBasemap}
+            mobile={!isDesktop}
+            bottomCss={
+              isDesktop ? undefined : `${snapHeights(vh)[snap] + 12}px`
+            }
+          />
+        )}
 
         {/* POI chips: below the legend normally; slide up in desktop preview mode
             (legend hidden). On mobile they sit below the floating search bar as a
