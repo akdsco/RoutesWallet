@@ -29,7 +29,20 @@ export type Route = {
   cafe: string;
   /** Optional, from the GPX import (e.g. "Road"). Not surfaced yet. */
   route_type?: string;
-  /** [lng, lat] pairs. */
+  /**
+   * Total elevation gain in metres — Strava's own displayed figure, not a local
+   * recomputation. Optional: absent on routes we couldn't enrich (e.g. the few
+   * non-Strava links). Not surfaced yet.
+   */
+  elevation_gain_m?: number;
+  /** Route owner's display name, from the GPX author metadata. Optional. */
+  owner_name?: string;
+  /** Route owner's Strava athlete id, for a profile link. Optional. */
+  owner_strava_id?: string;
+  /**
+   * `[lng, lat]` pairs, optionally `[lng, lat, ele]` where elevation was imported
+   * (the standard GeoJSON 3rd coordinate). The profile chart reads the 3rd axis.
+   */
   geometry: LineString;
   /** [lng, lat], for a cheap proximity pre-filter before the exact line distance. */
   centroid: [number, number];

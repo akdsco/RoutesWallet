@@ -21,14 +21,14 @@ function round(n: number, dp: number): number {
 export function parseTrackpoints(gpx: string): number[][] {
   const out: number[][] = [];
   const re =
-    /<trkpt\s+lat="([-0-9.]+)"\s+lon="([-0-9.]+)"\s*(\/?)>([\s\S]*?)(?=<trkpt|<\/trkseg|<\/trk>|$)/g;
+    /<trkpt\s+lat="([-0-9.]+)"\s+lon="([-0-9.]+)"\s*\/?>([\s\S]*?)(?=<trkpt|<\/trkseg|<\/trk>|$)/g;
   for (const m of gpx.matchAll(re)) {
-    const lat = parseFloat(m[1]);
-    const lng = parseFloat(m[2]);
+    const lat = parseFloat(m[1] ?? '');
+    const lng = parseFloat(m[2] ?? '');
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
     const pos: number[] = [round(lng, COORD_DP), round(lat, COORD_DP)];
-    const ele = m[4].match(/<ele>([-0-9.]+)<\/ele>/);
-    if (ele) pos.push(Math.round(parseFloat(ele[1])));
+    const ele = (m[3] ?? '').match(/<ele>([-0-9.]+)<\/ele>/);
+    if (ele?.[1]) pos.push(Math.round(parseFloat(ele[1])));
     out.push(pos);
   }
   return out;
@@ -41,12 +41,12 @@ export function parseTrackpoints(gpx: string): number[][] {
 export function parseAuthor(
   gpx: string
 ): { name: string; stravaId: string } | null {
-  const author = gpx.match(/<author>([\s\S]*?)<\/author>/);
-  if (!author) return null;
-  const name = author[1].match(/<name>([^<]*)<\/name>/)?.[1]?.trim();
-  const stravaId = author[1].match(/\/athletes\/(\d+)/)?.[1];
+  const block = gpx.match(/<author>([\s\S]*?)<\/author>/)?.[1];
+  if (!block) return null;
+  const name = block.match(/<name>([^<]*)<\/name>/)?.[1]?.trim();
   if (!name) return null;
-  return stravaId ? { name, stravaId } : { name, stravaId: '' };
+  const stravaId = block.match(/\/athletes\/(\d+)/)?.[1] ?? '';
+  return { name, stravaId };
 }
 
 /**
@@ -56,6 +56,6 @@ export function parseAuthor(
  */
 export function parseStatMeters(s: string): number | null {
   const m = s.trim().match(/^([\d,]+(?:\.\d+)?)\s*m$/);
-  if (!m) return null;
+  if (!m?.[1]) return null;
   return Math.round(parseFloat(m[1].replace(/,/g, '')));
 }

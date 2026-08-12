@@ -60,6 +60,11 @@ export function featuresToRoutes(fc: FeatureCollection): Route[] {
       notes: str(p.notes),
       cafe: str(p.cafe),
       route_type: typeof p.route_type === 'string' ? p.route_type : undefined,
+      elevation_gain_m:
+        typeof p.elevation_gain_m === 'number' ? p.elevation_gain_m : undefined,
+      owner_name: typeof p.owner_name === 'string' ? p.owner_name : undefined,
+      owner_strava_id:
+        typeof p.owner_strava_id === 'string' ? p.owner_strava_id : undefined,
       geometry: f.geometry,
       centroid: centroidOf(coords),
     });
