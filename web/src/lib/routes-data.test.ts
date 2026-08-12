@@ -99,6 +99,98 @@ describe('featuresToRoutes', () => {
     expect(routes.map((r) => r.id)).toEqual(['a']);
   });
 
+  it('maps elevation_gain_m and owner fields when present', () => {
+    const withElev = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'e',
+            name: 'E',
+            link: 'https://e/e',
+            source: 'club-verified',
+            elevation_gain_m: 388,
+            owner_name: 'Alex Booker',
+            owner_strava_id: '39587126',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0, 100],
+              [2, 2, 150],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    expect(featuresToRoutes(withElev)[0]).toMatchObject({
+      elevation_gain_m: 388,
+      owner_name: 'Alex Booker',
+      owner_strava_id: '39587126',
+    });
+  });
+
+  it('leaves elevation/owner undefined when absent, without crashing', () => {
+    const r = featuresToRoutes(fc)[0]!;
+    expect(r.elevation_gain_m).toBeUndefined();
+    expect(r.owner_name).toBeUndefined();
+    expect(r.owner_strava_id).toBeUndefined();
+  });
+
+  it('treats empty-string owner fields as undefined, not a defined ""', () => {
+    const empty = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'o',
+            name: 'O',
+            link: 'https://e/o',
+            owner_name: '',
+            owner_strava_id: '',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    const r = featuresToRoutes(empty)[0]!;
+    expect(r.owner_name).toBeUndefined();
+    expect(r.owner_strava_id).toBeUndefined();
+  });
+
+  it('preserves 3D [lng,lat,ele] geometry and centroids from the first two axes', () => {
+    const threeD = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { id: 'z', name: 'Z', link: 'https://e/z' },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0, 100],
+              [2, 2, 200],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    const route = featuresToRoutes(threeD)[0]!;
+    expect(route.geometry.coordinates).toEqual([
+      [0, 0, 100],
+      [2, 2, 200],
+    ]);
+    expect(route.centroid).toEqual([1, 1]);
+  });
+
   it('coerces an unknown source to the least-trusted tier', () => {
     const odd = {
       type: 'FeatureCollection',

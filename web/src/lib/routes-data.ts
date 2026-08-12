@@ -18,6 +18,11 @@ function str(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
 
+/** A non-empty string, else undefined — for optional fields where '' means absent. */
+function optStr(v: unknown): string | undefined {
+  return typeof v === 'string' && v !== '' ? v : undefined;
+}
+
 function centroidOf(coords: number[][]): [number, number] {
   const n = coords.length;
   let sx = 0;
@@ -60,6 +65,10 @@ export function featuresToRoutes(fc: FeatureCollection): Route[] {
       notes: str(p.notes),
       cafe: str(p.cafe),
       route_type: typeof p.route_type === 'string' ? p.route_type : undefined,
+      elevation_gain_m:
+        typeof p.elevation_gain_m === 'number' ? p.elevation_gain_m : undefined,
+      owner_name: optStr(p.owner_name),
+      owner_strava_id: optStr(p.owner_strava_id),
       geometry: f.geometry,
       centroid: centroidOf(coords),
     });
