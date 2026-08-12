@@ -43,7 +43,18 @@ export function parseAuthor(
 ): { name: string; stravaId: string } | null {
   const block = gpx.match(/<author>([\s\S]*?)<\/author>/)?.[1];
   if (!block) return null;
-  const name = block.match(/<name>([^<]*)<\/name>/)?.[1]?.trim();
+  const raw = block.match(/<name>([^<]*)<\/name>/)?.[1];
+  if (!raw) return null;
+  // Strip Strava's enclosed-alphanumeric "verified" badge glyph (e.g. "ⓥ") and
+  // collapse whitespace so owner names store clean.
+  const name = [...raw]
+    .filter((c) => {
+      const cp = c.codePointAt(0) ?? 0;
+      return cp < 0x2460 || cp > 0x24ff;
+    })
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!name) return null;
   const stravaId = block.match(/\/athletes\/(\d+)/)?.[1] ?? '';
   return { name, stravaId };

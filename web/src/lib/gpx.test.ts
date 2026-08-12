@@ -43,9 +43,9 @@ describe('parseTrackpoints', () => {
 });
 
 describe('parseAuthor', () => {
-  it('extracts owner name and Strava athlete id from <metadata><author>', () => {
+  it('extracts owner name and Strava athlete id, stripping the verified badge', () => {
     expect(parseAuthor(GPX)).toEqual({
-      name: 'Alex Booker ⓥ',
+      name: 'Alex Booker',
       stravaId: '39587126',
     });
   });
