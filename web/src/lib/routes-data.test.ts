@@ -138,6 +138,34 @@ describe('featuresToRoutes', () => {
     expect(r.owner_strava_id).toBeUndefined();
   });
 
+  it('treats empty-string owner fields as undefined, not a defined ""', () => {
+    const empty = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'o',
+            name: 'O',
+            link: 'https://e/o',
+            owner_name: '',
+            owner_strava_id: '',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    const r = featuresToRoutes(empty)[0]!;
+    expect(r.owner_name).toBeUndefined();
+    expect(r.owner_strava_id).toBeUndefined();
+  });
+
   it('preserves 3D [lng,lat,ele] geometry and centroids from the first two axes', () => {
     const threeD = {
       type: 'FeatureCollection',

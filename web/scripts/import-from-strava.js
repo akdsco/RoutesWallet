@@ -74,6 +74,7 @@ function parseAuthor(gpx) {
     .join('')
     .replace(/\s+/g, ' ')
     .trim();
+  if (!clean) return null; // matches gpx.ts: a name that was only a badge glyph is no name
   return { name: clean, stravaId: sid };
 }
 
@@ -89,8 +90,9 @@ function parseStatMeters(s) {
 async function readPageElevation(id) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const kmRe = /^\d[\d,.]*\s*km$/;
-  const mRe = /^\d[\d,.]*\s*m$/;
   const timeRe = /^\d+:\d{2}(:\d{2})?$/;
+  // parseStatMeters is the single source of truth for "is this a metres value" —
+  // detection and parsing use the same rule, so they can never disagree.
   const readElev = (doc) => {
     const leaf = (el) =>
       [...el.querySelectorAll('*')]
@@ -99,17 +101,19 @@ async function readPageElevation(id) {
     let best = null;
     for (const el of doc.querySelectorAll('div,section,ul,header')) {
       const t = leaf(el);
+      const metres = t.map(parseStatMeters).filter((v) => v != null);
       if (
         t.some((x) => kmRe.test(x)) &&
-        t.some((x) => mRe.test(x)) &&
-        t.some((x) => timeRe.test(x))
+        t.some((x) => timeRe.test(x)) &&
+        metres.length
       ) {
-        if (!best || t.length < best.count) {
-          best = { count: t.length, elev: t.find((x) => mRe.test(x)) };
-        }
+        if (!best || t.length < best.count) best = { count: t.length, metres };
       }
     }
-    return best ? parseStatMeters(best.elev) : null;
+    if (!best) return null;
+    // The route summary has exactly one metres stat (distance is km, time is time).
+    // If a block ever exposes more than one, don't guess — surface it as missing.
+    return best.metres.length === 1 ? best.metres[0] : null;
   };
   const f = document.createElement('iframe');
   f.style.cssText =
