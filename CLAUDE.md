@@ -33,17 +33,34 @@ winter-friendly metadata · monetisation / paywalls · **any backend or server**
 
 Every route is exactly this shape. Do not mutate it without the user's say-so:
 
+Source of truth is `web/src/types.ts`; keep this in sync with it.
+
 ```ts
 type Route = {
   id: string;
   name: string;
   link: string; // opens in Strava/RWGPS or a GPX download
   distance_km: number;
-  source: 'HV-signed' | '3rd-party'; // trust badge; HV = vetted by the club
-  geometry: GeoJSON.LineString; // [lng, lat] pairs
+  source: 'club-verified' | 'club-member' | 'third-party'; // trust tier
+  region: string; // grouping + card meta, e.g. "Kent", "Hub Velo trips"
+  notes: string; // free-text ride notes; may be empty
+  cafe: string; // café stop; may be empty
+  route_type?: string; // e.g. "Road" | "Gravel", from the GPX import
+  elevation_gain_m?: number; // Strava's own displayed total; NOT recomputed
+  owner_name?: string; // route owner, from GPX author metadata
+  owner_strava_id?: string; // owner's Strava athlete id, for a profile link
+  geometry: GeoJSON.LineString; // [lng, lat] or [lng, lat, ele] (elevation = 3rd axis)
   centroid: [number, number]; // [lng, lat], for cheap proximity pre-filter
 };
 ```
+
+Elevation rides in as the standard GeoJSON 3rd coordinate (`[lng, lat, ele]`,
+whole metres) from the GPX `<ele>` tags — the profile chart is derived from it
+(distance-along vs the 3rd axis), so there is no separate profile array.
+`elevation_gain_m` is Strava's displayed figure, read off the route page at
+import — never recomputed locally, since a different smoothing rule would
+disagree. The 2 RideWithGPS + 1 Garmin routes have no Strava GPX, so they carry
+neither elevation nor owner yet.
 
 ### How to work here
 
