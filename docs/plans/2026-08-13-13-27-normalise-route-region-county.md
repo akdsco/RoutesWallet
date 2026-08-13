@@ -34,15 +34,24 @@ and Maidenhead 1, Devon 1, Somerset 1. ~28 rows aren't a clean county.
 - **Full canonical county names** (Herts → Hertfordshire, Bucks →
   Buckinghamshire, London → Greater London, Windsor and Maidenhead → Berkshire,
   Sussex → East/West Sussex per the boundary set).
-- **Geometry-first resolution.** The route's **start point** (`coordinates[0]`) is
-  tested with **Turf point-in-polygon** against a **UK ceremonial-counties boundary
-  set**. Inside a county → `country = "United Kingdom"`, `region` = that county.
-  Outside every UK county (e.g. Girona/Calpe) → `region = null`, `country` from a
-  small name-hint resolver (Girona/Calpe → `"Spain"`) else `null`. This replaces
-  the messy labels with a derived, reproducible truth and honours the "geo maths
-  goes through Turf" invariant. The existing labels become a **cross-check** (the
-  60 Essex starts should resolve to Essex) — mismatches are logged, not silently
-  trusted.
+- **Pure-geometry resolution by majority vote (labels dropped).** The old region
+  labels are discarded entirely — they mixed counties with informal groupings and
+  read confusingly as "counties". Instead, sample points along the line
+  (`sampleAlong`, `SAMPLE_COUNT = 5`), **Turf point-in-polygon** each against a
+  **UK ceremonial-counties boundary set**, and take the **majority county**.
+  - **London is the home county.** These are a London club's rides: nearly all
+    start/finish in Greater London (a large polygon), so a plain distance-majority
+    mislabels a "Kent Hills" ride "Greater London". So a ride's region is the
+    **away-county it reaches** — if any non-London county appears, the most-voted
+    of those wins; only a ride touching no other county stays Greater London.
+  - Outside every UK county (Girona/Calpe/Mallorca/Como) → `region = null`,
+    `country` from a name-hint resolver (Girona/Calpe → `"Spain"`) else `null`.
+
+  > **Design evolution (from the dry-run):** started as "geometry-first by start
+  > point", then "label-first + geo-fallback". A dry run showed the start point is
+  > always London (club start), collapsing ~everything to Greater London; and the
+  > user chose to drop the confusing labels. The **home-county away-rule** is what
+  > makes it right — it cut Greater London from 19 routes to 2 genuine London loops.
 - **Re-runnable transform, not hand edits.** A deterministic Node script rewrites
   `routes.geojson`; running it twice yields an identical file.
 
@@ -80,10 +89,10 @@ Layers, cheapest-honest-test first:
 
 ## Behaviours — Given / When / Then
 
-- **B1** Given a route whose start falls in a UK county polygon, When normalised,
-  Then `country = "United Kingdom"` and `region` = that county's canonical full
-  name.
-- **B2** Given a route whose start is outside every UK county polygon, When
+- **B1** Given a route whose sampled points fall (in majority) in a UK county,
+  When normalised, Then `country = "United Kingdom"` and `region` = that county's
+  canonical full name; a London start/finish is outvoted by the away-county.
+- **B2** Given a route whose points are all outside every UK county polygon, When
   normalised, Then `region = null` and `country` = the name-hint result (Spain for
   Girona/Calpe) or `null` — never `""`.
 - **B3** Given the whole `routes.geojson` after the transform, Then every route has

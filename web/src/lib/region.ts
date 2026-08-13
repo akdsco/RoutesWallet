@@ -1,6 +1,6 @@
 /**
  * Canonical country + region (county) vocabulary and the pure resolver that turns
- * a route's start point into a `{ country, region }` pair.
+ * a route's sampled points into a `{ country, region }` pair by majority vote.
  *
  * Two-level grouping: a route has a `country` (always set once resolved) and,
  * only where the country is "unlocked" (the UK), a `region` = its ceremonial
