@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
 import type { Route } from './types.ts';
@@ -15,6 +22,7 @@ vi.mock('./lib/geocode.ts', () => ({ geocode: vi.fn() }));
 // (selection, matches, the search marker) stays observable without pixels.
 vi.mock('./components/RouteMap.tsx', () => ({
   RouteMap: (props: {
+    routes: { id: string }[];
     selectedId: string | null;
     matchedIds: Set<string> | null;
     searchPoint: [number, number] | null;
@@ -22,6 +30,10 @@ vi.mock('./components/RouteMap.tsx', () => ({
   }) => (
     <div
       data-testid="route-map"
+      data-routes={props.routes
+        .map((r) => r.id)
+        .sort()
+        .join(',')}
       data-selected={props.selectedId ?? ''}
       data-matched={
         props.matchedIds ? [...props.matchedIds].sort().join(',') : ''
@@ -265,6 +277,91 @@ describe('App — search', () => {
 
     await user.click(screen.getByRole('button', { name: /clear search/i }));
 
+    await waitFor(() => expect(routeCards()).toHaveLength(3));
+  });
+});
+
+describe('App — filters, sort & grouping', () => {
+  const openFilters = async (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole('button', { name: /^filters$/i }));
+  // The county chip is the one control carrying aria-pressed with that name (the
+  // group header uses aria-expanded; cards carry neither).
+  const countyChip = (name: RegExp) =>
+    screen
+      .getAllByRole('button', { name })
+      .find((b) => b.hasAttribute('aria-pressed'))!;
+
+  it('idle count line reads the bare total', async () => {
+    await renderLoaded();
+    expect(screen.getByText('3 routes')).toBeInTheDocument();
+  });
+
+  it('a county filter narrows the pool + map, survives a search, and survives clear', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    await user.click(countyChip(/cambridgeshire/i));
+
+    // pool narrows to the two Cambridgeshire routes; the count line + map agree
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+    expect(mapProps().getAttribute('data-routes')).toBe(
+      'cam-loop,grantchester'
+    );
+
+    // a search ranks WITHIN the filtered pool: "K of M filtered"
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() =>
+      expect(
+        screen.getByText('Within 25 km of Cambridge · 2 of 2 filtered')
+      ).toBeInTheDocument()
+    );
+
+    // clearing the search returns to the filtered pool, not to everything
+    await user.click(screen.getByRole('button', { name: /clear search/i }));
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+  });
+
+  it('a search switches sort to Nearest first and announces it', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+
+    expect(screen.getByText('Sorted by nearest first.')).toBeInTheDocument();
+    // the sort trigger now reads "Nearest"
+    expect(
+      screen.getByRole('button', { name: /sort: nearest/i })
+    ).toBeInTheDocument();
+  });
+
+  it('filters that exclude everything show the empty state with a way out', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    // London only (its one route is ~61 km)…
+    await user.click(countyChip(/london/i));
+    // …then squeeze the distance max below it → nothing matches
+    fireEvent.change(
+      screen.getByRole('slider', { name: /maximum distance/i }),
+      {
+        target: { value: '30' },
+      }
+    );
+
+    expect(
+      await screen.findByText(/no routes match these filters/i)
+    ).toBeInTheDocument();
+    // Clearing the filters brings the routes back.
+    await user.click(
+      screen.getByRole('button', { name: /clear all filters/i })
+    );
     await waitFor(() => expect(routeCards()).toHaveLength(3));
   });
 });

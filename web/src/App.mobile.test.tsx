@@ -136,7 +136,9 @@ describe('App — mobile layout (§F)', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.click(routeCards()[0]!);
+    const firstCard = routeCards()[0]!;
+    const firstId = firstCard.getAttribute('data-route-id'); // order-independent
+    await user.click(firstCard);
 
     const detail = screen.getByRole('region', { name: 'Route detail' });
     expect(
@@ -145,7 +147,7 @@ describe('App — mobile layout (§F)', () => {
     expect(within(detail).getByRole('link')).toBeInTheDocument(); // the exit
     expect(screen.getByTestId('route-map')).toHaveAttribute(
       'data-selected',
-      sampleRoutes[0]!.id
+      firstId!
     );
 
     await user.click(within(detail).getByRole('button', { name: /back to/i }));

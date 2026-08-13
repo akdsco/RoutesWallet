@@ -53,7 +53,6 @@ function Harness({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   return (
     <Sidebar
-      totalCount={3}
       query=""
       hint="Shows routes passing within 25 km"
       banner="none"

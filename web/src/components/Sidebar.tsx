@@ -1,13 +1,12 @@
-import { type FormEvent } from 'react';
+import { type FormEvent, type ReactNode } from 'react';
 import { SearchField } from './SearchField.tsx';
-import { RouteList } from './RouteList.tsx';
+import { RouteList, type FilterEmpty } from './RouteList.tsx';
 
 // Re-exported so existing importers (App, tests) keep their `from './Sidebar'`.
 export type { CardVM, GroupVM, Banner } from './RouteList.tsx';
 import type { Banner, GroupVM } from './RouteList.tsx';
 
 type Props = {
-  totalCount: number;
   query: string;
   hint: string;
   banner: Banner;
@@ -17,6 +16,17 @@ type Props = {
   /** Label for the detail panel's back row, e.g. "Back to 21 results". */
   backLabel: string;
   theme: 'light' | 'dark';
+  /** The §G filter panel, rendered between the search field and the list. */
+  filterPanel?: ReactNode;
+  /** Count-line phrasing for the list's count row. */
+  countLine?: string;
+  /** The sort control on the count row. */
+  sortControl?: ReactNode;
+  /** Nearest-first suspends grouping → flat list. */
+  flat?: boolean;
+  openGroups?: ReadonlySet<string>;
+  onToggleGroup?: (county: string) => void;
+  filterEmpty?: FilterEmpty | null;
   onQueryChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onClear: () => void;
@@ -29,13 +39,12 @@ type Props = {
 
 /**
  * The desktop sidebar: a fixed 392px column — search header (hidden while a route
- * is selected) over the shared RouteList (which swaps to the detail panel). On
- * mobile the same two pieces split apart: SearchField floats over the map and
- * RouteList lives in the bottom sheet (see App).
+ * is selected) over the shared RouteList (which swaps to the detail panel). The
+ * §G filter panel discloses between the search field and the list. On mobile the
+ * same pieces split apart (see App).
  */
 export function Sidebar(props: Props) {
   const {
-    totalCount,
     query,
     hint,
     banner,
@@ -44,6 +53,13 @@ export function Sidebar(props: Props) {
     selectedId,
     backLabel,
     theme,
+    filterPanel,
+    countLine,
+    sortControl,
+    flat,
+    openGroups,
+    onToggleGroup,
+    filterEmpty,
     onQueryChange,
     onSubmit,
     onClear,
@@ -70,25 +86,20 @@ export function Sidebar(props: Props) {
               </span>
               <span className="text-[13px] text-muted">routes</span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[11px] text-muted">
-                {totalCount} routes
-              </span>
-              <button
-                type="button"
-                aria-pressed={theme === 'dark'}
-                aria-label={
-                  theme === 'dark'
-                    ? 'Switch to light theme'
-                    : 'Switch to dark theme'
-                }
-                onClick={onToggleTheme}
-                title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-                className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
-              >
-                <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              aria-pressed={theme === 'dark'}
+              aria-label={
+                theme === 'dark'
+                  ? 'Switch to light theme'
+                  : 'Switch to dark theme'
+              }
+              onClick={onToggleTheme}
+              title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
+            >
+              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+            </button>
           </div>
 
           <form className="flex flex-col gap-2" onSubmit={submit}>
@@ -106,6 +117,8 @@ export function Sidebar(props: Props) {
         </div>
       )}
 
+      {!selectedId && filterPanel}
+
       <RouteList
         query={query}
         banner={banner}
@@ -114,6 +127,12 @@ export function Sidebar(props: Props) {
         selectedId={selectedId}
         backLabel={backLabel}
         theme={theme}
+        countLine={countLine}
+        sortControl={sortControl}
+        flat={flat}
+        openGroups={openGroups}
+        onToggleGroup={onToggleGroup}
+        filterEmpty={filterEmpty}
         onClear={onClear}
         onSelect={onSelect}
         onDeselect={onDeselect}
