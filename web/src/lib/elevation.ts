@@ -40,6 +40,9 @@ export function elevationGainM(
   if (eles.length < 2) return 0;
 
   let gain = 0;
+  // The `?? 0` / `?? ref` are not dead code: under `noUncheckedIndexedAccess`
+  // `eles[i]` is typed `number | undefined`, so the fallbacks are what keep `ref`
+  // and `e` typed `number` (they can't fire at runtime — eles holds only finites).
   let ref = eles[0] ?? 0;
   for (let i = 1; i < eles.length; i++) {
     const e = eles[i] ?? ref;

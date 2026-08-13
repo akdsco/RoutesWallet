@@ -26,6 +26,17 @@ export function enrichFeatureFromGpx(
       `GPX has ${coords.length} trackpoint(s); need at least 2 to build a route`
     );
   }
+  // This function's whole job is elevation — a GPX with no <ele> series (e.g. an
+  // elevation-stripped export) would otherwise be stored as 2D geometry with 0 m
+  // gain and reported as a success. Refuse it loudly instead.
+  const eleSamples = coords.filter(
+    (c) => typeof c[2] === 'number' && Number.isFinite(c[2])
+  ).length;
+  if (eleSamples < 2) {
+    throw new Error(
+      `GPX carries ${eleSamples} elevation sample(s); need an <ele> series to enrich`
+    );
+  }
   const author = parseAuthor(gpx);
 
   const properties: Record<string, unknown> = {

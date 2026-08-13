@@ -59,17 +59,25 @@ async function loadGpx({ id, fetchUrl }) {
   const file = join(GPX_DIR, `${id}.gpx`);
   if (existsSync(file)) return readFileSync(file, 'utf8');
   if (fetchUrl) {
-    const res = await fetch(fetchUrl);
-    if (res.ok) {
-      const text = await res.text();
-      mkdirSync(GPX_DIR, { recursive: true });
-      writeFileSync(file, text); // cache so re-runs are deterministic + offline
-      console.log(`  fetched ${fetchUrl} → ${id}.gpx`);
-      return text;
+    try {
+      const res = await fetch(fetchUrl);
+      if (res.ok) {
+        const text = await res.text();
+        mkdirSync(GPX_DIR, { recursive: true });
+        writeFileSync(file, text); // cache so re-runs are deterministic + offline
+        console.log(`  fetched ${fetchUrl} → ${id}.gpx`);
+        return text;
+      }
+      console.warn(
+        `  fetch ${fetchUrl} → HTTP ${res.status} (needs manual export)`
+      );
+    } catch (e) {
+      // Network-level failure (offline, DNS, host down) — degrade to "no GPX"
+      // so any locally-dropped files still get processed.
+      console.warn(
+        `  fetch ${fetchUrl} failed: ${e.message} (needs manual export)`
+      );
     }
-    console.warn(
-      `  fetch ${fetchUrl} → HTTP ${res.status} (needs manual export)`
-    );
   }
   return null;
 }
@@ -80,6 +88,7 @@ async function main() {
 
   let enriched = 0;
   const missing = [];
+  const failed = [];
   for (const target of TARGETS) {
     const idx = indexById.get(target.id);
     if (idx === undefined) {
@@ -92,23 +101,36 @@ async function main() {
       console.warn(`! ${target.id}: no GPX available — leaving as-is`);
       continue;
     }
-    const out = enrichFeatureFromGpx(fc.features[idx], gpx);
-    fc.features[idx] = out;
-    const p = out.properties;
-    console.log(
-      `✓ ${target.id}: ${out.geometry.coordinates.length} pts, ` +
-        `${p.elevation_gain_m} m gain, owner ${p.owner_name ?? '—'}`
-    );
-    enriched++;
+    try {
+      const out = enrichFeatureFromGpx(fc.features[idx], gpx);
+      fc.features[idx] = out;
+      const p = out.properties;
+      console.log(
+        `✓ ${target.id}: ${out.geometry.coordinates.length} pts, ` +
+          `${p.elevation_gain_m} m gain, owner ${p.owner_name ?? '—'}`
+      );
+      enriched++;
+    } catch (e) {
+      // A bad drop (e.g. an HTML error page saved as .gpx) must not abort the
+      // run and discard the routes already enriched — log it and carry on.
+      failed.push(target.id);
+      console.warn(`! ${target.id}: bad GPX — ${e.message} (leaving as-is)`);
+    }
   }
 
   // Match the on-disk format exactly (minified, no trailing newline) so the 122
   // untouched features stay byte-identical and the diff is only the 3 routes.
   writeFileSync(ROUTES_PATH, JSON.stringify(fc));
 
+  const problems = [
+    missing.length ? `missing GPX: ${missing.join(', ')}` : '',
+    failed.length ? `bad GPX: ${failed.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('; ');
   console.log(
     `\nEnriched ${enriched}/${TARGETS.length} non-Strava routes.` +
-      (missing.length ? ` Missing GPX: ${missing.join(', ')}.` : '')
+      (problems ? ` Skipped — ${problems}.` : '')
   );
 }
 

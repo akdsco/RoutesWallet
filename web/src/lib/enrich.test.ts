@@ -100,4 +100,16 @@ describe('enrichFeatureFromGpx', () => {
     </trkseg></trk></gpx>`;
     expect(() => enrichFeatureFromGpx(baseFeature(), thin)).toThrow();
   });
+
+  it('throws when the GPX has trackpoints but no elevation series', () => {
+    // e.g. an elevation-stripped export — enriching it would silently store 2D
+    // geometry + 0 m gain and report success, defeating the whole point.
+    const noEle = `<gpx><trk><trkseg>
+      <trkpt lat="41.90" lon="2.80"></trkpt>
+      <trkpt lat="41.91" lon="2.81"></trkpt>
+    </trkseg></trk></gpx>`;
+    expect(() => enrichFeatureFromGpx(baseFeature(), noEle)).toThrow(
+      /elevation/i
+    );
+  });
 });
