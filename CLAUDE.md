@@ -57,10 +57,20 @@ type Route = {
 Elevation rides in as the standard GeoJSON 3rd coordinate (`[lng, lat, ele]`,
 whole metres) from the GPX `<ele>` tags — the profile chart is derived from it
 (distance-along vs the 3rd axis), so there is no separate profile array.
-`elevation_gain_m` is Strava's displayed figure, read off the route page at
-import — never recomputed locally, since a different smoothing rule would
-disagree. The 2 RideWithGPS + 1 Garmin routes have no Strava GPX, so they carry
-neither elevation nor owner yet.
+`elevation_gain_m` for the 122 Strava routes is Strava's displayed figure, read
+off the route page at import — never recomputed locally, since a different
+smoothing rule would disagree.
+
+**Non-Strava sources (2 RideWithGPS + 1 Garmin).** They have no Strava GPX and
+expose no Strava-style displayed gain. They are enriched from their own GPX by
+`web/scripts/enrich-non-strava.mjs` (re-runnable; GPX inputs dropped in
+`scripts/non-strava-gpx/`, never hand-edited): elevation series from the source
+`<ele>` tags (3rd coord, same as Strava), and `elevation_gain_m` **computed** from
+that series (`src/lib/elevation.ts`, hysteresis 3 m). That computed gain is the
+**deliberate exception** to the never-recompute rule above — it only held for
+Strava because Strava showed its own number. Owner is set only when the GPX
+carries an `<author>` (RWGPS/Garmin don't), and `owner_strava_id` stays absent for
+non-Strava. Building link-based importers on this core is TB-65.
 
 ### How to work here
 
