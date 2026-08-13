@@ -72,10 +72,12 @@ describe('groupNav', () => {
     });
   });
 
-  it('Enter/Space toggle a header, but not a card', () => {
+  it('does not handle Enter/Space — the native header button owns the toggle', () => {
+    // The component early-returns for Enter/Space so the <button>'s own onClick
+    // folds; groupNav stays out of it to keep a single fold path.
     expect(
       groupNav(rows, { kind: 'header', county: 'Essex' }, 'Enter')
-    ).toEqual({ type: 'fold', county: 'Essex', open: false });
+    ).toBeNull();
     expect(groupNav(rows, { kind: 'card', id: 'e1' }, ' ')).toBeNull();
   });
 });

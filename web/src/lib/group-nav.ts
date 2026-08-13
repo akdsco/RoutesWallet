@@ -3,8 +3,10 @@
  * flat list nav). The visible sequence is group headers interleaved with their
  * cards; a folded group contributes its header but NOT its cards, so focus never
  * enters hidden content. ↑/↓ walk the sequence (header → cards → next header),
- * ←/→ fold/unfold explicitly, Enter/Space toggle a header. Pure — unit tested; the
- * component maps the returned intent onto real focus + fold state.
+ * ←/→ fold/unfold explicitly. Enter/Space are NOT handled here — a header is a
+ * real <button>, so the component lets its native activation own the toggle (one
+ * fold path, no divergence). Pure — unit tested; the component maps the returned
+ * intent onto real focus + fold state.
  */
 
 export type NavRow =
@@ -91,12 +93,9 @@ export function groupNav(
       if (cur?.kind === 'card')
         return { type: 'move', target: { kind: 'header', county: cur.county } };
       return null;
-    case 'Enter':
-    case ' ':
-      if (cur?.kind === 'header')
-        return { type: 'fold', county: cur.county, open: !cur.open };
-      return null;
     default:
+      // Enter/Space are intentionally not handled — the header <button>'s native
+      // activation owns the fold toggle in the component.
       return null;
   }
 }

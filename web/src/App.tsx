@@ -235,6 +235,9 @@ export function App() {
         setPlace(null);
         setGeoFail(true);
         setSelectedId(null);
+        // Losing the place must also drop a 'nearest' sort — otherwise the list
+        // stays flat/ungrouped with an un-selectable sort and no place (§G).
+        setSortState((s) => sortOnClear(s));
       };
 
       let point: [number, number] | null;
@@ -252,13 +255,7 @@ export function App() {
       setGeoFail(false);
       setPlace({ lng: point[0], lat: point[1], name: q });
       setSelectedId(null);
-      setSortState((s) => {
-        const next = sortOnSearch(s);
-        if (next.sort === 'nearest' && s.sort !== 'nearest') {
-          setAnnounce('Sorted by nearest first.');
-        }
-        return next;
-      });
+      setSortState((s) => sortOnSearch(s)); // announce handled by the effect below
     },
     [routes, loading, clearSearch]
   );
@@ -410,6 +407,16 @@ export function App() {
     []
   );
 
+  // Announce a switch to nearest-first (§G) — in an effect, not the state updater,
+  // so the announce stays a pure side effect (StrictMode-safe).
+  const prevSortRef = useRef<SortKey>(sortState.sort);
+  useEffect(() => {
+    if (sortState.sort === 'nearest' && prevSortRef.current !== 'nearest') {
+      setAnnounce('Sorted by nearest first.');
+    }
+    prevSortRef.current = sortState.sort;
+  }, [sortState.sort]);
+
   const countyChips = useMemo(
     () => countyCounts(routes, effFilters, domains),
     [routes, effFilters, domains]
@@ -431,10 +438,14 @@ export function App() {
         ...(rangeDraft.elevation ? { elevation: rangeDraft.elevation } : {}),
       }
     : effFilters;
-  const previewPoolCount = draftActive
+  // Preview the count from the draft pool only when idle. During a search the
+  // count line shows "K of M" over the COMMITTED pool + matches, so previewing
+  // just the pool would make K > M until release — so don't.
+  const previewCount = draftActive && !place;
+  const previewPoolCount = previewCount
     ? applyFilters(routes, displayFilters, domains).length
     : pool.length;
-  const previewHasFilters = draftActive
+  const previewHasFilters = previewCount
     ? activeFilterCount(displayFilters, domains) > 0
     : hasFilters;
 

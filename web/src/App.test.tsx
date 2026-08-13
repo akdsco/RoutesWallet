@@ -328,6 +328,28 @@ describe('App — filters, sort & grouping', () => {
     expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
   });
 
+  it('a failed search after a successful one does not strand a nearest sort', async () => {
+    geocodeMock
+      .mockResolvedValueOnce(CAMBRIDGE) // first search succeeds → nearest
+      .mockResolvedValueOnce(null); // second fails to geocode
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+
+    await user.clear(searchBox());
+    await user.type(searchBox(), 'Nowhere{Enter}');
+    await screen.findByText('Couldn’t find that place');
+
+    // Losing the place must drop the 'nearest' sort — otherwise the view is
+    // flat/ungrouped with a disabled sort, and the URL carries an invalid
+    // sort=nearest with no place.
+    await waitFor(() =>
+      expect(window.location.search).not.toContain('sort=nearest')
+    );
+  });
+
   it('a search switches sort to Nearest first and announces it', async () => {
     geocodeMock.mockResolvedValue(CAMBRIDGE);
     const user = userEvent.setup();
