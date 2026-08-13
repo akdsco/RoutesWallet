@@ -32,6 +32,19 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { enrichFeatureFromGpx } from '../src/lib/enrich.ts';
 
+// This script imports the `.ts` libs directly and relies on Node's TypeScript
+// type-stripping (default since 22.18 / 23.6). Fail with a clear message on an
+// older runtime rather than a cryptic "unknown file extension" from the import.
+// (A package.json `engines` field would wrongly claim the whole app needs this —
+// the app + CI run fine on stock Node; only this script does.)
+const [major, minor] = process.versions.node.split('.').map(Number);
+if (major < 22 || (major === 22 && minor < 18)) {
+  console.error(
+    `Needs Node >= 22.18 for TypeScript type-stripping; you have ${process.versions.node}.`
+  );
+  process.exit(1);
+}
+
 const here = dirname(fileURLToPath(import.meta.url));
 const ROUTES_PATH = join(here, '..', 'public', 'routes.geojson');
 const GPX_DIR = join(here, 'non-strava-gpx');
@@ -63,6 +76,15 @@ async function loadGpx({ id, fetchUrl }) {
       const res = await fetch(fetchUrl);
       if (res.ok) {
         const text = await res.text();
+        // A soft-200 login/interstitial HTML page must not be cached as .gpx —
+        // existsSync would then return the poisoned file forever. Only cache a
+        // body that actually looks like a GPX track.
+        if (!/<trkpt[\s>]/.test(text)) {
+          console.warn(
+            `  fetch ${fetchUrl} → 200 but no trackpoints (login/interstitial?); not caching`
+          );
+          return null;
+        }
         mkdirSync(GPX_DIR, { recursive: true });
         writeFileSync(file, text); // cache so re-runs are deterministic + offline
         console.log(`  fetched ${fetchUrl} → ${id}.gpx`);

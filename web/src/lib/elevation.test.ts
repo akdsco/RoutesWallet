@@ -53,4 +53,27 @@ describe('elevationGainM', () => {
   it('is 0 for a single point', () => {
     expect(elevationGainM(at(100))).toBe(0);
   });
+
+  it('does not bank a climb across a gap in the ele series', () => {
+    // A missing-elevation point breaks the run — the 300 m difference between the
+    // two ends of the gap spans unknown terrain and must not be counted.
+    const withGap: number[][] = [
+      [0, 0, 100],
+      [0, 1], // no elevation → gap
+      [0, 2, 400],
+    ];
+    expect(elevationGainM(withGap)).toBe(0);
+  });
+
+  it('sums each side of a gap independently', () => {
+    // climb 0→50, gap, climb 100→130 → 50 + 30 = 80 (not bridged as 130)
+    const split: number[][] = [
+      [0, 0, 0],
+      [0, 1, 50],
+      [0, 2], // gap
+      [0, 3, 100],
+      [0, 4, 130],
+    ];
+    expect(elevationGainM(split)).toBe(80);
+  });
 });

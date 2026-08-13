@@ -26,15 +26,16 @@ export function enrichFeatureFromGpx(
       `GPX has ${coords.length} trackpoint(s); need at least 2 to build a route`
     );
   }
-  // This function's whole job is elevation — a GPX with no <ele> series (e.g. an
-  // elevation-stripped export) would otherwise be stored as 2D geometry with 0 m
-  // gain and reported as a success. Refuse it loudly instead.
-  const eleSamples = coords.filter(
-    (c) => typeof c[2] === 'number' && Number.isFinite(c[2])
+  // This function's whole job is elevation. Require it on EVERY point: a GPX with
+  // no <ele> would be stored as 2D geometry + 0 m gain and reported as success,
+  // and a partially-stripped one would store a mixed 2D/3D geometry that breaks
+  // the profile chart and lets gain bridge the gap. Refuse both loudly.
+  const missingEle = coords.filter(
+    (c) => typeof c[2] !== 'number' || !Number.isFinite(c[2])
   ).length;
-  if (eleSamples < 2) {
+  if (missingEle > 0) {
     throw new Error(
-      `GPX carries ${eleSamples} elevation sample(s); need an <ele> series to enrich`
+      `GPX has ${missingEle} trackpoint(s) without <ele>; need elevation on every point to enrich`
     );
   }
   const author = parseAuthor(gpx);

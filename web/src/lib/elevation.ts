@@ -32,21 +32,22 @@ export function elevationGainM(
   coords: number[][],
   { threshold = 3 }: ElevationGainOptions = {}
 ): number {
-  const eles: number[] = [];
+  let gain = 0;
+  // `ref` is the reference elevation of the current continuous run of samples.
+  // A point with no elevation resets it to null, so a gap in the series is NOT
+  // bridged — banking the delta across an unknown stretch would be a phantom
+  // climb. Walking coords directly (rather than compacting to an eles array)
+  // is what makes that gap visible.
+  let ref: number | null = null;
   for (const c of coords) {
     const e = c[2];
-    if (typeof e === 'number' && Number.isFinite(e)) eles.push(e);
-  }
-  if (eles.length < 2) return 0;
-
-  let gain = 0;
-  // The `?? 0` / `?? ref` are not dead code: under `noUncheckedIndexedAccess`
-  // `eles[i]` is typed `number | undefined`, so the fallbacks are what keep `ref`
-  // and `e` typed `number` (they can't fire at runtime — eles holds only finites).
-  let ref = eles[0] ?? 0;
-  for (let i = 1; i < eles.length; i++) {
-    const e = eles[i] ?? ref;
-    if (e - ref >= threshold) {
+    if (typeof e !== 'number' || !Number.isFinite(e)) {
+      ref = null; // gap — break the run
+      continue;
+    }
+    if (ref === null) {
+      ref = e; // (re)start a run
+    } else if (e - ref >= threshold) {
       gain += e - ref; // bank the climb, advance the reference up
       ref = e;
     } else if (ref - e >= threshold) {

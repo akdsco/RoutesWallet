@@ -112,4 +112,17 @@ describe('enrichFeatureFromGpx', () => {
       /elevation/i
     );
   });
+
+  it('throws on partial elevation (some points lack <ele>)', () => {
+    // A gapped series would store a mixed 2D/3D geometry that breaks the profile
+    // and lets gain bridge the gap — refuse it rather than enrich half a route.
+    const gappy = `<gpx><trk><trkseg>
+      <trkpt lat="41.90" lon="2.80"><ele>81</ele></trkpt>
+      <trkpt lat="41.91" lon="2.81"></trkpt>
+      <trkpt lat="41.92" lon="2.82"><ele>120</ele></trkpt>
+    </trkseg></trk></gpx>`;
+    expect(() => enrichFeatureFromGpx(baseFeature(), gappy)).toThrow(
+      /elevation/i
+    );
+  });
 });
