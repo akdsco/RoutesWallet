@@ -25,6 +25,7 @@ function route(
     link: `https://example.com/${id}`,
     distance_km: 30,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Essex',
     notes: '',
     cafe: '',

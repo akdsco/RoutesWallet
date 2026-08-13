@@ -17,6 +17,7 @@ function route(id: string, over: Partial<Route> = {}): Route {
     link: `https://example.com/${id}`,
     distance_km: 30,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Essex',
     notes: '',
     cafe: '',
