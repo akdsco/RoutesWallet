@@ -25,6 +25,7 @@ const geocodeMock = vi.mocked(geocode);
 beforeEach(() => {
   loadRoutesMock.mockReset();
   geocodeMock.mockReset();
+  window.history.replaceState(null, '', '/'); // reset the app-written URL per test
   window.matchMedia = (query: string): MediaQueryList => ({
     matches: false,
     media: query,
@@ -136,7 +137,9 @@ describe('App — mobile layout (§F)', () => {
     const user = userEvent.setup();
     await renderLoaded();
 
-    await user.click(routeCards()[0]!);
+    const firstCard = routeCards()[0]!;
+    const firstId = firstCard.getAttribute('data-route-id'); // order-independent
+    await user.click(firstCard);
 
     const detail = screen.getByRole('region', { name: 'Route detail' });
     expect(
@@ -145,7 +148,7 @@ describe('App — mobile layout (§F)', () => {
     expect(within(detail).getByRole('link')).toBeInTheDocument(); // the exit
     expect(screen.getByTestId('route-map')).toHaveAttribute(
       'data-selected',
-      sampleRoutes[0]!.id
+      firstId!
     );
 
     await user.click(within(detail).getByRole('button', { name: /back to/i }));
@@ -202,6 +205,37 @@ describe('App — mobile layout (§F)', () => {
     expect(
       screen.getByRole('button', { name: /switch to (dark|light) theme/i })
     ).toBeInTheDocument();
+  });
+
+  it('opens the filter view from the Filters pill and commits back to the list', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    // The Filters pill leads the chip row on mobile.
+    const pill = screen.getByRole('button', { name: /^filters$/i });
+    await user.click(pill);
+
+    // The sheet swaps to the filter view: a "Show N routes" commit footer appears
+    // and the list cards are gone.
+    const commit = await screen.findByRole('button', {
+      name: /show 3 routes/i,
+    });
+    expect(commit).toBeInTheDocument();
+    expect(routeCards()).toHaveLength(0);
+
+    // Narrowing a county updates the commit count…
+    await user.click(
+      screen
+        .getAllByRole('button', { name: /cambridgeshire/i })
+        .find((b) => b.hasAttribute('aria-pressed'))!
+    );
+    expect(
+      await screen.findByRole('button', { name: /show 2 routes/i })
+    ).toBeInTheDocument();
+
+    // …and committing returns to the (now filtered) list.
+    await user.click(screen.getByRole('button', { name: /show 2 routes/i }));
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
   });
 
   it('shows the active basemap credit in the sheet and updates it on switch', async () => {

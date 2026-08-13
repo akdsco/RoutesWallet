@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
 import type { Route } from './types.ts';
@@ -15,6 +22,7 @@ vi.mock('./lib/geocode.ts', () => ({ geocode: vi.fn() }));
 // (selection, matches, the search marker) stays observable without pixels.
 vi.mock('./components/RouteMap.tsx', () => ({
   RouteMap: (props: {
+    routes: { id: string }[];
     selectedId: string | null;
     matchedIds: Set<string> | null;
     searchPoint: [number, number] | null;
@@ -22,6 +30,10 @@ vi.mock('./components/RouteMap.tsx', () => ({
   }) => (
     <div
       data-testid="route-map"
+      data-routes={props.routes
+        .map((r) => r.id)
+        .sort()
+        .join(',')}
       data-selected={props.selectedId ?? ''}
       data-matched={
         props.matchedIds ? [...props.matchedIds].sort().join(',') : ''
@@ -80,6 +92,9 @@ function deferred<T>() {
 beforeEach(() => {
   loadRoutesMock.mockReset();
   geocodeMock.mockReset();
+  // The app writes its view into the URL (replaceState); jsdom keeps that across
+  // tests in the shared window, so reset it so each test starts from a clean URL.
+  window.history.replaceState(null, '', '/');
 });
 
 describe('App — loading + listing', () => {
@@ -265,6 +280,160 @@ describe('App — search', () => {
 
     await user.click(screen.getByRole('button', { name: /clear search/i }));
 
+    await waitFor(() => expect(routeCards()).toHaveLength(3));
+  });
+});
+
+describe('App — filters, sort & grouping', () => {
+  const openFilters = async (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole('button', { name: /^filters$/i }));
+  // The county chip is the one control carrying aria-pressed with that name (the
+  // group header uses aria-expanded; cards carry neither).
+  const countyChip = (name: RegExp) =>
+    screen
+      .getAllByRole('button', { name })
+      .find((b) => b.hasAttribute('aria-pressed'))!;
+
+  it('idle count line reads the bare total', async () => {
+    await renderLoaded();
+    expect(screen.getByText('3 routes')).toBeInTheDocument();
+  });
+
+  it('a county filter narrows the pool + map, survives a search, and survives clear', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    await user.click(countyChip(/cambridgeshire/i));
+
+    // pool narrows to the two Cambridgeshire routes; the count line + map agree
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+    expect(mapProps().getAttribute('data-routes')).toBe(
+      'cam-loop,grantchester'
+    );
+
+    // a search ranks WITHIN the filtered pool: "K of M filtered"
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() =>
+      expect(
+        screen.getByText('Within 25 km of Cambridge · 2 of 2 filtered')
+      ).toBeInTheDocument()
+    );
+
+    // clearing the search returns to the filtered pool, not to everything
+    await user.click(screen.getByRole('button', { name: /clear search/i }));
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+  });
+
+  it('a failed search after a successful one does not strand a nearest sort', async () => {
+    geocodeMock
+      .mockResolvedValueOnce(CAMBRIDGE) // first search succeeds → nearest
+      .mockResolvedValueOnce(null); // second fails to geocode
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+
+    await user.clear(searchBox());
+    await user.type(searchBox(), 'Nowhere{Enter}');
+    await screen.findByText('Couldn’t find that place');
+
+    // Losing the place must drop the 'nearest' sort — otherwise the view is
+    // flat/ungrouped with a disabled sort, and the URL carries an invalid
+    // sort=nearest with no place.
+    await waitFor(() =>
+      expect(window.location.search).not.toContain('sort=nearest')
+    );
+  });
+
+  it('a search switches sort to Nearest first and announces it', async () => {
+    geocodeMock.mockResolvedValue(CAMBRIDGE);
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.type(searchBox(), 'Cambridge{Enter}');
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+
+    expect(screen.getByText('Sorted by nearest first.')).toBeInTheDocument();
+    // the sort trigger now reads "Nearest"
+    expect(
+      screen.getByRole('button', { name: /sort: nearest/i })
+    ).toBeInTheDocument();
+  });
+
+  it('writes the active filters into the URL (replaceState)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    await user.click(countyChip(/cambridgeshire/i));
+
+    await waitFor(() =>
+      expect(window.location.search).toContain('county=cambridgeshire')
+    );
+  });
+
+  it('restores a filtered/sorted view from the URL and drops unknown params', async () => {
+    // A shared link: a known county + an unknown one + an explicit sort.
+    window.history.replaceState(
+      null,
+      '',
+      '/?county=cambridgeshire,atlantis&sort=distance-desc'
+    );
+    await renderLoaded();
+
+    // cambridgeshire is applied (2 routes); 'atlantis' is dropped without error
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+    // the shared sort is restored
+    expect(screen.getByRole('button', { name: /sort:/i })).toHaveTextContent(
+      /distance ↓/i
+    );
+  });
+
+  it('a slider drag previews the count live but re-renders the list only on release', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await openFilters(user);
+
+    const maxSlider = screen.getByRole('slider', { name: /maximum distance/i });
+    // Drag (onChange) — the count line previews the narrower pool immediately…
+    fireEvent.change(maxSlider, { target: { value: '30' } });
+    await waitFor(() =>
+      expect(screen.getByText(/of 3 routes/)).toBeInTheDocument()
+    );
+    // …but the list has NOT yet dropped the out-of-range routes (commit pending).
+    expect(routeCards()).toHaveLength(3);
+
+    // Release commits: the list re-renders to the filtered pool.
+    fireEvent.blur(maxSlider);
+    await waitFor(() => expect(routeCards().length).toBeLessThan(3));
+  });
+
+  it('filters that exclude everything show the empty state with a way out', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    // London only (its one route is ~61 km)…
+    await user.click(countyChip(/london/i));
+    // …then squeeze the distance max below it → nothing matches. onChange only
+    // drafts (live count); the list re-renders on release, so commit via blur.
+    const maxSlider = screen.getByRole('slider', { name: /maximum distance/i });
+    fireEvent.change(maxSlider, { target: { value: '30' } });
+    fireEvent.blur(maxSlider);
+
+    expect(
+      await screen.findByText(/no routes match these filters/i)
+    ).toBeInTheDocument();
+    // Clearing the filters brings the routes back.
+    await user.click(
+      screen.getByRole('button', { name: /clear all filters/i })
+    );
     await waitFor(() => expect(routeCards()).toHaveLength(3));
   });
 });
