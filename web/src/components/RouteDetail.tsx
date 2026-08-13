@@ -89,12 +89,16 @@ export function RouteDetail({
             <span className="font-mono text-[14px] text-text">
               {r.distance_km} km
             </span>
-            <span className="h-[3px] w-[3px] rounded-full bg-muted" />
-            <span className="text-[12.5px] text-muted">
-              {r.region}
-              {nearKm != null &&
-                `${r.region ? ' · ' : ''}${nearKm.toFixed(1)} km away`}
-            </span>
+            {(r.region || nearKm != null) && (
+              <>
+                <span className="h-[3px] w-[3px] rounded-full bg-muted" />
+                <span className="text-[12.5px] text-muted">
+                  {r.region}
+                  {nearKm != null &&
+                    `${r.region ? ' · ' : ''}${nearKm.toFixed(1)} km away`}
+                </span>
+              </>
+            )}
           </div>
           <span className="self-start">
             <SourceBadge source={r.source} />

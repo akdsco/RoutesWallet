@@ -1,10 +1,11 @@
 /*
  * One-time, re-runnable normalisation of `public/routes.geojson` (TB-63).
  *
- * Rewrites each route's `country` + `region` from its START POINT, geometry-first:
- * the point is tested (Turf point-in-polygon) against the committed English
- * ceremonial-county boundaries. Inside a county → United Kingdom + that county;
- * outside → region null, country from a name hint (Girona/Calpe → Spain) or null.
+ * Rewrites each route's `country` + `region` by MAJORITY VOTE over points sampled
+ * along its line (Turf point-in-polygon): region against the committed English
+ * ceremonial-county boundaries (home-county away-rule — see region.ts), country
+ * against the world-country boundaries. Overseas rides get their real country and
+ * region null.
  *
  * Deterministic and idempotent — run it again after re-importing and the file is
  * unchanged. The transform core is `src/lib/normalise.ts` (unit-tested).

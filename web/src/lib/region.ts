@@ -14,7 +14,11 @@
  * country votes.
  */
 
-/** The ceremonial counties of England — the closed, documented region set. */
+/**
+ * The ceremonial counties of England — the closed, documented region set. City
+ * of London is deliberately omitted: the boundary asset folds it into Greater
+ * London, so no route can resolve to it and it would be a dead filter entry.
+ */
 export const UK_COUNTIES = Object.freeze([
   'Bedfordshire',
   'Berkshire',
@@ -22,7 +26,6 @@ export const UK_COUNTIES = Object.freeze([
   'Buckinghamshire',
   'Cambridgeshire',
   'Cheshire',
-  'City of London',
   'Cornwall',
   'Cumbria',
   'Derbyshire',
