@@ -86,7 +86,7 @@ export function defaultFilters(domains: Domains): Filters {
 }
 
 /** Is a range at (or beyond) both domain edges — i.e. constraining nothing? */
-function rangeIsDefault(range: Range, domain: Domain): boolean {
+export function rangeIsDefault(range: Range, domain: Domain): boolean {
   return range[0] <= domain.min && range[1] >= domain.max;
 }
 

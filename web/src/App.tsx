@@ -35,7 +35,7 @@ import {
   type Range,
   type Relaxation,
 } from './lib/filters.ts';
-import { encodeView, decodeView } from './lib/url-state.ts';
+import { encodeView, decodeView, contextualSort } from './lib/url-state.ts';
 import {
   sortRoutes,
   INITIAL_SORT,
@@ -121,6 +121,12 @@ export function App() {
   const [initialised, setInitialised] = useState(false);
   // Mobile: the filter view swaps into the sheet in place of the list (§F).
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // Live slider position while dragging — drives the handle + the count preview
+  // only. The heavier list/map re-render waits for release (commit), per §G.
+  const [rangeDraft, setRangeDraft] = useState<{
+    distance?: Range;
+    elevation?: Range;
+  }>({});
 
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
@@ -269,8 +275,10 @@ export function App() {
     // A sort that differs from the contextual default was chosen explicitly, so
     // mark it sticky; otherwise leave it as the default (a later search can switch
     // it to nearest).
-    const contextual: SortKey = view.near ? 'nearest' : 'name-az';
-    setSortState({ sort: view.sort, chose: view.sort !== contextual });
+    setSortState({
+      sort: view.sort,
+      chose: view.sort !== contextualSort(view.near),
+    });
     if (view.near) {
       setQuery(view.near);
       void runSearch(view.near);
@@ -331,9 +339,12 @@ export function App() {
     }));
   }, [flat, survivors, nearKm]);
 
-  const selectedCounty = selectedId
-    ? (routes.find((r) => r.id === selectedId)?.region ?? null)
+  // Use countyOf (not raw region) so a blank-region route resolves to 'Other' —
+  // matching the group label, so its group force-opens on select (§G fold rule).
+  const selectedRoute = selectedId
+    ? (routes.find((r) => r.id === selectedId) ?? null)
     : null;
+  const selectedCounty = selectedRoute ? countyOf(selectedRoute) : null;
   const singleCounty =
     filters.counties.size === 1 ? [...filters.counties][0]! : null;
   const openGroups = useMemo(() => {
@@ -372,14 +383,27 @@ export function App() {
       setFilters((f) => ({ ...f, countries: toggleSet(f.countries, name) })),
     []
   );
-  const setDistance = useCallback(
-    (r: Range) => setFilters((f) => ({ ...f, distance: r })),
+  // Slider drag (onChange) updates only the draft; release (onCommit) applies it
+  // to the filters and clears the draft — so the pool/list/map recompute once, on
+  // release, not on every drag step.
+  const previewDistance = useCallback(
+    (r: Range) => setRangeDraft((d) => ({ ...d, distance: r })),
     []
   );
-  const setElevation = useCallback(
-    (r: Range) => setFilters((f) => ({ ...f, elevation: r })),
+  const previewElevation = useCallback(
+    (r: Range) => setRangeDraft((d) => ({ ...d, elevation: r })),
     []
   );
+  const commitDistance = useCallback((r: Range) => {
+    setFilters((f) => ({ ...f, distance: r }));
+    setRangeDraft((d) => ({ ...d, distance: undefined }));
+  }, []);
+  const commitElevation = useCallback((r: Range) => {
+    setFilters((f) => ({ ...f, elevation: r }));
+    setRangeDraft((d) => ({ ...d, elevation: undefined }));
+  }, []);
+  // Empty-state "Widen distance" commits directly (no drag).
+  const setDistance = commitDistance;
 
   const pickSort = useCallback(
     (key: SortKey) => setSortState(sortOnPick(key)),
@@ -396,11 +420,29 @@ export function App() {
   );
   const activeCount = activeFilterCount(effFilters, domains);
 
+  // While a slider is mid-drag, the sliders show the draft value and the count
+  // previews the draft pool — the list stays on the committed filters until
+  // release. displayFilters merges any draft range over the committed filters.
+  const draftActive = !!(rangeDraft.distance || rangeDraft.elevation);
+  const displayFilters: Filters = draftActive
+    ? {
+        ...effFilters,
+        ...(rangeDraft.distance ? { distance: rangeDraft.distance } : {}),
+        ...(rangeDraft.elevation ? { elevation: rangeDraft.elevation } : {}),
+      }
+    : effFilters;
+  const previewPoolCount = draftActive
+    ? applyFilters(routes, displayFilters, domains).length
+    : pool.length;
+  const previewHasFilters = draftActive
+    ? activeFilterCount(displayFilters, domains) > 0
+    : hasFilters;
+
   const countLineText = countLine({
     total: routes.length,
-    poolCount: pool.length,
+    poolCount: previewPoolCount,
     matchCount: matches?.length ?? 0,
-    hasFilters,
+    hasFilters: previewHasFilters,
     place: place?.name ?? '',
     radiusKm: RADIUS_KM,
   });
@@ -518,24 +560,25 @@ export function App() {
   );
 
   const filterBodyProps = {
-    filters,
+    // draft-aware, so a mid-drag handle position shows immediately
+    filters: displayFilters,
     domains,
     countyChips,
     countryChips,
     elevationEnabled: hasElevation,
     onToggleCounty: toggleCounty,
     onToggleCountry: toggleCountry,
-    onDistanceChange: setDistance,
-    onDistanceCommit: setDistance,
-    onElevationChange: setElevation,
-    onElevationCommit: setElevation,
+    onDistanceChange: previewDistance,
+    onDistanceCommit: commitDistance,
+    onElevationChange: previewElevation,
+    onElevationCommit: commitElevation,
   };
 
   const filterPanel = initialised ? (
     <FilterPanel
       {...filterBodyProps}
       activeCount={activeCount}
-      matchCount={pool.length}
+      matchCount={previewPoolCount}
       totalCount={routes.length}
       onClearAll={clearFilters}
     />
@@ -738,7 +781,9 @@ export function App() {
             {mobileFiltersOpen && initialised ? (
               <MobileFilterSheet
                 {...filterBodyProps}
-                matchCount={pool.length}
+                // what the list will actually show on commit: the searched matches
+                // when a search is active, else the filtered pool.
+                matchCount={matches?.length ?? previewPoolCount}
                 onClearAll={clearFilters}
                 onDone={closeMobileFilters}
               />

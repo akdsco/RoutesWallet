@@ -106,4 +106,13 @@ describe('decode degrades, never errors', () => {
       'nearest'
     );
   });
+
+  it('drops sort=nearest when there is no place (it needs one)', () => {
+    // hand-edited / stale URL: nearest with no near would strand a disabled sort
+    expect(decodeView('sort=nearest', counties, domains).sort).toBe('name-az');
+    // but nearest is kept when a place is present
+    expect(decodeView('sort=nearest&near=Ely', counties, domains).sort).toBe(
+      'nearest'
+    );
+  });
 });

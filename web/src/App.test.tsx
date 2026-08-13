@@ -373,6 +373,25 @@ describe('App — filters, sort & grouping', () => {
     );
   });
 
+  it('a slider drag previews the count live but re-renders the list only on release', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await openFilters(user);
+
+    const maxSlider = screen.getByRole('slider', { name: /maximum distance/i });
+    // Drag (onChange) — the count line previews the narrower pool immediately…
+    fireEvent.change(maxSlider, { target: { value: '30' } });
+    await waitFor(() =>
+      expect(screen.getByText(/of 3 routes/)).toBeInTheDocument()
+    );
+    // …but the list has NOT yet dropped the out-of-range routes (commit pending).
+    expect(routeCards()).toHaveLength(3);
+
+    // Release commits: the list re-renders to the filtered pool.
+    fireEvent.blur(maxSlider);
+    await waitFor(() => expect(routeCards().length).toBeLessThan(3));
+  });
+
   it('filters that exclude everything show the empty state with a way out', async () => {
     const user = userEvent.setup();
     await renderLoaded();
@@ -380,13 +399,11 @@ describe('App — filters, sort & grouping', () => {
     await openFilters(user);
     // London only (its one route is ~61 km)…
     await user.click(countyChip(/london/i));
-    // …then squeeze the distance max below it → nothing matches
-    fireEvent.change(
-      screen.getByRole('slider', { name: /maximum distance/i }),
-      {
-        target: { value: '30' },
-      }
-    );
+    // …then squeeze the distance max below it → nothing matches. onChange only
+    // drafts (live count); the list re-renders on release, so commit via blur.
+    const maxSlider = screen.getByRole('slider', { name: /maximum distance/i });
+    fireEvent.change(maxSlider, { target: { value: '30' } });
+    fireEvent.blur(maxSlider);
 
     expect(
       await screen.findByText(/no routes match these filters/i)

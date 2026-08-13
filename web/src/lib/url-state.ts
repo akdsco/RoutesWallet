@@ -1,5 +1,5 @@
 import type { Domain, Domains, Filters, Range } from './filters.ts';
-import { defaultFilters } from './filters.ts';
+import { defaultFilters, rangeIsDefault } from './filters.ts';
 import { isSortKey, type SortKey } from './sort.ts';
 
 /**
@@ -21,16 +21,12 @@ export function slugify(s: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function rangeIsDefault(range: Range, domain: Domain): boolean {
-  return range[0] <= domain.min && range[1] >= domain.max;
-}
-
 function encodeRange(range: Range, domain: Domain): string | null {
   return rangeIsDefault(range, domain) ? null : `${range[0]}-${range[1]}`;
 }
 
 /** The sort implied by context — the default we don't bother encoding. */
-function contextualSort(near: string): SortKey {
+export function contextualSort(near: string): SortKey {
   return near ? 'nearest' : 'name-az';
 }
 
@@ -98,7 +94,10 @@ export function decodeView(
   }
 
   const sortParam = p.get('sort');
-  const sort: SortKey = isSortKey(sortParam) ? sortParam : contextualSort(near);
+  let sort: SortKey = isSortKey(sortParam) ? sortParam : contextualSort(near);
+  // 'nearest' is meaningless without a place — a shared URL carrying it (or a
+  // hand-edited one) would strand the rider on a disabled sort. Fall back.
+  if (sort === 'nearest' && !near) sort = 'name-az';
 
   return { filters, sort, near };
 }
