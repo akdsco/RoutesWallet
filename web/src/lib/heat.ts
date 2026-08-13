@@ -45,6 +45,21 @@ function cellCentreLngLat(
   return [lng, lat];
 }
 
+/** Snap a route's coordinates to the sequence of distinct grid cells it crosses. */
+function distinctCells(coords: number[][], cellMeters: number): string[] {
+  const cells: string[] = [];
+  let prev = '';
+  for (const p of coords) {
+    const [mx, my] = toMercator(p[0] ?? 0, p[1] ?? 0);
+    const key = `${Math.floor(mx / cellMeters)}:${Math.floor(my / cellMeters)}`;
+    if (key !== prev) {
+      cells.push(key);
+      prev = key;
+    }
+  }
+  return cells;
+}
+
 /** Build the heat index for one grid resolution. */
 export function buildHeatIndex(
   routes: Route[],
@@ -52,17 +67,7 @@ export function buildHeatIndex(
 ): HeatSegment[] {
   const counts = new Map<string, number>();
   for (const r of routes) {
-    // Snap the route's coordinates to a sequence of distinct cells.
-    const cells: string[] = [];
-    let prev = '';
-    for (const p of r.geometry.coordinates) {
-      const [mx, my] = toMercator(p[0] ?? 0, p[1] ?? 0);
-      const key = `${Math.floor(mx / cellMeters)}:${Math.floor(my / cellMeters)}`;
-      if (key !== prev) {
-        cells.push(key);
-        prev = key;
-      }
-    }
+    const cells = distinctCells(r.geometry.coordinates, cellMeters);
     const seen = new Set<string>();
     for (let i = 0; i < cells.length - 1; i++) {
       const a = cells[i]!;
@@ -87,6 +92,42 @@ export function buildHeatIndex(
     });
   }
   return segs;
+}
+
+/**
+ * Per-route "ridden" score for the Most-ridden sort — reuses the heat overlap
+ * count (no new data). A route's score is how much of it is shared with others:
+ * the sum, over its distinct segments, of (routes on that segment − 1). A lone
+ * route scores 0; a route riding busy shared corridors scores high. Zoom-
+ * independent (fixed cell size). Pure — unit tested.
+ */
+export function riddenScores(
+  routes: Route[],
+  cellMeters = 60
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  const perRoute = new Map<string, Set<string>>();
+  for (const r of routes) {
+    const cells = distinctCells(r.geometry.coordinates, cellMeters);
+    const segs = new Set<string>();
+    for (let i = 0; i < cells.length - 1; i++) {
+      const a = cells[i]!;
+      const b = cells[i + 1]!;
+      if (a === b) continue;
+      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+      if (segs.has(key)) continue; // count each segment once per route
+      segs.add(key);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    perRoute.set(r.id, segs);
+  }
+  const scores = new Map<string, number>();
+  for (const r of routes) {
+    let s = 0;
+    for (const key of perRoute.get(r.id)!) s += (counts.get(key) ?? 1) - 1;
+    scores.set(r.id, s);
+  }
+  return scores;
 }
 
 /** Grid resolution by zoom: coarse (corridors) far out, fine (lanes) zoomed in. */

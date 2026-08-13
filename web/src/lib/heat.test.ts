@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildHeatIndex,
+  riddenScores,
   cellSizeForZoom,
   heatTierIndex,
   HEAT_RAMP,
@@ -74,6 +75,30 @@ describe('buildHeatIndex', () => {
     const segs = buildHeatIndex([outAndBack], 150);
     expect(segs.length).toBeGreaterThan(0);
     expect(segs.every((s) => s.count === 1)).toBe(true);
+  });
+});
+
+describe('riddenScores', () => {
+  it('scores shared-corridor routes above a lone route', () => {
+    // a and b ride the same lane (overlap); c rides alone far away.
+    const far: [number, number][] = base.map(([lng, lat]) => [
+      lng + 1,
+      lat + 1,
+    ]);
+    const scores = riddenScores([
+      route('a', base),
+      route('b', base), // same lane → shared segments
+      route('c', far),
+    ]);
+    expect(scores.get('a')!).toBeGreaterThan(0);
+    expect(scores.get('b')!).toBeGreaterThan(0);
+    expect(scores.get('c')).toBe(0);
+    expect(scores.get('a')!).toBeGreaterThan(scores.get('c')!);
+  });
+
+  it('gives a single route a score of 0 (nothing to share with)', () => {
+    const scores = riddenScores([route('solo', base)]);
+    expect(scores.get('solo')).toBe(0);
   });
 });
 
