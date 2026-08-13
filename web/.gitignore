@@ -3,6 +3,11 @@ dist/
 *.local
 .vite/
 
+# Source GPX dropped for the non-Strava enrichment (scripts/enrich-non-strava.mjs).
+# Kept local like the Strava exports: some are private routes, all are large — the
+# enriched routes.geojson is the committed output, not the raw GPX inputs.
+scripts/non-strava-gpx/*.gpx
+
 # Playwright
 /test-results/
 /playwright-report/

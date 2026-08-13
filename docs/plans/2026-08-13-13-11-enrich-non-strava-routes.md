@@ -11,7 +11,16 @@
      auto-closed. The TB-xx label is optional human sugar. -->
 
 - Resolves: https://app.notion.com/p/Enrich-non-Strava-routes-RWGPS-Garmin-with-elevation-owner-data-3bb15f963d1381d0902bf730ccb0420f
-- Refs:
+- Refs: https://app.notion.com/p/Build-RWGPS-Garmin-link-importers-pull-route-data-incl-elevation-from-a-URL-3bb15f963d1381c89356e7c5be860840 (TB-65, downstream importer build that reuses this ticket's libs)
+
+## Decisions (locked 2026-08-13)
+
+- **Gain threshold = 3 m** hysteresis (light; route 1 ≈ 1467 m).
+- **Sourcing:** Garmin GPX (`~/Downloads/COURSE_451746090.gpx`, 6328 pts ✓) + RWGPS
+  route 1 (public fetch) in hand; **route 2 (private RWGPS) exported by the owner**
+  into the drop folder.
+- **Importers** are out of scope here → tracked as **TB-65** (refs TB-61 spike).
+- **`region`/country** left untouched — the user handles that separately.
 
 ## Problem / Context
 
