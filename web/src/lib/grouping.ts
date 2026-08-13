@@ -30,3 +30,46 @@ export function groupByRegion(routes: Route[]): RouteGroup[] {
         seen.get(a.label)! - seen.get(b.label)!
     );
 }
+
+export type FoldContext = {
+  /** county → explicit open/closed the rider set this session (overrides default). */
+  manualFolds?: ReadonlyMap<string, boolean>;
+  /** county of the currently-selected route — always opened so it's visible. */
+  selectedCounty?: string | null;
+  /** the sole county when a filter narrows to one — opened regardless of position. */
+  singleCounty?: string | null;
+  /** how many leading groups open by default (§G: first three). */
+  defaultOpen?: number;
+};
+
+/**
+ * Which county groups are open, per §G's fold rules. Default: the first
+ * `defaultOpen` (3) groups by the given order. A manual fold/unfold overrides that
+ * for its county and is remembered for the session. The selected route's group and
+ * a single-county filter always force-open (over a manual fold). Pure — unit tested.
+ */
+export function resolveOpenGroups(
+  orderedLabels: string[],
+  {
+    manualFolds,
+    selectedCounty,
+    singleCounty,
+    defaultOpen = 3,
+  }: FoldContext = {}
+): Set<string> {
+  const open = new Set(orderedLabels.slice(0, defaultOpen));
+  if (manualFolds) {
+    for (const [county, isOpen] of manualFolds) {
+      if (!orderedLabels.includes(county)) continue;
+      if (isOpen) open.add(county);
+      else open.delete(county);
+    }
+  }
+  if (selectedCounty && orderedLabels.includes(selectedCounty)) {
+    open.add(selectedCounty);
+  }
+  if (singleCounty && orderedLabels.includes(singleCounty)) {
+    open.add(singleCounty);
+  }
+  return open;
+}

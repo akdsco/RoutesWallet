@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupByRegion } from './grouping.ts';
+import { groupByRegion, resolveOpenGroups } from './grouping.ts';
 import type { Route } from '../types.ts';
 
 function route(id: string, region: string): Route {
@@ -49,5 +49,49 @@ describe('groupByRegion', () => {
   it('falls back to "Other" for a blank region', () => {
     const [group] = groupByRegion([route('a', '')]);
     expect(group!.label).toBe('Other');
+  });
+});
+
+describe('resolveOpenGroups', () => {
+  const labels = ['Essex', 'Kent', 'Herts', 'Surrey', 'London'];
+
+  it('opens the first three by default', () => {
+    expect([...resolveOpenGroups(labels)]).toEqual(['Essex', 'Kent', 'Herts']);
+  });
+
+  it('a manual unfold opens a group past the first three', () => {
+    const open = resolveOpenGroups(labels, {
+      manualFolds: new Map([['Surrey', true]]),
+    });
+    expect(open.has('Surrey')).toBe(true);
+  });
+
+  it('a manual fold closes one of the first three', () => {
+    const open = resolveOpenGroups(labels, {
+      manualFolds: new Map([['Essex', false]]),
+    });
+    expect(open.has('Essex')).toBe(false);
+    expect(open.has('Kent')).toBe(true);
+  });
+
+  it("the selected route's group opens over a manual fold", () => {
+    const open = resolveOpenGroups(labels, {
+      manualFolds: new Map([['London', false]]),
+      selectedCounty: 'London',
+    });
+    expect(open.has('London')).toBe(true);
+  });
+
+  it('a single-county filter opens that county regardless of position', () => {
+    const open = resolveOpenGroups(labels, { singleCounty: 'Surrey' });
+    expect(open.has('Surrey')).toBe(true);
+  });
+
+  it('ignores fold/selection hints for counties not present', () => {
+    const open = resolveOpenGroups(labels, {
+      selectedCounty: 'Nowhere',
+      manualFolds: new Map([['Ghost', true]]),
+    });
+    expect([...open]).toEqual(['Essex', 'Kent', 'Herts']);
   });
 });
