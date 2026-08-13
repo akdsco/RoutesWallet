@@ -74,4 +74,13 @@ describe('RouteDetail', () => {
     expect(render(makeRoute(), { nearKm: 3.2 })).toContain('3.2 km away');
     expect(render(makeRoute())).not.toContain('km away');
   });
+
+  // Overseas / unresolved routes carry region: null — the meta line must not
+  // render "null" or a dangling separator.
+  it('renders cleanly when region is null', () => {
+    const html = render(makeRoute({ region: null }), { nearKm: 3.2 });
+    expect(html).not.toContain('null');
+    expect(html).toContain('3.2 km away');
+    expect(html).not.toContain('· · '); // no doubled/orphan separator
+  });
 });
