@@ -11,6 +11,7 @@ import {
   biggestRelaxation,
   widenDistanceTarget,
   countyOf,
+  groupKeyOf,
   type Filters,
   type Domains,
 } from './filters.ts';
@@ -172,10 +173,42 @@ describe('isDefault / activeFilterCount', () => {
   });
 });
 
-describe('countyOf', () => {
-  it('reads the region field, defaulting a blank to Other', () => {
+describe('countyOf (county-filter key)', () => {
+  it('reads the county for a county-bearing country (UK)', () => {
     expect(countyOf(route('a', { region: 'Kent' }))).toBe('Kent');
-    expect(countyOf(route('b', { region: '' }))).toBe('Other');
+  });
+
+  it('is undefined for a UK route with no county — it drops out of the filter', () => {
+    expect(countyOf(route('b', { region: '' }))).toBeUndefined();
+  });
+
+  it('is undefined for an overseas route (the country filter covers it)', () => {
+    expect(
+      countyOf(route('c', { country: 'Spain', region: '' }))
+    ).toBeUndefined();
+  });
+});
+
+describe('groupKeyOf (list grouping key)', () => {
+  it('groups a UK route under its county', () => {
+    expect(groupKeyOf(route('a', { region: 'Kent' }))).toBe('Kent');
+  });
+
+  it('a UK route with no county falls back to Other', () => {
+    expect(groupKeyOf(route('b', { region: '' }))).toBe('Other');
+  });
+
+  it('collapses a county-less country to the country itself (no "Other")', () => {
+    expect(groupKeyOf(route('c', { country: 'Spain', region: '' }))).toBe(
+      'Spain'
+    );
+    expect(groupKeyOf(route('d', { country: 'Italy', region: '' }))).toBe(
+      'Italy'
+    );
+  });
+
+  it('falls back to Other only when the country is unknown too', () => {
+    expect(groupKeyOf(route('e', { country: null, region: '' }))).toBe('Other');
   });
 });
 

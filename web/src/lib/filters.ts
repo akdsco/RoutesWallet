@@ -65,15 +65,45 @@ export function elevationDomain(routes: Route[]): Domain {
   return domainOf(vals);
 }
 
-/** County for grouping/filtering — the `region` field, blank → "Other". */
-export function countyOf(r: Route): string {
-  return r.region || 'Other';
+/**
+ * Which countries carry county-level data (a county filter + county groups).
+ * Others collapse to a single country-level group. Hardcoded stopgap — one
+ * boolean per country we hold routes for — until country handling is reworked.
+ */
+export const COUNTRY_HAS_COUNTIES: Record<string, boolean> = {
+  'United Kingdom': true,
+  Spain: false,
+  Italy: false,
+};
+
+/** Country of a route, or undefined when unresolved. */
+export function countryOf(r: Route): string | undefined {
+  return typeof r.country === 'string' && r.country !== ''
+    ? r.country
+    : undefined;
 }
 
-/** Country, once the data ticket adds it; undefined until then (degrades to pass). */
-export function countryOf(r: Route): string | undefined {
-  const c = (r as { country?: unknown }).country;
-  return typeof c === 'string' && c !== '' ? c : undefined;
+/**
+ * The COUNTY filter key: the UK county for a county-bearing country, else
+ * undefined. Overseas routes aren't county-filterable (they have no county — the
+ * country filter covers them), so they drop out of the county chip row and the
+ * county filter rather than piling into a vague "Other".
+ */
+export function countyOf(r: Route): string | undefined {
+  const c = countryOf(r);
+  return c && COUNTRY_HAS_COUNTIES[c] ? r.region || undefined : undefined;
+}
+
+/**
+ * The LIST grouping key: a county-bearing country's route groups under its county
+ * (blank → "Other"); a country without county data (Spain, Italy) collapses to
+ * the country itself — never a vague "Other". Falls back to "Other" only when the
+ * country is unknown too.
+ */
+export function groupKeyOf(r: Route): string {
+  const c = countryOf(r);
+  if (c && COUNTRY_HAS_COUNTIES[c]) return r.region || 'Other';
+  return c ?? 'Other';
 }
 
 export function defaultFilters(domains: Domains): Filters {
@@ -105,8 +135,10 @@ export function applyFilters(
 ): Route[] {
   const elevActive = !rangeIsDefault(filters.elevation, domains.elevation);
   return routes.filter((r) => {
-    if (filters.counties.size && !filters.counties.has(countyOf(r)))
-      return false;
+    if (filters.counties.size) {
+      const cty = countyOf(r);
+      if (cty === undefined || !filters.counties.has(cty)) return false;
+    }
     if (filters.countries.size) {
       const c = countryOf(r);
       if (c === undefined || !filters.countries.has(c)) return false;

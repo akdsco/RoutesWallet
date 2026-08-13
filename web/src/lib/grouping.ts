@@ -1,19 +1,21 @@
 import type { Route } from '../types.ts';
+import { groupKeyOf } from './filters.ts';
 
 export type RouteGroup = { label: string; routes: Route[] };
 
 /**
- * Group routes by region (= county) for the sidebar, ordered by route count
- * descending so the biggest counties lead and the "first three open" fold rule
- * (§G) opens the fullest groups. Ties keep first-seen order for stability. At
- * ~125 routes a flat list is unusable; grouped headers make it scannable. Pure —
- * unit tested. Routes keep their incoming order within a group (the caller sorts).
+ * Group routes by county for the sidebar (a country without county data collapses
+ * to a country-level group — see `groupKeyOf`), ordered by route count descending
+ * so the biggest groups lead and the "first three open" fold rule (§G) opens the
+ * fullest. Ties keep first-seen order for stability. At ~125 routes a flat list is
+ * unusable; grouped headers make it scannable. Pure — unit tested. Routes keep
+ * their incoming order within a group (the caller sorts).
  */
 export function groupByRegion(routes: Route[]): RouteGroup[] {
   const seen = new Map<string, number>(); // label → first-seen index
   const byRegion = new Map<string, Route[]>();
   for (const r of routes) {
-    const key = r.region || 'Other';
+    const key = groupKeyOf(r);
     let bucket = byRegion.get(key);
     if (!bucket) {
       bucket = [];
