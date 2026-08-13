@@ -17,8 +17,9 @@
  *
  * This is thin glue: all the real logic is the pure, unit-tested src/lib fns
  * (parseTrackpoints, parseAuthor, elevationGainM, enrichFeatureFromGpx), imported
- * directly — Node 24 strips the TS types, so there is NO second copy of the
- * parsers to keep in sync (unlike the browser-console import-from-strava.js).
+ * directly — Node strips the TS types (default from 22.18 / 23.6; guarded below),
+ * so there is NO second copy of the parsers to keep in sync (unlike the
+ * browser-console import-from-strava.js).
  *
  * RUN (from web/):  npm run enrich:non-strava
  * Public GPX is fetched + cached into scripts/non-strava-gpx/; authed exports
@@ -38,9 +39,13 @@ import { enrichFeatureFromGpx } from '../src/lib/enrich.ts';
 // (A package.json `engines` field would wrongly claim the whole app needs this —
 // the app + CI run fine on stock Node; only this script does.)
 const [major, minor] = process.versions.node.split('.').map(Number);
-if (major < 22 || (major === 22 && minor < 18)) {
+// Type-stripping is default-on from 22.18 (in the 22.x line) and from 23.6 — note
+// the 23.0–23.5 gap where it is NOT, so a bare `>= 23` check would wrongly pass.
+const stripsTypes =
+  major > 23 || (major === 23 && minor >= 6) || (major === 22 && minor >= 18);
+if (!stripsTypes) {
   console.error(
-    `Needs Node >= 22.18 for TypeScript type-stripping; you have ${process.versions.node}.`
+    `Needs Node >= 22.18 or >= 23.6 for TypeScript type-stripping; you have ${process.versions.node}.`
   );
   process.exit(1);
 }
