@@ -9,6 +9,12 @@ import {
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
+import {
+  buildNavRows,
+  groupNav,
+  type NavRow,
+  type NavTarget,
+} from '../lib/group-nav.ts';
 import { RouteDetail } from './RouteDetail.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
 
@@ -16,32 +22,60 @@ export type CardVM = { route: Route; nearKm?: number };
 export type GroupVM = { label: string; count: number; items: CardVM[] };
 export type Banner = 'none' | 'loading' | 'empty' | 'geofail' | 'nomatch';
 
+/** Filter-empty state: shown when active filters exclude every route (§G). */
+export type FilterEmpty = {
+  /** e.g. "Widening the distance range would add 12 routes." */
+  detail: string;
+  onClearAll: () => void;
+  /** Present only when widening distance would actually help. */
+  onWiden?: () => void;
+};
+
 type Props = {
   query: string;
   banner: Banner;
   placeLabel: string;
   groups: GroupVM[];
   selectedId: string | null;
-  /** Label for the detail panel's back row, e.g. "Back to 21 results". */
   backLabel: string;
   theme: 'light' | 'dark';
-  /** Plain-text credit for the ACTIVE basemap — shown at the list end on mobile,
-   *  where the on-map Leaflet attribution is hidden behind the sheet (§F). Omit on
-   *  desktop (the Leaflet control carries it there). */
   mapAttribution?: string;
+  /** Count-line phrasing (§G), e.g. "34 of 96 routes". */
+  countLine?: string;
+  /** The sort control (App owns sort state); rendered on the count row. */
+  sortControl?: ReactNode;
+  /** Nearest-first suspends grouping → one flat list with no headers. */
+  flat?: boolean;
+  /** Open county groups (ignored when `flat`). Defaults to all open. */
+  openGroups?: ReadonlySet<string>;
+  onToggleGroup?: (county: string) => void;
+  /** Non-null when filters exclude everything. */
+  filterEmpty?: FilterEmpty | null;
   onClear: () => void;
   onSelect: (id: string) => void;
   onDeselect: () => void;
   onHover: (id: string | null) => void;
 };
 
-const NAV_KEYS = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
+const CARD_NAV = new Set<string>(['ArrowDown', 'ArrowUp', 'Home', 'End']);
+const GROUP_NAV = new Set<string>([
+  'ArrowDown',
+  'ArrowUp',
+  'Home',
+  'End',
+  'ArrowLeft',
+  'ArrowRight',
+]);
+
+const cssEscape = (s: string) =>
+  typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s;
 
 /**
  * The scrollable body shared by the desktop sidebar and the mobile sheet: the
- * route list, or — when a route is selected — the RouteDetail panel that replaces
- * it (§E). Owns list keyboard-nav (roving tabindex) and the list ↔ detail focus
- * handoff. Presentation only; all state lives in App.
+ * grouped route list, or — when a route is selected — the RouteDetail panel that
+ * replaces it (§E). Owns the foldable county groups, the count/sort row, the
+ * filter-empty state, and roving-tabindex keyboard nav over headers + cards
+ * (§G/§D). Presentation only; all state lives in App.
  */
 export function RouteList({
   query,
@@ -52,6 +86,12 @@ export function RouteList({
   backLabel,
   theme,
   mapAttribution,
+  countLine,
+  sortControl,
+  flat = false,
+  openGroups,
+  onToggleGroup,
+  filterEmpty,
   onClear,
   onSelect,
   onDeselect,
@@ -61,13 +101,35 @@ export function RouteList({
   const backRef = useRef<HTMLButtonElement>(null);
   const scrollTopRef = useRef(0);
 
+  const grouped = !flat;
+  // Open set governs which groups show cards; a missing prop = everything open.
+  const isOpen = (label: string) =>
+    !grouped || (openGroups?.has(label) ?? true);
+
   const orderedIds = useMemo(
-    () => groups.flatMap((g) => g.items.map((i) => i.route.id)),
-    [groups]
+    () =>
+      groups.flatMap((g) =>
+        isOpen(g.label) ? g.items.map((i) => i.route.id) : []
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [groups, openGroups, grouped]
   );
 
-  // The selected route's detail replaces the list. Derive its data from the
-  // current groups (the selected route is always in the visible set).
+  const navRows = useMemo<NavRow[]>(
+    () =>
+      grouped
+        ? buildNavRows(
+            groups.map((g) => ({
+              label: g.label,
+              itemIds: g.items.map((i) => i.route.id),
+            })),
+            new Set(groups.filter((g) => isOpen(g.label)).map((g) => g.label))
+          )
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [groups, openGroups, grouped]
+  );
+
   const selectedItem = useMemo(
     () =>
       selectedId
@@ -78,17 +140,15 @@ export function RouteList({
     [groups, selectedId]
   );
 
-  // Roving tabindex: Tab enters the list once, arrows move focus within it. The
-  // card holding focus (or the first, before any) is the single tab stop.
-  const [rovingId, setRovingId] = useState<string | null>(null);
+  // Roving tabindex over the visible rows (headers + cards). One tab stop.
+  const rowKeys = grouped
+    ? navRows.map((r) => (r.kind === 'header' ? `h:${r.county}` : `c:${r.id}`))
+    : orderedIds.map((id) => `c:${id}`);
+  const [rovingKey, setRovingKey] = useState<string | null>(null);
   const effectiveRoving =
-    rovingId && orderedIds.includes(rovingId)
-      ? rovingId
-      : (orderedIds[0] ?? null);
+    rovingKey && rowKeys.includes(rovingKey) ? rovingKey : (rowKeys[0] ?? null);
 
-  // Focus handoff across the list ↔ detail swap: entering focuses the back row,
-  // leaving restores the list scroll and returns focus to that route's card so
-  // arrow nav resumes where it left off.
+  // Focus handoff across the list ↔ detail swap (§E).
   const prevSelRef = useRef<string | null>(null);
   useEffect(() => {
     const prev = prevSelRef.current;
@@ -97,28 +157,66 @@ export function RouteList({
     } else if (!selectedId && prev) {
       if (listRef.current) listRef.current.scrollTop = scrollTopRef.current;
       listRef.current
-        ?.querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+        ?.querySelector<HTMLElement>(`[data-route-id="${cssEscape(prev)}"]`)
         ?.focus();
     }
     prevSelRef.current = selectedId;
   }, [selectedId]);
 
+  function focusRow(key: string) {
+    const val = key.slice(2);
+    const sel =
+      key[0] === 'h'
+        ? `[data-group-id="${cssEscape(val)}"]`
+        : `[data-route-id="${cssEscape(val)}"]`;
+    const el = listRef.current?.querySelector<HTMLElement>(sel);
+    el?.focus();
+    el?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function currentTarget(): NavTarget | null {
+    const active = document.activeElement as HTMLElement | null;
+    const card = active?.closest<HTMLElement>('[data-route-id]');
+    if (card?.dataset.routeId)
+      return { kind: 'card', id: card.dataset.routeId };
+    const header = active?.closest<HTMLElement>('[data-group-id]');
+    if (header?.dataset.groupId)
+      return { kind: 'header', county: header.dataset.groupId };
+    if (!effectiveRoving) return null;
+    const val = effectiveRoving.slice(2);
+    return effectiveRoving[0] === 'h'
+      ? { kind: 'header', county: val }
+      : { kind: 'card', id: val };
+  }
+
   function onListKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (!NAV_KEYS.has(e.key)) return; // Enter/Space activate on the card itself
-    e.preventDefault(); // don't let ↑/↓ also scroll the panel
+    if (grouped) {
+      if (!GROUP_NAV.has(e.key)) return; // Enter/Space handled on the row itself
+      const res = groupNav(navRows, currentTarget(), e.key);
+      if (!res) return;
+      e.preventDefault();
+      if (res.type === 'fold') {
+        onToggleGroup?.(res.county); // header keeps focus across the re-render
+      } else {
+        focusRow(
+          res.target.kind === 'header'
+            ? `h:${res.target.county}`
+            : `c:${res.target.id}`
+        );
+      }
+      return;
+    }
+    // Flat list (nearest-first): vertical card nav only.
+    if (!CARD_NAV.has(e.key)) return;
+    e.preventDefault();
     const focused = (
       document.activeElement as HTMLElement | null
     )?.closest<HTMLElement>('[data-route-id]');
-    const currentId = focused?.dataset.routeId ?? effectiveRoving;
+    const currentId =
+      focused?.dataset.routeId ??
+      (effectiveRoving?.[0] === 'c' ? effectiveRoving.slice(2) : null);
     const target = nextRouteId(orderedIds, currentId, e.key as NavKey);
-    if (!target) return;
-    // Move focus only — selection (opening the detail) is Enter/Space/click.
-    // Focus fires onFocus → onHover, which mirrors the highlight on the map.
-    const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-route-id="${target}"]`
-    );
-    el?.focus();
-    el?.scrollIntoView({ block: 'nearest' });
+    if (target) focusRow(`c:${target}`);
   }
 
   if (selectedItem) {
@@ -134,6 +232,8 @@ export function RouteList({
     );
   }
 
+  const showCountRow = banner === 'none' && (countLine || sortControl);
+
   return (
     <div
       ref={listRef}
@@ -145,6 +245,15 @@ export function RouteList({
       role="group"
       aria-label="Routes"
     >
+      {showCountRow && (
+        <div className="flex items-center justify-between border-b border-line-2 px-6 py-2.5">
+          <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-muted">
+            {countLine}
+          </span>
+          {sortControl}
+        </div>
+      )}
+
       {banner === 'loading' && (
         <div className="py-2">
           {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -182,43 +291,125 @@ export function RouteList({
       )}
 
       {banner === 'none' &&
-        groups.map((g) => (
-          <div key={g.label}>
-            <div className="sticky top-0 z-[2] flex items-baseline justify-between border-b border-line-2 bg-surface px-6 py-2.5">
-              <span className="font-mono text-[11px] uppercase tracking-[0.09em] text-muted">
-                {g.label}
-              </span>
-              <span className="font-mono text-[11px] text-muted">
-                {g.count}
-              </span>
-            </div>
-            {g.items.map(({ route: r, nearKm }) => (
-              <RouteCard
-                key={r.id}
-                route={r}
-                nearKm={nearKm}
-                tabIndex={r.id === effectiveRoving ? 0 : -1}
-                onSelect={onSelect}
-                onFocusCard={(id) => {
-                  setRovingId(id);
-                  onHover(id);
-                }}
-                onHover={onHover}
-              />
-            ))}
+        (groups.length === 0 && filterEmpty ? (
+          <FilterEmptyState empty={filterEmpty} />
+        ) : flat ? (
+          <div>
+            {groups.flatMap((g) =>
+              g.items.map(({ route: r, nearKm }) => (
+                <RouteCard
+                  key={r.id}
+                  route={r}
+                  nearKm={nearKm}
+                  tabIndex={`c:${r.id}` === effectiveRoving ? 0 : -1}
+                  onSelect={onSelect}
+                  onFocusCard={(id) => {
+                    setRovingKey(`c:${id}`);
+                    onHover(id);
+                  }}
+                  onHover={onHover}
+                />
+              ))
+            )}
           </div>
+        ) : (
+          groups.map((g, gi) => {
+            const open = isOpen(g.label);
+            const bodyId = `rw-group-${gi}`;
+            return (
+              <div key={g.label}>
+                <button
+                  type="button"
+                  data-group-id={g.label}
+                  aria-expanded={open}
+                  aria-controls={bodyId}
+                  tabIndex={`h:${g.label}` === effectiveRoving ? 0 : -1}
+                  onFocus={() => setRovingKey(`h:${g.label}`)}
+                  onClick={() => onToggleGroup?.(g.label)}
+                  className="sticky top-0 z-[2] flex w-full items-center gap-2.5 border-b border-line-2 bg-surface-2 px-6 py-2.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
+                >
+                  <svg
+                    viewBox="0 0 12 12"
+                    width="10"
+                    height="10"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className={`flex-none transition-transform ${open ? '' : '-rotate-90'} ${open ? 'text-text-2' : 'text-muted'}`}
+                  >
+                    <polyline points="2.5,4.5 6,8 9.5,4.5" />
+                  </svg>
+                  <span
+                    className={`font-mono text-[10.5px] uppercase tracking-[0.09em] ${open ? 'text-text-2' : 'text-muted'}`}
+                  >
+                    {g.label}
+                  </span>
+                  <span className="ml-auto font-mono text-[10.5px] text-muted">
+                    {g.count}
+                  </span>
+                </button>
+                {open && (
+                  <div id={bodyId}>
+                    {g.items.map(({ route: r, nearKm }) => (
+                      <RouteCard
+                        key={r.id}
+                        route={r}
+                        nearKm={nearKm}
+                        tabIndex={`c:${r.id}` === effectiveRoving ? 0 : -1}
+                        onSelect={onSelect}
+                        onFocusCard={(id) => {
+                          setRovingKey(`c:${id}`);
+                          onHover(id);
+                        }}
+                        onHover={onHover}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })
         ))}
 
-      {/* Attribution rides the list end on mobile (§F): the on-map Leaflet
-          control is hidden behind the sheet there. Shown in every list state
-          (not just the populated one); in the detail view the always-present
-          basemap popover carries the per-style credit. Desktop keeps the Leaflet
-          control (this is md:hidden and only passed on mobile). */}
       {mapAttribution && (
         <p className="px-6 py-3 text-[11px] text-muted md:hidden">
           {mapAttribution}
         </p>
       )}
+    </div>
+  );
+}
+
+function FilterEmptyState({ empty }: { empty: FilterEmpty }) {
+  return (
+    <div className="flex flex-col items-start gap-2.5 px-6 pb-[30px] pt-7">
+      <strong className="text-[14px] font-semibold text-text">
+        No routes match these filters
+      </strong>
+      <span className="text-[12.5px] leading-normal text-text-2">
+        {empty.detail}
+      </span>
+      <div className="mt-1 flex gap-2">
+        <button
+          type="button"
+          onClick={empty.onClearAll}
+          className="h-[34px] rounded-lg bg-sel px-[13px] text-[12.5px] font-semibold text-white dark:text-bg"
+        >
+          Clear all filters
+        </button>
+        {empty.onWiden && (
+          <button
+            type="button"
+            onClick={empty.onWiden}
+            className="h-[34px] rounded-lg border border-line px-[13px] text-[12.5px] font-medium text-text-2"
+          >
+            Widen distance
+          </button>
+        )}
+      </div>
     </div>
   );
 }

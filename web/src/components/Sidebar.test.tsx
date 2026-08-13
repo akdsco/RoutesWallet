@@ -90,14 +90,19 @@ describe('Sidebar route list a11y', () => {
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
   });
 
-  it('uses a roving tabindex: one entry point, others out of Tab order', () => {
+  it('uses a roving tabindex: the county header is the single entry point (§G)', () => {
     render(<Harness />);
-    expect(card(/Alpha Loop/)).toHaveAttribute('tabindex', '0');
+    // Headers join the roving sequence — the first row (the group header) is the
+    // one tab stop; every card is out of Tab order until arrowed to.
+    expect(screen.getByRole('button', { expanded: true })).toHaveAttribute(
+      'tabindex',
+      '0'
+    );
+    expect(card(/Alpha Loop/)).toHaveAttribute('tabindex', '-1');
     expect(card(/Bravo Circuit/)).toHaveAttribute('tabindex', '-1');
-    expect(card(/Charlie Traverse/)).toHaveAttribute('tabindex', '-1');
   });
 
-  it('arrows move focus and mirror the map highlight — they do not select', async () => {
+  it('arrows walk headers and cards, mirror the highlight, and do not select', async () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const onHover = vi.fn();
@@ -114,7 +119,8 @@ describe('Sidebar route list a11y', () => {
     await user.keyboard('{End}');
     expect(card(/Charlie Traverse/)).toHaveFocus();
     await user.keyboard('{Home}');
-    expect(card(/Alpha Loop/)).toHaveFocus();
+    // Home lands on the first row — the county header sitting above the cards.
+    expect(screen.getByRole('button', { expanded: true })).toHaveFocus();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
