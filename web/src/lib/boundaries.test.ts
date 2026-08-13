@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { isUkCounty } from './region.ts';
+import { makePointLookup } from './county-lookup.ts';
 
 // The committed build asset that the normalise script + importer resolve start
 // points against. This harness keeps the dataset and the canonical UK_COUNTIES
@@ -48,5 +49,28 @@ describe('uk-ceremonial-counties boundary asset', () => {
       expect(lat).toBeGreaterThan(49);
       expect(lat).toBeLessThan(56);
     }
+  });
+});
+
+describe('world-countries boundary asset', () => {
+  const world = JSON.parse(
+    readFileSync('scripts/data/world-countries.geojson', 'utf8')
+  ) as FeatureCollection<Polygon | MultiPolygon>;
+  const countryOf = makePointLookup(world);
+
+  it('is a non-empty FeatureCollection of named polygons', () => {
+    expect(world.features.length).toBeGreaterThan(150);
+    for (const f of world.features) {
+      expect(['Polygon', 'MultiPolygon']).toContain(f.geometry.type);
+      expect(typeof (f.properties as { name?: unknown }).name).toBe('string');
+    }
+  });
+
+  it('resolves the routes we care about to the right country', () => {
+    // Mallorca (Liam) + Como (Mikhail) — the ones name hints missed — plus the camps.
+    expect(countryOf(3.119, 39.838)).toBe('Spain'); // Mallorca
+    expect(countryOf(9.075, 45.808)).toBe('Italy'); // Lake Como
+    expect(countryOf(2.821, 41.979)).toBe('Spain'); // Girona
+    expect(countryOf(-0.09, 51.51)).toBe('United Kingdom'); // London
   });
 });

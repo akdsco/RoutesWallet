@@ -1,12 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import type { FeatureCollection } from 'geojson';
 import { normaliseFeatures } from './normalise.ts';
-import type { CountyOf } from './region.ts';
+import type { PointLookup } from './region.ts';
 
-// Fake resolver by longitude band: lng<0 → Greater London, [0,2) → Essex, else
-// nowhere (overseas). Lets the majority vote outweigh a London start/finish.
-const countyOf: CountyOf = (lng) =>
+// Fake county lookup by longitude band: lng<0 → Greater London, [0,2) → Essex,
+// else nowhere. Lets the majority vote outweigh a London start/finish.
+const countyOf: PointLookup = (lng) =>
   lng < 0 ? 'Greater London' : lng < 2 ? 'Essex' : null;
+// Fake country lookup: west of lng 2 → United Kingdom, else Spain.
+const countryOf: PointLookup = (lng) => (lng < 2 ? 'United Kingdom' : 'Spain');
+const lookups = { countyOf, countryOf };
 
 function sampleFc(): FeatureCollection {
   return {
@@ -54,8 +57,8 @@ function sampleFc(): FeatureCollection {
 }
 
 describe('normaliseFeatures', () => {
-  it('sets country + region from the start point (geometry-first)', () => {
-    const { fc } = normaliseFeatures(sampleFc(), countyOf);
+  it('sets country + region by majority vote over the line', () => {
+    const { fc } = normaliseFeatures(sampleFc(), lookups);
     const [a, b] = fc.features;
     expect(a!.properties).toMatchObject({
       country: 'United Kingdom',
@@ -65,14 +68,14 @@ describe('normaliseFeatures', () => {
   });
 
   it('never writes an empty-string region', () => {
-    const { fc } = normaliseFeatures(sampleFc(), countyOf);
+    const { fc } = normaliseFeatures(sampleFc(), lookups);
     for (const f of fc.features) {
       expect(f.properties?.region).not.toBe('');
     }
   });
 
   it('reports before→after mismatches against the old label', () => {
-    const { report } = normaliseFeatures(sampleFc(), countyOf);
+    const { report } = normaliseFeatures(sampleFc(), lookups);
     expect(report.total).toBe(2); // two LineStrings; the Point is skipped
     expect(report.byRegion.Essex).toBe(1);
     expect(report.byRegion['(null)']).toBe(1);
@@ -88,14 +91,14 @@ describe('normaliseFeatures', () => {
   });
 
   it('leaves non-LineString features untouched', () => {
-    const { fc } = normaliseFeatures(sampleFc(), countyOf);
+    const { fc } = normaliseFeatures(sampleFc(), lookups);
     const p = fc.features[2]!;
     expect(p.properties).toEqual({ id: 'p', name: 'point' });
   });
 
   it('is idempotent — a second run reproduces the same country/region', () => {
-    const once = normaliseFeatures(sampleFc(), countyOf).fc;
-    const twice = normaliseFeatures(once, countyOf).fc;
+    const once = normaliseFeatures(sampleFc(), lookups).fc;
+    const twice = normaliseFeatures(once, lookups).fc;
     const key = (fc: FeatureCollection) =>
       fc.features.map((f): [unknown, unknown] => [
         f.properties?.country,
@@ -103,6 +106,6 @@ describe('normaliseFeatures', () => {
       ]);
     expect(key(twice)).toEqual(key(once));
     // and the second run flags no mismatches (labels already canonical)
-    expect(normaliseFeatures(once, countyOf).report.mismatches).toEqual([]);
+    expect(normaliseFeatures(once, lookups).report.mismatches).toEqual([]);
   });
 });

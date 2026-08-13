@@ -23,3 +23,20 @@ derive `country` + `region` from a route's start coordinate (TB-63).
 
 `src/lib/boundaries.test.ts` guards that this file stays a valid polygon set whose
 names are all members of `UK_COUNTIES`.
+
+## `world-countries.geojson`
+
+Point-in-polygon boundaries for every country, used to derive a route's
+`country` from its geometry (majority vote), so overseas rides land in the right
+country (e.g. Mallorca → Spain, Lake Como → Italy) without name guessing.
+
+- **Source:** Natural Earth 1:50m Admin 0 – Countries
+  ([nvkelso/natural-earth-vector](https://github.com/nvkelso/natural-earth-vector)),
+  **public domain**.
+- **Local processing:** kept the `ADMIN` name as `name`, dropped all other
+  properties, rounded coordinates to 3 dp (~110 m). ~3.1 MB → ~1.7 MB. 50m (not
+  110m) so islands like Mallorca resolve.
+- Coordinate order is `[lng, lat]`.
+
+`src/lib/boundaries.test.ts` also checks this file resolves the known route
+locations to the right country.

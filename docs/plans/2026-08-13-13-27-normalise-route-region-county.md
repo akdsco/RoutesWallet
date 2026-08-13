@@ -44,8 +44,10 @@ and Maidenhead 1, Devon 1, Somerset 1. ~28 rows aren't a clean county.
     mislabels a "Kent Hills" ride "Greater London". So a ride's region is the
     **away-county it reaches** — if any non-London county appears, the most-voted
     of those wins; only a ride touching no other county stays Greater London.
-  - Outside every UK county (Girona/Calpe/Mallorca/Como) → `region = null`,
-    `country` from a name-hint resolver (Girona/Calpe → `"Spain"`) else `null`.
+  - `country` is likewise geometry-derived: majority vote of the same points
+    against a **world-countries** boundary set (Natural Earth 50m). Overseas rides
+    (Girona/Calpe/Mallorca → Spain, Como → Italy) get their real country and
+    `region = null`. No name-guessing — every route resolves a country.
 
   > **Design evolution (from the dry-run):** started as "geometry-first by start
   > point", then "label-first + geo-fallback". A dry run showed the start point is
@@ -93,8 +95,8 @@ Layers, cheapest-honest-test first:
   When normalised, Then `country = "United Kingdom"` and `region` = that county's
   canonical full name; a London start/finish is outvoted by the away-county.
 - **B2** Given a route whose points are all outside every UK county polygon, When
-  normalised, Then `region = null` and `country` = the name-hint result (Spain for
-  Girona/Calpe) or `null` — never `""`.
+  normalised, Then `region = null` and `country` = the majority country from the
+  world-borders vote (Spain for Girona/Mallorca, Italy for Como) — never `""`.
 - **B3** Given the whole `routes.geojson` after the transform, Then every route has
   a `country` and a `region` that is a canonical-set member **or** explicit null;
   no informal value survives.

@@ -56,15 +56,16 @@ type Route = {
 ```
 
 `country` + `region` are a **two-level grouping key**: a country "unlocks" its
-region (county) picker. They are **derived from geometry, never typed by hand** —
-`npm run normalise:routes` samples points along each line, point-in-polygon tests
-them against England's ceremonial counties (build asset in `web/scripts/data/`),
-and takes the **majority county**. Greater London is the club's home county, so a
-ride's region is the away-county it reaches (a London→Kent ride is "Kent"); a
-London-only loop stays "Greater London". Overseas rides get `region: null` and a
-name-hinted `country` (Girona/Calpe → "Spain") or `null`. Canonical set + logic
-live in `src/lib/region.ts`. The importer emits neither field — it runs the
-normalise step instead, so re-imports stay clean (TB-63).
+region (county) picker. Both are **derived from geometry, never typed by hand** —
+`npm run normalise:routes` samples points along each line and point-in-polygon
+tests them (build assets in `web/scripts/data/`: England's ceremonial counties
+for region, world countries for country), taking the **majority** of each.
+Greater London is the club's home county, so a ride's region is the away-county
+it reaches (a London→Kent ride is "Kent"); a London-only loop stays "Greater
+London". Overseas rides get `region: null` and their real `country` (Spain,
+Italy, …). Canonical set + logic live in `src/lib/region.ts`. The importer emits
+neither field — it runs the normalise step instead, so re-imports stay clean
+(TB-63).
 
 Elevation rides in as the standard GeoJSON 3rd coordinate (`[lng, lat, ele]`,
 whole metres) from the GPX `<ele>` tags — the profile chart is derived from it

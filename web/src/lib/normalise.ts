@@ -1,10 +1,14 @@
 import type { FeatureCollection } from 'geojson';
 import {
   resolveRegionByVotes,
+  resolveCountryByVotes,
   sampleAlong,
   SAMPLE_COUNT,
-  type CountyOf,
+  type PointLookup,
 } from './region.ts';
+
+/** Point-in-polygon lookups the normaliser votes with, one per grouping level. */
+export type Lookups = { countyOf: PointLookup; countryOf: PointLookup };
 
 /** A route whose derived region differs from its old (informal) label. */
 export type Mismatch = {
@@ -26,14 +30,15 @@ const asStr = (v: unknown): string | null =>
   typeof v === 'string' && v !== '' ? v : null;
 
 /**
- * Rewrite each LineString feature's `country` + `region` from its start point,
- * geometry-first (see `resolveCountryRegion`). Pure and deterministic, so running
- * it twice on the same input yields identical country/region — a re-runnable
- * transform, not hand edits. Non-LineString features pass through untouched.
+ * Rewrite each LineString feature's `country` + `region` by majority vote over
+ * points sampled along its line — country from the world-country lookup, region
+ * from the UK-county lookup (see `resolveRegionByVotes`/`resolveCountryByVotes`).
+ * Pure and deterministic, so running it twice yields an identical file — a
+ * re-runnable transform, not hand edits. Non-LineString features pass through.
  */
 export function normaliseFeatures(
   fc: FeatureCollection,
-  countyOf: CountyOf,
+  { countyOf, countryOf }: Lookups,
   count = SAMPLE_COUNT
 ): { fc: FeatureCollection; report: NormaliseReport } {
   const features: FeatureCollection['features'] = [];
@@ -54,11 +59,16 @@ export function normaliseFeatures(
     const props = { ...(f.properties ?? {}) } as Record<string, unknown>;
     const name = typeof props.name === 'string' ? props.name : '';
     const was = asStr(props.region);
-    // Vote on the county across points spread along the line, not just the start.
-    const votes = sampleAlong(coords, count).map((c) =>
-      countyOf(Number(c[0]), Number(c[1]))
+    // Vote on region + country across points spread along the line, not the start.
+    const pts = sampleAlong(coords, count).map(
+      (c) => [Number(c[0]), Number(c[1])] as const
     );
-    const { country, region } = resolveRegionByVotes(votes, name);
+    const region = resolveRegionByVotes(
+      pts.map(([lng, lat]) => countyOf(lng, lat))
+    );
+    const country = resolveCountryByVotes(
+      pts.map(([lng, lat]) => countryOf(lng, lat))
+    );
     props.country = country;
     props.region = region;
     features.push({ ...f, properties: props });

@@ -9,7 +9,9 @@
  *
  * This module is deliberately PURE and Turf-free so the app can import the
  * canonical sets. The actual point-in-polygon test lives in `county-lookup.ts`
- * (build/import-time only) and is injected here as `CountyOf`.
+ * (build/import-time only) and is injected here as a `PointLookup` — built over
+ * the county boundaries for region votes, or the world-country boundaries for
+ * country votes.
  */
 
 /** The ceremonial counties of England — the closed, documented region set. */
@@ -73,27 +75,10 @@ export function isUkCounty(name: string): name is UkCounty {
   return UK_COUNTY_SET.has(name);
 }
 
-/** A resolver from a lng/lat to the canonical county its point sits in, or null. */
-export type CountyOf = (lng: number, lat: number) => string | null;
-
-export type Resolved = { country: string | null; region: string | null };
-
-/**
- * Overseas training-camp routes carry no UK county; their country is inferred
- * from a name hint (the club's camps are Girona and Calpe, both Spain). Anything
- * else stays `null` rather than guessing.
- */
-const NAME_HINTS: ReadonlyArray<[RegExp, string]> = [
-  [/\bgirona\b/i, 'Spain'],
-  [/\bcalpe\b/i, 'Spain'],
-];
-
-export function nameHintCountry(name: string): string | null {
-  for (const [re, country] of NAME_HINTS) {
-    if (re.test(name)) return country;
-  }
-  return null;
-}
+/** A resolver from a lng/lat to the name of the polygon it sits in, or null.
+ *  Generic: built over the county boundaries (→ region) or the world-country
+ *  boundaries (→ country). See `county-lookup.ts`. */
+export type PointLookup = (lng: number, lat: number) => string | null;
 
 /** How many points to sample along a route when voting on its county. */
 export const SAMPLE_COUNT = 5;
@@ -117,8 +102,17 @@ export function sampleAlong<T>(items: readonly T[], count: number): T[] {
 /** The club's home county — the start/finish of nearly every ride, never its point. */
 export const HOME_COUNTY = 'Greater London';
 
+/** Pick the most-voted key from a tally; ties break alphabetically. */
+function topOf(counts: Map<string, number>): string | null {
+  if (counts.size === 0) return null;
+  return [...counts.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1]; // most votes first
+    return a[0].localeCompare(b[0]); // then stable alphabetical
+  })[0]![0];
+}
+
 /**
- * Resolve country + region by MAJORITY VOTE over a route's sampled points.
+ * Resolve a route's REGION (UK county) by majority vote over its sampled points.
  *
  * These are a London club's rides: nearly all start and finish in Greater London
  * but ride OUT to Kent/Essex/Surrey — and Greater London is a large polygon, so a
@@ -126,25 +120,30 @@ export const HOME_COUNTY = 'Greater London';
  * So London is treated as the home county: a ride's region is the away-county it
  * reaches. If any non-London county appears in the votes, the most-voted of THOSE
  * wins (ties alphabetical); only a ride that touches no other county at all stays
- * Greater London (a genuine London loop). With no UK county among the votes the
- * region is null and the country comes from the name hint (Girona/Calpe → Spain)
- * or null. Never returns an empty string.
+ * Greater London. With no UK county among the votes → null (e.g. overseas).
  */
 export function resolveRegionByVotes(
-  votes: readonly (string | null)[],
-  name: string
-): Resolved {
+  votes: readonly (string | null)[]
+): string | null {
   const counts = new Map<string, number>();
   for (const v of votes) {
     if (v && isUkCounty(v)) counts.set(v, (counts.get(v) ?? 0) + 1);
   }
-  if (counts.size === 0)
-    return { country: nameHintCountry(name), region: null };
-  const away = [...counts.entries()].filter(([c]) => c !== HOME_COUNTY);
-  const pool = away.length > 0 ? away : [...counts.entries()];
-  const winner = pool.sort((a, b) => {
-    if (b[1] !== a[1]) return b[1] - a[1]; // most votes first
-    return a[0].localeCompare(b[0]); // then stable alphabetical
-  })[0]![0];
-  return { country: 'United Kingdom', region: winner };
+  const away = new Map([...counts].filter(([c]) => c !== HOME_COUNTY));
+  return topOf(away.size > 0 ? away : counts);
+}
+
+/**
+ * Resolve a route's COUNTRY by plain majority vote over its sampled points
+ * (against the world-country boundaries). Ties break alphabetically; no UK-style
+ * home-county rule applies. `null` when no point resolved to a country.
+ */
+export function resolveCountryByVotes(
+  votes: readonly (string | null)[]
+): string | null {
+  const counts = new Map<string, number>();
+  for (const v of votes) {
+    if (v) counts.set(v, (counts.get(v) ?? 0) + 1);
+  }
+  return topOf(counts);
 }

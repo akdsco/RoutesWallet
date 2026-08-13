@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   UK_COUNTIES,
   isUkCounty,
-  nameHintCountry,
   resolveRegionByVotes,
+  resolveCountryByVotes,
   sampleAlong,
 } from './region.ts';
 
@@ -37,20 +37,6 @@ describe('UK_COUNTIES canonical set', () => {
   });
 });
 
-describe('nameHintCountry', () => {
-  it('maps overseas training-camp names to their country', () => {
-    expect(nameHintCountry('Girona - just Girona')).toBe('Spain');
-    expect(nameHintCountry('Calpe: Coll de Rates (longer)')).toBe('Spain');
-    expect(nameHintCountry('Girona (Tia’s favourite)')).toBe('Spain');
-  });
-
-  it('returns null when no country can be inferred from the name', () => {
-    expect(nameHintCountry('Better route to Brighton')).toBeNull();
-    expect(nameHintCountry("Liam's route")).toBeNull();
-    expect(nameHintCountry('')).toBeNull();
-  });
-});
-
 describe('sampleAlong', () => {
   it('samples count points evenly by index, endpoints included', () => {
     expect(sampleAlong([0, 1, 2, 3, 4, 5, 6, 7, 8], 5)).toEqual([
@@ -75,70 +61,88 @@ describe('sampleAlong', () => {
 describe('resolveRegionByVotes', () => {
   it('the majority county wins (a London start/finish is outvoted)', () => {
     expect(
-      resolveRegionByVotes(
-        ['Greater London', 'Kent', 'Kent', 'Kent', 'Greater London'],
-        'Kent Hills'
-      )
-    ).toEqual({ country: 'United Kingdom', region: 'Kent' });
+      resolveRegionByVotes([
+        'Greater London',
+        'Kent',
+        'Kent',
+        'Kent',
+        'Greater London',
+      ])
+    ).toBe('Kent');
   });
 
   it('a route wholly in one county resolves to it', () => {
     expect(
-      resolveRegionByVotes(['Essex', 'Essex', 'Essex', 'Essex', 'Essex'], 'x')
-    ).toEqual({ country: 'United Kingdom', region: 'Essex' });
+      resolveRegionByVotes(['Essex', 'Essex', 'Essex', 'Essex', 'Essex'])
+    ).toBe('Essex');
   });
 
   it('an away county beats a London majority (London is the home county)', () => {
     // London leads 4–1 on raw votes, but the ride reaches Kent, so it is a Kent ride.
     expect(
-      resolveRegionByVotes(
-        [
-          'Greater London',
-          'Greater London',
-          'Greater London',
-          'Greater London',
-          'Kent',
-        ],
-        'Kent Hills'
-      )
-    ).toEqual({ country: 'United Kingdom', region: 'Kent' });
+      resolveRegionByVotes([
+        'Greater London',
+        'Greater London',
+        'Greater London',
+        'Greater London',
+        'Kent',
+      ])
+    ).toBe('Kent');
   });
 
   it('among multiple away counties, the most-voted wins (ties alphabetical)', () => {
     expect(
-      resolveRegionByVotes(
-        ['Greater London', 'Surrey', 'Kent', 'Kent', 'Greater London'],
-        'x'
-      )
-    ).toEqual({ country: 'United Kingdom', region: 'Kent' });
+      resolveRegionByVotes([
+        'Greater London',
+        'Surrey',
+        'Kent',
+        'Kent',
+        'Greater London',
+      ])
+    ).toBe('Kent');
   });
 
   it('a London-only ride stays Greater London', () => {
     expect(
-      resolveRegionByVotes(
-        ['Greater London', 'Greater London', 'Greater London'],
-        'Olympic Park loop'
-      )
-    ).toEqual({ country: 'United Kingdom', region: 'Greater London' });
+      resolveRegionByVotes([
+        'Greater London',
+        'Greater London',
+        'Greater London',
+      ])
+    ).toBe('Greater London');
   });
 
-  it('no UK county among votes, overseas name → country hint, region null', () => {
-    expect(
-      resolveRegionByVotes([null, null, null, null, null], 'Girona - 70km')
-    ).toEqual({ country: 'Spain', region: null });
-  });
-
-  it('no UK county, unknown name → both null (never empty string)', () => {
-    const r = resolveRegionByVotes([null, null, null], "Liam's route");
-    expect(r).toEqual({ country: null, region: null });
-    expect(r.region).not.toBe('');
-    expect(r.country).not.toBe('');
+  it('no UK county among votes → null', () => {
+    expect(resolveRegionByVotes([null, null, null, null, null])).toBeNull();
   });
 
   it('ignores non-canonical vote values', () => {
-    expect(resolveRegionByVotes(['Herts', 'Herts', null], 'x')).toEqual({
-      country: null,
-      region: null,
-    });
+    expect(resolveRegionByVotes(['Herts', 'Herts', null])).toBeNull();
+  });
+});
+
+describe('resolveCountryByVotes', () => {
+  it('picks the most-voted country', () => {
+    expect(
+      resolveCountryByVotes([
+        'United Kingdom',
+        'United Kingdom',
+        'United Kingdom',
+        'Spain',
+        null,
+      ])
+    ).toBe('United Kingdom');
+  });
+
+  it('ties break alphabetically', () => {
+    expect(resolveCountryByVotes(['Spain', 'Italy'])).toBe('Italy');
+  });
+
+  it('ignores null votes in the tally', () => {
+    expect(resolveCountryByVotes([null, 'Spain', null])).toBe('Spain');
+  });
+
+  it('all-null votes → null', () => {
+    expect(resolveCountryByVotes([null, null])).toBeNull();
   });
 });

@@ -14,19 +14,24 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import { makeCountyOf } from '../src/lib/county-lookup.ts';
+import { makePointLookup } from '../src/lib/county-lookup.ts';
 import { normaliseFeatures } from '../src/lib/normalise.ts';
 
-const BOUNDARIES = 'scripts/data/uk-ceremonial-counties.geojson';
+const COUNTIES = 'scripts/data/uk-ceremonial-counties.geojson';
+const COUNTRIES = 'scripts/data/world-countries.geojson';
 const ROUTES = 'public/routes.geojson';
 const dry = process.argv.includes('--dry');
 
-const boundaries = JSON.parse(
-  readFileSync(BOUNDARIES, 'utf8')
-) as FeatureCollection<Polygon | MultiPolygon>;
+const readPolys = (path: string) =>
+  JSON.parse(readFileSync(path, 'utf8')) as FeatureCollection<
+    Polygon | MultiPolygon
+  >;
 const routes = JSON.parse(readFileSync(ROUTES, 'utf8')) as FeatureCollection;
 
-const { fc, report } = normaliseFeatures(routes, makeCountyOf(boundaries));
+const { fc, report } = normaliseFeatures(routes, {
+  countyOf: makePointLookup(readPolys(COUNTIES)),
+  countryOf: makePointLookup(readPolys(COUNTRIES)),
+});
 
 const sort = (rec: Record<string, number>) =>
   Object.entries(rec).sort((a, b) => b[1] - a[1]);

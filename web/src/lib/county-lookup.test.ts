@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson';
-import { makeCountyOf } from './county-lookup.ts';
+import { makePointLookup } from './county-lookup.ts';
 
 /** Two unit squares, canonical names on `properties.name`. */
 const boundaries: FeatureCollection<Polygon | MultiPolygon> = {
@@ -58,8 +58,8 @@ const boundaries: FeatureCollection<Polygon | MultiPolygon> = {
   ],
 };
 
-describe('makeCountyOf', () => {
-  const countyOf = makeCountyOf(boundaries);
+describe('makePointLookup', () => {
+  const countyOf = makePointLookup(boundaries);
 
   it('returns the canonical name of the polygon a point falls inside', () => {
     expect(countyOf(0.5, 0.5)).toBe('Alpha');

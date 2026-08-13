@@ -5,20 +5,21 @@ import type {
   MultiPolygon,
   Polygon,
 } from 'geojson';
-import type { CountyOf } from './region.ts';
+import type { PointLookup } from './region.ts';
 
 /**
- * Build a point→county resolver from a boundary FeatureCollection whose features
- * each carry the canonical county name on `properties.name`. Geometry maths goes
- * through Turf (`booleanPointInPolygon`) — never hand-rolled.
+ * Build a point→name resolver from a boundary FeatureCollection whose features
+ * each carry a name on `properties.name`. Generic: used over the UK-county
+ * boundaries (→ region) and the world-country boundaries (→ country). Geometry
+ * maths goes through Turf (`booleanPointInPolygon`) — never hand-rolled.
  *
  * Build/import-time only: this is imported by the normalise script, the importer
  * and their tests, NOT by the app, so `@turf/boolean-point-in-polygon` stays a
  * devDependency and nothing extra ships to the client.
  */
-export function makeCountyOf(
+export function makePointLookup(
   boundaries: FeatureCollection<Polygon | MultiPolygon>
-): CountyOf {
+): PointLookup {
   const named = boundaries.features.filter(
     (
       f
