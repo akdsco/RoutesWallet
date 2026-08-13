@@ -120,3 +120,33 @@ export function sortRoutes(
 function elevOrLast(r: Route, dir: 1 | -1): number {
   return r.elevation_gain_m ?? dir * Infinity;
 }
+
+/**
+ * Session sort state: the active `sort`, and whether the rider *chose* it (vs it
+ * being the automatic default). `chose` is what makes a manual pick stick across
+ * later searches (§G sort behaviour).
+ */
+export type SortState = { sort: SortKey; chose: boolean };
+
+export const INITIAL_SORT: SortState = { sort: 'name-az', chose: false };
+
+/** A search resolved: switch to nearest first — unless the rider chose a sort. */
+export function sortOnSearch(state: SortState): SortState {
+  return state.chose ? state : { sort: 'nearest', chose: false };
+}
+
+/**
+ * The search cleared: fall back to Name A–Z only if the rider never chose a sort
+ * (a chosen sort sticks) — but 'nearest' can't survive without a place, so it
+ * always falls back.
+ */
+export function sortOnClear(state: SortState): SortState {
+  // A chosen non-nearest sort sticks; everything else (auto sort, or a now-invalid
+  // 'nearest' with no place) falls back to the default and forgets the choice.
+  return state.chose && state.sort !== 'nearest' ? state : INITIAL_SORT;
+}
+
+/** The rider picked a sort — it sticks for the session. */
+export function sortOnPick(key: SortKey): SortState {
+  return { sort: key, chose: true };
+}

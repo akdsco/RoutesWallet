@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { sortRoutes, SORT_OPTIONS, isSortKey } from './sort.ts';
+import {
+  sortRoutes,
+  SORT_OPTIONS,
+  isSortKey,
+  sortOnSearch,
+  sortOnClear,
+  sortOnPick,
+  INITIAL_SORT,
+} from './sort.ts';
 import type { Route } from '../types.ts';
 
 function route(id: string, over: Partial<Route> = {}): Route {
@@ -107,5 +115,36 @@ describe('SORT_OPTIONS', () => {
   it('isSortKey guards unknown values', () => {
     expect(isSortKey('distance-asc')).toBe(true);
     expect(isSortKey('bogus')).toBe(false);
+  });
+});
+
+describe('sort resolution', () => {
+  it('a search switches an auto sort to nearest first', () => {
+    expect(sortOnSearch(INITIAL_SORT)).toEqual({
+      sort: 'nearest',
+      chose: false,
+    });
+  });
+
+  it('a search does NOT override a sort the rider chose', () => {
+    const chosen = sortOnPick('distance-desc');
+    expect(sortOnSearch(chosen)).toEqual(chosen);
+  });
+
+  it('clearing search falls back to name A–Z only when the rider never chose', () => {
+    expect(sortOnClear({ sort: 'nearest', chose: false })).toEqual(
+      INITIAL_SORT
+    );
+    // a chosen non-nearest sort survives clearing
+    const chosen = sortOnPick('most-ridden');
+    expect(sortOnClear(chosen)).toEqual(chosen);
+  });
+
+  it('clearing forgets a now-invalid nearest even if the rider picked it', () => {
+    expect(sortOnClear({ sort: 'nearest', chose: true })).toEqual(INITIAL_SORT);
+  });
+
+  it('picking a sort marks it as chosen', () => {
+    expect(sortOnPick('flattest')).toEqual({ sort: 'flattest', chose: true });
   });
 });
