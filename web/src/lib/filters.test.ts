@@ -8,6 +8,8 @@ import {
   isDefault,
   activeFilterCount,
   countyCounts,
+  biggestRelaxation,
+  widenDistanceTarget,
   countyOf,
   type Filters,
   type Domains,
@@ -173,6 +175,52 @@ describe('countyOf', () => {
   it('reads the region field, defaulting a blank to Other', () => {
     expect(countyOf(route('a', { region: 'Kent' }))).toBe('Kent');
     expect(countyOf(route('b', { region: '' }))).toBe('Other');
+  });
+});
+
+describe('empty-state relaxation', () => {
+  const routes = [
+    route('e40', { region: 'Essex', distance_km: 40 }),
+    route('e60', { region: 'Essex', distance_km: 60 }),
+    route('e70', { region: 'Essex', distance_km: 70 }),
+    route('k40', { region: 'Kent', distance_km: 40 }),
+  ];
+  const domains: Domains = {
+    distance: distanceDomain(routes),
+    elevation: elevationDomain(routes),
+  };
+  const base = defaultFilters(domains);
+  // Kent + distance ≥ 50 excludes everything (the one Kent route is 40 km).
+  const empty: Filters = {
+    ...base,
+    counties: new Set(['Kent']),
+    distance: [50, domains.distance.max],
+  };
+
+  it('names the dimension whose relaxation adds the most routes', () => {
+    const r = biggestRelaxation(routes, empty, domains);
+    // dropping the county exposes the two ≥50 km Essex routes (adds 2); dropping
+    // the distance exposes only the one Kent route (adds 1) — county wins.
+    expect(r).toEqual({ dimension: 'county', adds: 2 });
+  });
+
+  it('returns null when no single relaxation helps', () => {
+    expect(biggestRelaxation(routes, base, domains)).toBeNull();
+  });
+
+  it('widens distance to the nearest bound that yields results', () => {
+    const target = widenDistanceTarget(routes, empty, domains);
+    // the nearest Kent route is 40 km, just below the 50 km floor
+    expect(target).not.toBeNull();
+    expect(target![0]).toBeLessThanOrEqual(40);
+    expect(
+      applyFilters(routes, { ...empty, distance: target! }, domains).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('has no distance target when the other filters exclude everything', () => {
+    const f: Filters = { ...base, counties: new Set(['Nowhere']) };
+    expect(widenDistanceTarget(routes, f, domains)).toBeNull();
   });
 });
 

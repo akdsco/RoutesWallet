@@ -181,6 +181,98 @@ export function countryCounts(
   return chipCounts(routes, pool, countryOf);
 }
 
+export type FilterDimension = 'county' | 'country' | 'distance' | 'elevation';
+
+/** A filter set with one dimension reset to its default (widest) value. */
+function withoutDimension(
+  filters: Filters,
+  dim: FilterDimension,
+  domains: Domains
+): Filters {
+  switch (dim) {
+    case 'county':
+      return { ...filters, counties: new Set() };
+    case 'country':
+      return { ...filters, countries: new Set() };
+    case 'distance':
+      return {
+        ...filters,
+        distance: [domains.distance.min, domains.distance.max],
+      };
+    case 'elevation':
+      return {
+        ...filters,
+        elevation: [domains.elevation.min, domains.elevation.max],
+      };
+  }
+}
+
+export type Relaxation = { dimension: FilterDimension; adds: number };
+
+/**
+ * The single dimension whose relaxation would add the most routes — powers the
+ * empty state's "Widening the distance range would add N routes". Considers only
+ * active dimensions; null when nothing single-handedly helps. Cheap on ~125 routes.
+ */
+export function biggestRelaxation(
+  routes: Route[],
+  filters: Filters,
+  domains: Domains
+): Relaxation | null {
+  const current = applyFilters(routes, filters, domains).length;
+  const dims: FilterDimension[] = [
+    'county',
+    'country',
+    'distance',
+    'elevation',
+  ];
+  let best: Relaxation | null = null;
+  for (const dimension of dims) {
+    const relaxed = withoutDimension(filters, dimension, domains);
+    const adds = applyFilters(routes, relaxed, domains).length - current;
+    if (adds > 0 && (!best || adds > best.adds)) best = { dimension, adds };
+  }
+  return best;
+}
+
+/**
+ * The nearest distance range that yields ≥1 result, keeping the other filters —
+ * "a nudge, not a reset" behind the empty state's "Widen distance". Null when the
+ * other dimensions already exclude everything (widening distance can't help).
+ */
+export function widenDistanceTarget(
+  routes: Route[],
+  filters: Filters,
+  domains: Domains
+): Range | null {
+  const dd = domains.distance;
+  const [lo, hi] = filters.distance;
+  const candidates = applyFilters(
+    routes,
+    { ...filters, distance: [dd.min, dd.max] },
+    domains
+  ).map((r) => r.distance_km);
+  if (candidates.length === 0) return null;
+
+  let best: { range: Range; cost: number } | null = null;
+  for (const d of candidates) {
+    let range: Range;
+    let cost: number;
+    if (d < lo) {
+      range = [Math.max(dd.min, floor5(d)), hi];
+      cost = lo - d;
+    } else if (d > hi) {
+      range = [lo, d >= dd.max ? dd.max : ceil5(d)];
+      cost = d - hi;
+    } else {
+      range = [lo, hi];
+      cost = 0;
+    }
+    if (!best || cost < best.cost) best = { range, cost };
+  }
+  return best?.range ?? null;
+}
+
 export function isDefault(filters: Filters, domains: Domains): boolean {
   return (
     filters.counties.size === 0 &&
