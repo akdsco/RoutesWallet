@@ -411,7 +411,8 @@ export function App() {
               {hovered.name}
             </span>
             <span className="font-mono text-[12px] text-text-2">
-              {hovered.distance_km} km · {hovered.region}
+              {hovered.distance_km} km
+              {hovered.region ? ` · ${hovered.region}` : ''}
             </span>
             <span className="text-[12px] text-muted">
               {SOURCE_META[hovered.source].blurb}

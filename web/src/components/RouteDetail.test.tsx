@@ -11,6 +11,7 @@ function makeRoute(over: Partial<Route> = {}): Route {
     link: 'https://www.strava.com/routes/123',
     distance_km: 58,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Surrey',
     notes: '',
     cafe: '',

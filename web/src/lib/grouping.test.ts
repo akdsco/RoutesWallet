@@ -9,6 +9,7 @@ function route(id: string, region: string): Route {
     link: `https://example.com/${id}`,
     distance_km: 10,
     source: 'club-verified',
+    country: 'United Kingdom',
     region,
     notes: '',
     cafe: '',

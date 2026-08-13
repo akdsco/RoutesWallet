@@ -191,6 +191,72 @@ describe('featuresToRoutes', () => {
     expect(route.centroid).toEqual([1, 1]);
   });
 
+  it('maps country and region from the feature', () => {
+    const withCR = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'cr',
+            name: 'CR',
+            link: 'https://e/cr',
+            country: 'United Kingdom',
+            region: 'Essex',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    expect(featuresToRoutes(withCR)[0]).toMatchObject({
+      country: 'United Kingdom',
+      region: 'Essex',
+    });
+  });
+
+  it('carries an explicit null region/country without inventing values', () => {
+    const overseas = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'es',
+            name: 'Girona',
+            link: 'https://e/es',
+            country: 'Spain',
+            region: null,
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [2.8, 41.9],
+              [2.9, 42.0],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    const r = featuresToRoutes(overseas)[0]!;
+    expect(r.country).toBe('Spain');
+    expect(r.region).toBeNull();
+  });
+
+  it('coerces a missing/empty country and region to null (never "" or "Other")', () => {
+    // fc's route "a" carries neither country nor region.
+    const r = featuresToRoutes(fc)[0]!;
+    expect(r.country).toBeNull();
+    expect(r.region).toBeNull();
+    expect(r.region).not.toBe('');
+    expect(r.region).not.toBe('Other');
+  });
+
   it('coerces an unknown source to the least-trusted tier', () => {
     const odd = {
       type: 'FeatureCollection',

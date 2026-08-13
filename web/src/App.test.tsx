@@ -93,7 +93,7 @@ describe('App — loading + listing', () => {
     // top of its per-card region labels, so a region with N cards names itself
     // N + 1 times. That extra occurrence is the header.
     expect(screen.getAllByText('Cambridgeshire')).toHaveLength(3); // header + 2 cards
-    expect(screen.getAllByText('London')).toHaveLength(2); // header + 1 card
+    expect(screen.getAllByText('Greater London')).toHaveLength(2); // header + 1 card
 
     // The header count reflects the loaded total.
     expect(screen.getByText('3 routes')).toBeInTheDocument();

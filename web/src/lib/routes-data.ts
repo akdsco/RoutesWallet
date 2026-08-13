@@ -23,6 +23,11 @@ function optStr(v: unknown): string | undefined {
   return typeof v === 'string' && v !== '' ? v : undefined;
 }
 
+/** A non-empty string, else null — for the nullable grouping keys (country/region). */
+function nullableStr(v: unknown): string | null {
+  return typeof v === 'string' && v !== '' ? v : null;
+}
+
 function centroidOf(coords: number[][]): [number, number] {
   const n = coords.length;
   let sx = 0;
@@ -61,7 +66,8 @@ export function featuresToRoutes(fc: FeatureCollection): Route[] {
       link: p.link,
       distance_km: typeof p.distance_km === 'number' ? p.distance_km : 0,
       source: normSource(p.source),
-      region: str(p.region, 'Other'),
+      country: nullableStr(p.country),
+      region: nullableStr(p.region),
       notes: str(p.notes),
       cafe: str(p.cafe),
       route_type: typeof p.route_type === 'string' ? p.route_type : undefined,

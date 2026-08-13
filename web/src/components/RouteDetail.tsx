@@ -92,7 +92,8 @@ export function RouteDetail({
             <span className="h-[3px] w-[3px] rounded-full bg-muted" />
             <span className="text-[12.5px] text-muted">
               {r.region}
-              {nearKm != null && ` · ${nearKm.toFixed(1)} km away`}
+              {nearKm != null &&
+                `${r.region ? ' · ' : ''}${nearKm.toFixed(1)} km away`}
             </span>
           </div>
           <span className="self-start">
