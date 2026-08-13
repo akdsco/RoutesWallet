@@ -7,6 +7,7 @@ import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { SearchField } from './components/SearchField.tsx';
 import { RouteList, type FilterEmpty } from './components/RouteList.tsx';
 import { FilterPanel } from './components/FilterPanel.tsx';
+import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
 import { SortMenu } from './components/SortMenu.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { useMediaQuery } from './lib/useMediaQuery.ts';
@@ -118,6 +119,8 @@ export function App() {
     () => new Map()
   );
   const [initialised, setInitialised] = useState(false);
+  // Mobile: the filter view swaps into the sheet in place of the list (§F).
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [poiTypes, setPoiTypes] = useState<Set<string>>(
     () => new Set(['toilet', 'water', 'station'])
@@ -496,7 +499,11 @@ export function App() {
 
   useEffect(() => {
     if (isDesktop) return;
-    if (matches || geoFail) setSnap('mid');
+    // A search resolving takes over the sheet — leave the filter view for results.
+    if (matches || geoFail) {
+      setMobileFiltersOpen(false);
+      setSnap('mid');
+    }
   }, [matches, geoFail, isDesktop]);
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
@@ -510,25 +517,40 @@ export function App() {
     />
   );
 
+  const filterBodyProps = {
+    filters,
+    domains,
+    countyChips,
+    countryChips,
+    elevationEnabled: hasElevation,
+    onToggleCounty: toggleCounty,
+    onToggleCountry: toggleCountry,
+    onDistanceChange: setDistance,
+    onDistanceCommit: setDistance,
+    onElevationChange: setElevation,
+    onElevationCommit: setElevation,
+  };
+
   const filterPanel = initialised ? (
     <FilterPanel
-      filters={filters}
-      domains={domains}
-      countyChips={countyChips}
-      countryChips={countryChips}
-      elevationEnabled={hasElevation}
+      {...filterBodyProps}
       activeCount={activeCount}
       matchCount={pool.length}
       totalCount={routes.length}
       onClearAll={clearFilters}
-      onToggleCounty={toggleCounty}
-      onToggleCountry={toggleCountry}
-      onDistanceChange={setDistance}
-      onDistanceCommit={setDistance}
-      onElevationChange={setElevation}
-      onElevationCommit={setElevation}
     />
   ) : null;
+
+  const snapBeforeFilters = useRef<Snap>('peek');
+  const openMobileFilters = () => {
+    snapBeforeFilters.current = snap === 'detail' ? 'peek' : snap;
+    setMobileFiltersOpen(true);
+    setSnap('mid');
+  };
+  const closeMobileFilters = () => {
+    setMobileFiltersOpen(false);
+    setSnap(snapBeforeFilters.current);
+  };
 
   return (
     <div className={isDesktop ? 'flex h-screen' : 'relative h-dvh w-full'}>
@@ -589,6 +611,28 @@ export function App() {
             selectedId ? 'top-5 max-md:hidden' : 'top-[68px]'
           }`}
         >
+          {/* Mobile only: the Filters pill leads the chip row (it's the one chip
+              that isn't a POI toggle). Filled + counted when active; opens the
+              sheet's filter view (§G/§F). Desktop uses the disclosure panel. */}
+          {!isDesktop && initialised && (
+            <button
+              type="button"
+              onClick={openMobileFilters}
+              aria-label="Filters"
+              className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-semibold ${
+                activeCount > 0
+                  ? 'border-sel bg-sel text-white dark:text-bg'
+                  : 'border-line bg-surface text-text'
+              }`}
+            >
+              Filters
+              {activeCount > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/30 px-1 font-mono text-[10px]">
+                  {activeCount}
+                </span>
+              )}
+            </button>
+          )}
           {(
             [
               ['cafe', '☕', 'Cafés'],
@@ -691,26 +735,35 @@ export function App() {
           </form>
 
           <BottomSheet snap={snap} snaps={snaps} vh={vh} onSnapChange={setSnap}>
-            <RouteList
-              query={query}
-              banner={displayBanner}
-              placeLabel={place?.name ?? ''}
-              groups={groups}
-              selectedId={selectedId}
-              backLabel={backLabel}
-              theme={theme}
-              countLine={countLineText}
-              sortControl={sortControl}
-              flat={flat}
-              openGroups={openGroups}
-              onToggleGroup={toggleGroup}
-              filterEmpty={filterEmpty}
-              mapAttribution={BASEMAPS[basemap].credit}
-              onClear={clearSearch}
-              onSelect={onSelect}
-              onDeselect={onDeselect}
-              onHover={onHover}
-            />
+            {mobileFiltersOpen && initialised ? (
+              <MobileFilterSheet
+                {...filterBodyProps}
+                matchCount={pool.length}
+                onClearAll={clearFilters}
+                onDone={closeMobileFilters}
+              />
+            ) : (
+              <RouteList
+                query={query}
+                banner={displayBanner}
+                placeLabel={place?.name ?? ''}
+                groups={groups}
+                selectedId={selectedId}
+                backLabel={backLabel}
+                theme={theme}
+                countLine={countLineText}
+                sortControl={sortControl}
+                flat={flat}
+                openGroups={openGroups}
+                onToggleGroup={toggleGroup}
+                filterEmpty={filterEmpty}
+                mapAttribution={BASEMAPS[basemap].credit}
+                onClear={clearSearch}
+                onSelect={onSelect}
+                onDeselect={onDeselect}
+                onHover={onHover}
+              />
+            )}
           </BottomSheet>
         </>
       )}

@@ -207,6 +207,37 @@ describe('App — mobile layout (§F)', () => {
     ).toBeInTheDocument();
   });
 
+  it('opens the filter view from the Filters pill and commits back to the list', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    // The Filters pill leads the chip row on mobile.
+    const pill = screen.getByRole('button', { name: /^filters$/i });
+    await user.click(pill);
+
+    // The sheet swaps to the filter view: a "Show N routes" commit footer appears
+    // and the list cards are gone.
+    const commit = await screen.findByRole('button', {
+      name: /show 3 routes/i,
+    });
+    expect(commit).toBeInTheDocument();
+    expect(routeCards()).toHaveLength(0);
+
+    // Narrowing a county updates the commit count…
+    await user.click(
+      screen
+        .getAllByRole('button', { name: /cambridgeshire/i })
+        .find((b) => b.hasAttribute('aria-pressed'))!
+    );
+    expect(
+      await screen.findByRole('button', { name: /show 2 routes/i })
+    ).toBeInTheDocument();
+
+    // …and committing returns to the (now filtered) list.
+    await user.click(screen.getByRole('button', { name: /show 2 routes/i }));
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+  });
+
   it('shows the active basemap credit in the sheet and updates it on switch', async () => {
     const user = userEvent.setup();
     await renderLoaded();
