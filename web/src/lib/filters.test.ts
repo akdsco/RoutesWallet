@@ -7,6 +7,7 @@ import {
   applyFilters,
   isDefault,
   activeFilterCount,
+  countyCounts,
   countyOf,
   type Filters,
   type Domains,
@@ -172,5 +173,45 @@ describe('countyOf', () => {
   it('reads the region field, defaulting a blank to Other', () => {
     expect(countyOf(route('a', { region: 'Kent' }))).toBe('Kent');
     expect(countyOf(route('b', { region: '' }))).toBe('Other');
+  });
+});
+
+describe('countyCounts', () => {
+  const routes = [
+    route('e1', { region: 'Essex', distance_km: 40 }),
+    route('e2', { region: 'Essex', distance_km: 40 }),
+    route('e3', { region: 'Essex', distance_km: 200 }),
+    route('k1', { region: 'Kent', distance_km: 40 }),
+    route('s1', { region: 'Surrey', distance_km: 200 }),
+  ];
+  const domains: Domains = {
+    distance: distanceDomain(routes),
+    elevation: elevationDomain(routes),
+  };
+  const base = defaultFilters(domains);
+
+  it('counts each county over the pool and orders by count desc', () => {
+    const counts = countyCounts(routes, base, domains);
+    expect(counts.map((c) => c.value)).toEqual(['Essex', 'Kent', 'Surrey']);
+    expect(counts.map((c) => c.count)).toEqual([3, 1, 1]);
+  });
+
+  it('counts a county under the OTHER dimensions but ignores the county selection', () => {
+    // A distance filter that drops the 200 km routes; Surrey then has 0 but is
+    // still listed (dimmed), and selecting Essex must not hide Kent/Surrey.
+    const f: Filters = {
+      ...base,
+      counties: new Set(['Essex']),
+      distance: [domains.distance.min, 100],
+    };
+    const counts = countyCounts(routes, f, domains);
+    const byName = Object.fromEntries(counts.map((c) => [c.value, c.count]));
+    expect(byName).toEqual({ Essex: 2, Kent: 1, Surrey: 0 });
+    // every county still present so a zero-count chip renders dimmed, not gone
+    expect(counts.map((c) => c.value).sort()).toEqual([
+      'Essex',
+      'Kent',
+      'Surrey',
+    ]);
   });
 });

@@ -124,6 +124,63 @@ export function applyFilters(
   });
 }
 
+export type ChipCount = { value: string; count: number };
+
+/** Chip counts for one dimension: every value in the data, ordered by count desc. */
+function chipCounts(
+  allRoutes: Route[],
+  pool: Route[],
+  keyOf: (r: Route) => string | undefined
+): ChipCount[] {
+  const order = new Map<string, number>(); // value → first-seen index
+  for (const r of allRoutes) {
+    const k = keyOf(r);
+    if (k !== undefined && !order.has(k)) order.set(k, order.size);
+  }
+  const counts = new Map<string, number>();
+  for (const r of pool) {
+    const k = keyOf(r);
+    if (k !== undefined) counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return [...order.keys()]
+    .map((value) => ({ value, count: counts.get(value) ?? 0 }))
+    .sort(
+      (a, b) => b.count - a.count || order.get(a.value)! - order.get(b.value)!
+    );
+}
+
+/**
+ * County chips: each county's route count under the *other* active dimensions
+ * (the county selection itself is ignored, so selecting one county never hides the
+ * rest, and a county legitimately reading 0 stays listed for a dimmed chip).
+ */
+export function countyCounts(
+  routes: Route[],
+  filters: Filters,
+  domains: Domains
+): ChipCount[] {
+  const pool = applyFilters(
+    routes,
+    { ...filters, counties: new Set() },
+    domains
+  );
+  return chipCounts(routes, pool, countyOf);
+}
+
+/** Country chips — same rule as counties; empty until the data ticket adds `country`. */
+export function countryCounts(
+  routes: Route[],
+  filters: Filters,
+  domains: Domains
+): ChipCount[] {
+  const pool = applyFilters(
+    routes,
+    { ...filters, countries: new Set() },
+    domains
+  );
+  return chipCounts(routes, pool, countryOf);
+}
+
 export function isDefault(filters: Filters, domains: Domains): boolean {
   return (
     filters.counties.size === 0 &&
