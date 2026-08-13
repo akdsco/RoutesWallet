@@ -118,8 +118,11 @@ Each is one meaningful commit: failing test (red) → minimum to pass (green) �
 **Filter core**
 1. test: `applyFilters` intersects county ∧ distance ∧ elevation; routes with no
    `elevation_gain_m` are excluded once the elevation range is narrowed off-default;
-   `distanceDomain`/`elevationDomain` round outward to 5. → `lib/filters.ts` (types,
-   domains, apply). [B2]
+   `distanceDomain`/`elevationDomain` **clamp the top to a percentile (p95) rounded
+   outward to 5 and bucket outliers above it** — a range sitting at the clamped max
+   means "no upper limit" (outliers included); dragging the max below it excludes
+   them. Bottom rounds outward (down) to 5. → `lib/filters.ts` (types, domains,
+   apply). [B2]
 2. test: `countyCounts` returns each county's count under the *other* active
    dimensions (so a county can legitimately read 0 and stay visible-dimmed);
    `activeFilterCount` + `isDefault` count only non-default dims. → extend
@@ -199,12 +202,13 @@ source · a filter summary/legend on the map · per-county counts on the map · 
 `country` data itself and `region`→county normalisation (separate data ticket).
 
 **Risks / calls to confirm at the plan gate:**
-- **Slider domain outliers.** The spec says "domain = data min/max rounded outward to
-  5 km". Literally that makes the distance domain ~0–835 km (one 834 km ultra) and
-  elevation ~15–12,860 m, so the default handles sit at the extremes and the useful
-  0–150 km band is a sliver. Options: (a) follow the spec literally and accept it;
-  (b) clamp the domain to a sensible percentile and bucket outliers at the top handle.
-  **Proposed: (a) literal for v1**, note as a fast-follow if it feels bad by eye.
+- **Slider domain outliers — DECIDED: clamp + bucket.** The data spans 4–834 km and
+  15–12,860 m (a few ultra/trip outliers), so the literal spec domain would bury the
+  useful band. Decision: clamp the top handle to **p95 rounded outward to 5** and
+  **bucket outliers above it at the top handle** (labelled e.g. "150+ km"). A range
+  resting at the clamped max = "no upper limit" (outliers included); dragging the max
+  below it excludes them. Small, deliberate deviation from §G's literal wording, made
+  because TB-60's real data has outliers the spec's specimen didn't.
 - **Size.** This is a large ticket — ~18 commits across 4 new libs + 3 new components +
   App/mobile/URL/E2E. It can ship as one PR built in the order above, or split into
   **(1) desktop filters+sort+groups** then **(2) URL + mobile + E2E**. Proposed: one

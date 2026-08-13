@@ -1,0 +1,144 @@
+import type { Route } from '../types.ts';
+
+/**
+ * The filter model behind §G: filters define the *pool* (search then ranks within
+ * it, sort orders survivors). Pure — unit tested. County is keyed on the existing
+ * `region` field today (a separate data ticket normalises region→county + adds
+ * `country`); nothing here changes when that lands.
+ */
+
+export type Range = [min: number, max: number];
+
+/**
+ * A slider's numeric domain. `min`/`max` bound the handles; `hardMax` is the true
+ * data maximum. When `hardMax > max` the data has outliers clamped out of the
+ * handle range (p95), and a range sitting at `max` means "no upper limit" — the
+ * outliers are bucketed at the top handle (UI labels it e.g. "105+").
+ */
+export type Domain = { min: number; max: number; hardMax: number };
+
+export type Domains = { distance: Domain; elevation: Domain };
+
+export type Filters = {
+  /** Chosen counties (the `region` field); empty = all counties. */
+  counties: ReadonlySet<string>;
+  /** Chosen countries; empty = all. Dead until the data ticket adds `country`. */
+  countries: ReadonlySet<string>;
+  /** [min, max] km. At the domain edges = no distance constraint. */
+  distance: Range;
+  /** [min, max] m. Off-default excludes routes with no elevation. */
+  elevation: Range;
+};
+
+/** The clamp percentile — keeps a handful of ultra/trip outliers off the handle. */
+const CLAMP_PCTL = 95;
+
+const floor5 = (x: number) => Math.floor(x / 5) * 5;
+const ceil5 = (x: number) => Math.ceil(x / 5) * 5;
+
+/** Nearest-rank percentile of `values` (unsorted ok), rounded outward up to 5. */
+export function percentileUp5(values: number[], pctl: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const rank = Math.ceil((pctl / 100) * sorted.length); // 1-based
+  const i = Math.min(sorted.length, Math.max(1, rank)) - 1;
+  return ceil5(sorted[i]!);
+}
+
+function domainOf(values: number[]): Domain {
+  if (values.length === 0) return { min: 0, max: 0, hardMax: 0 };
+  const dataMin = Math.min(...values);
+  const dataMax = Math.max(...values);
+  const min = floor5(dataMin);
+  const max = Math.max(min + 5, percentileUp5(values, CLAMP_PCTL));
+  return { min, max, hardMax: ceil5(dataMax) };
+}
+
+export function distanceDomain(routes: Route[]): Domain {
+  return domainOf(routes.map((r) => r.distance_km));
+}
+
+export function elevationDomain(routes: Route[]): Domain {
+  const vals = routes
+    .map((r) => r.elevation_gain_m)
+    .filter((v): v is number => typeof v === 'number');
+  return domainOf(vals);
+}
+
+/** County for grouping/filtering — the `region` field, blank → "Other". */
+export function countyOf(r: Route): string {
+  return r.region || 'Other';
+}
+
+/** Country, once the data ticket adds it; undefined until then (degrades to pass). */
+export function countryOf(r: Route): string | undefined {
+  const c = (r as { country?: unknown }).country;
+  return typeof c === 'string' && c !== '' ? c : undefined;
+}
+
+export function defaultFilters(domains: Domains): Filters {
+  return {
+    counties: new Set(),
+    countries: new Set(),
+    distance: [domains.distance.min, domains.distance.max],
+    elevation: [domains.elevation.min, domains.elevation.max],
+  };
+}
+
+/** Is a range at (or beyond) both domain edges — i.e. constraining nothing? */
+function rangeIsDefault(range: Range, domain: Domain): boolean {
+  return range[0] <= domain.min && range[1] >= domain.max;
+}
+
+/** A value passes `range`; the top edge means "unbounded" so outliers pass. */
+function inRange(v: number, range: Range, domain: Domain): boolean {
+  if (v < range[0]) return false;
+  if (range[1] >= domain.max) return true;
+  return v <= range[1];
+}
+
+/** The pool: routes matching every active dimension (county ∧ country ∧ dist ∧ elev). */
+export function applyFilters(
+  routes: Route[],
+  filters: Filters,
+  domains: Domains
+): Route[] {
+  const elevActive = !rangeIsDefault(filters.elevation, domains.elevation);
+  return routes.filter((r) => {
+    if (filters.counties.size && !filters.counties.has(countyOf(r)))
+      return false;
+    if (filters.countries.size) {
+      const c = countryOf(r);
+      if (c === undefined || !filters.countries.has(c)) return false;
+    }
+    if (!inRange(r.distance_km, filters.distance, domains.distance)) {
+      return false;
+    }
+    if (elevActive) {
+      if (r.elevation_gain_m == null) return false;
+      if (!inRange(r.elevation_gain_m, filters.elevation, domains.elevation)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+export function isDefault(filters: Filters, domains: Domains): boolean {
+  return (
+    filters.counties.size === 0 &&
+    filters.countries.size === 0 &&
+    rangeIsDefault(filters.distance, domains.distance) &&
+    rangeIsDefault(filters.elevation, domains.elevation)
+  );
+}
+
+/** Number of narrowed dimensions — the count-pill value on the panel header. */
+export function activeFilterCount(filters: Filters, domains: Domains): number {
+  let n = 0;
+  if (filters.counties.size) n++;
+  if (filters.countries.size) n++;
+  if (!rangeIsDefault(filters.distance, domains.distance)) n++;
+  if (!rangeIsDefault(filters.elevation, domains.elevation)) n++;
+  return n;
+}
