@@ -12,10 +12,17 @@
  * 3. Paste the `META` array (id + sheet metadata for the routes you want) below.
  * 4. Paste this whole file, run it, then save the returned object as
  *    web/public/routes.geojson.
+ * 5. Run `npm run normalise:routes` (in web/) to assign each route's `country`
+ *    + `region` from its geometry. The importer deliberately does NOT set them —
+ *    region is derived by majority-vote point-in-polygon, not typed by hand (see
+ *    scripts/normalise-routes-geojson.ts + src/lib/region.ts). This keeps
+ *    re-imports normalised and avoids the old free-text region mess (TB-63).
  *
  * `id` is the number in a route URL: strava.com/routes/<id>.
  *
  * WHAT EACH ROUTE CARRIES
+ * - country / region: NOT set here — assigned by the normalise step (step 5) from
+ *   the line's geometry. Do not add a region column to META.
  * - geometry: [lng, lat, ele] — elevation is the standard GeoJSON 3rd coordinate,
  *   read straight from the GPX <ele> tags (whole metres). The profile chart is
  *   derived from this (distance-along vs the 3rd axis); we store no separate array.
@@ -31,7 +38,7 @@
 // Fill from the Google Sheet: one entry per route.
 const META = [
   // { id: '3079343783499010458', name: 'Girona - just Girona', distance_km: 34,
-  //   region: 'Hub Velo trips', type: 'Road', cafe: '', notes: '' },
+  //   type: 'Road', cafe: '', notes: '' },   // NB: no region — see step 5
 ];
 
 // QUALITY RULE: keep FULL resolution. Do NOT decimate to a fixed point cap —
@@ -165,7 +172,8 @@ async function importRoutes(meta) {
           link: `https://www.strava.com/routes/${m.id}`,
           distance_km: m.distance_km,
           source: 'club-verified',
-          region: m.region,
+          // country + region intentionally omitted — assigned by
+          // `npm run normalise:routes` from geometry (see step 5 in the header).
           route_type: m.type,
           cafe: m.cafe ?? '',
           notes: m.notes ?? '',
