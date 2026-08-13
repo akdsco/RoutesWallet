@@ -92,6 +92,9 @@ function deferred<T>() {
 beforeEach(() => {
   loadRoutesMock.mockReset();
   geocodeMock.mockReset();
+  // The app writes its view into the URL (replaceState); jsdom keeps that across
+  // tests in the shared window, so reset it so each test starts from a clean URL.
+  window.history.replaceState(null, '', '/');
 });
 
 describe('App — loading + listing', () => {
@@ -338,6 +341,36 @@ describe('App — filters, sort & grouping', () => {
     expect(
       screen.getByRole('button', { name: /sort: nearest/i })
     ).toBeInTheDocument();
+  });
+
+  it('writes the active filters into the URL (replaceState)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await openFilters(user);
+    await user.click(countyChip(/cambridgeshire/i));
+
+    await waitFor(() =>
+      expect(window.location.search).toContain('county=cambridgeshire')
+    );
+  });
+
+  it('restores a filtered/sorted view from the URL and drops unknown params', async () => {
+    // A shared link: a known county + an unknown one + an explicit sort.
+    window.history.replaceState(
+      null,
+      '',
+      '/?county=cambridgeshire,atlantis&sort=distance-desc'
+    );
+    await renderLoaded();
+
+    // cambridgeshire is applied (2 routes); 'atlantis' is dropped without error
+    await waitFor(() => expect(routeCards()).toHaveLength(2));
+    expect(screen.getByText('2 of 3 routes')).toBeInTheDocument();
+    // the shared sort is restored
+    expect(screen.getByRole('button', { name: /sort:/i })).toHaveTextContent(
+      /distance ↓/i
+    );
   });
 
   it('filters that exclude everything show the empty state with a way out', async () => {

@@ -28,11 +28,13 @@ import {
   activeFilterCount,
   biggestRelaxation,
   widenDistanceTarget,
+  countyOf,
   type Domains,
   type Filters,
   type Range,
   type Relaxation,
 } from './lib/filters.ts';
+import { encodeView, decodeView } from './lib/url-state.ts';
 import {
   sortRoutes,
   INITIAL_SORT,
@@ -169,13 +171,6 @@ export function App() {
   );
   const effFilters = initialised ? filters : defaultFilters(domains);
 
-  // Initialise filters to the real domains once the data lands.
-  useEffect(() => {
-    if (loading || routes.length === 0 || initialised) return;
-    setFilters(defaultFilters(domains));
-    setInitialised(true);
-  }, [loading, routes, domains, initialised]);
-
   const pool = useMemo(
     () => applyFilters(routes, effFilters, domains),
     [routes, effFilters, domains]
@@ -258,6 +253,40 @@ export function App() {
     },
     [routes, loading, clearSearch]
   );
+
+  // Restore the shared view from the URL once the data lands (§G): filters, sort
+  // and the search place. Fold + selection are deliberately not in the URL.
+  // Degrades — unknown counties / out-of-domain ranges are dropped by decodeView.
+  useEffect(() => {
+    if (loading || routes.length === 0 || initialised) return;
+    setInitialised(true);
+    const counties = [...new Set(routes.map(countyOf))];
+    const view = decodeView(window.location.search, counties, domains);
+    setFilters(view.filters);
+    // A sort that differs from the contextual default was chosen explicitly, so
+    // mark it sticky; otherwise leave it as the default (a later search can switch
+    // it to nearest).
+    const contextual: SortKey = view.near ? 'nearest' : 'name-az';
+    setSortState({ sort: view.sort, chose: view.sort !== contextual });
+    if (view.near) {
+      setQuery(view.near);
+      void runSearch(view.near);
+    }
+  }, [loading, routes, domains, initialised, runSearch]);
+
+  // Mirror the live view back into the URL (replaceState, so Back leaves the app
+  // rather than walking slider drags). Omitted at defaults → a clean URL.
+  useEffect(() => {
+    if (!initialised) return;
+    const qs = encodeView(
+      { filters, sort: sortState.sort, near: place?.name ?? '' },
+      domains
+    );
+    const url = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [initialised, filters, sortState.sort, place, domains]);
 
   // Search ranks WITHIN the filtered pool, never the full library (§G).
   const scored = useMemo(

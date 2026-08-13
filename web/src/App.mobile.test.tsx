@@ -25,6 +25,7 @@ const geocodeMock = vi.mocked(geocode);
 beforeEach(() => {
   loadRoutesMock.mockReset();
   geocodeMock.mockReset();
+  window.history.replaceState(null, '', '/'); // reset the app-written URL per test
   window.matchMedia = (query: string): MediaQueryList => ({
     matches: false,
     media: query,
