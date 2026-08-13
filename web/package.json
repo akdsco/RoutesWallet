@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:report": "playwright show-report",
+    "enrich:non-strava": "node scripts/enrich-non-strava.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
