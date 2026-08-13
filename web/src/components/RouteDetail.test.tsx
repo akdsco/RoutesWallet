@@ -11,6 +11,7 @@ function makeRoute(over: Partial<Route> = {}): Route {
     link: 'https://www.strava.com/routes/123',
     distance_km: 58,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Surrey',
     notes: '',
     cafe: '',
@@ -72,5 +73,26 @@ describe('RouteDetail', () => {
   it('shows the distance-away only when nearKm is provided', () => {
     expect(render(makeRoute(), { nearKm: 3.2 })).toContain('3.2 km away');
     expect(render(makeRoute())).not.toContain('km away');
+  });
+
+  // Overseas / unresolved routes carry region: null — the meta line must not
+  // render "null" or a dangling separator.
+  it('renders cleanly when region is null', () => {
+    const html = render(makeRoute({ region: null }), { nearKm: 3.2 });
+    expect(html).not.toContain('null');
+    expect(html).toContain('3.2 km away');
+    expect(html).not.toContain('· · '); // no doubled/orphan separator
+  });
+
+  const DOT = 'h-[3px] w-[3px] rounded-full bg-muted';
+
+  it('drops the separator dot when there is no region and no distance-away', () => {
+    // Otherwise a Spain/Italy route with no active search reads "34 km ·".
+    expect(render(makeRoute({ region: null }))).not.toContain(DOT);
+  });
+
+  it('keeps the separator dot when there is meta to separate', () => {
+    expect(render(makeRoute())).toContain(DOT); // region present
+    expect(render(makeRoute({ region: null }), { nearKm: 3.2 })).toContain(DOT);
   });
 });

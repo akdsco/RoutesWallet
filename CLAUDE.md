@@ -42,7 +42,8 @@ type Route = {
   link: string; // opens in Strava/RWGPS or a GPX download
   distance_km: number;
   source: 'club-verified' | 'club-member' | 'third-party'; // trust tier
-  region: string; // grouping + card meta, e.g. "Kent", "Hub Velo trips"
+  country: string | null; // top-level grouping, e.g. "United Kingdom"; null if unresolved
+  region: string | null; // 2nd-level grouping (UK county), canonical name; null = none set
   notes: string; // free-text ride notes; may be empty
   cafe: string; // café stop; may be empty
   route_type?: string; // e.g. "Road" | "Gravel", from the GPX import
@@ -53,6 +54,18 @@ type Route = {
   centroid: [number, number]; // [lng, lat], for cheap proximity pre-filter
 };
 ```
+
+`country` + `region` are a **two-level grouping key**: a country "unlocks" its
+region (county) picker. Both are **derived from geometry, never typed by hand** —
+`npm run normalise:routes` samples points along each line and point-in-polygon
+tests them (build assets in `web/scripts/data/`: England's ceremonial counties
+for region, world countries for country), taking the **majority** of each.
+Greater London is the club's home county, so a ride's region is the away-county
+it reaches (a London→Kent ride is "Kent"); a London-only loop stays "Greater
+London". Overseas rides get `region: null` and their real `country` (Spain,
+Italy, …). Canonical set + logic live in `src/lib/region.ts`. The importer emits
+neither field — it runs the normalise step instead, so re-imports stay clean
+(TB-63).
 
 Elevation rides in as the standard GeoJSON 3rd coordinate (`[lng, lat, ele]`,
 whole metres) from the GPX `<ele>` tags — the profile chart is derived from it

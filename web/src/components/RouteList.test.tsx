@@ -12,6 +12,7 @@ function route(id: string, name: string): Route {
     link: `https://example.com/${id}`,
     distance_km: 40,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Home Counties', // deliberately NOT a county label, so 'Essex'/'Kent'
     notes: '', //                only ever appear on the group headers
     cafe: '',

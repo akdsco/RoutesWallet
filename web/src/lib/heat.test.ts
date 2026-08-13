@@ -16,6 +16,7 @@ function route(id: string, coords: [number, number][]): Route {
     link: `https://example.com/${id}`,
     distance_km: 10,
     source: 'club-verified',
+    country: 'United Kingdom',
     region: 'Test',
     notes: '',
     cafe: '',

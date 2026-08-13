@@ -21,8 +21,18 @@ export type Route = {
   distance_km: number;
   /** Trust badge. 'HV-signed' = vetted by the club; '3rd-party' = seeded/public. */
   source: RouteSource;
-  /** Grouping + card meta, e.g. "Kent", "Essex", "Hub Velo trips". */
-  region: string;
+  /**
+   * Top-level grouping key, e.g. "United Kingdom", "Spain". A country "unlocks"
+   * region (county) selection; only UK routes carry a region today. `null` when
+   * the country couldn't be resolved (a few ambiguous personal routes).
+   */
+  country: string | null;
+  /**
+   * Second-level grouping + card meta: the UK ceremonial county, a canonical full
+   * name from `lib/region.ts` (e.g. "Kent", "Hertfordshire", "Greater London").
+   * Explicit `null` = no county set (overseas, or not yet resolved) — never "".
+   */
+  region: string | null;
   /** Free-text ride notes shown on the selected card. May be empty. */
   notes: string;
   /** Café stop, shown on the selected card when present. May be empty. */

@@ -16,6 +16,7 @@ const ROUTES_FEED = {
         link: 'https://www.ridewithgps.com/routes/2',
         distance_km: 28,
         source: 'club-member',
+        country: 'United Kingdom',
         region: 'Cambridgeshire',
       },
       geometry: {
@@ -34,6 +35,7 @@ const ROUTES_FEED = {
         link: 'https://www.strava.com/routes/1',
         distance_km: 42,
         source: 'club-verified',
+        country: 'United Kingdom',
         region: 'Cambridgeshire',
       },
       geometry: {
@@ -52,7 +54,8 @@ const ROUTES_FEED = {
         link: 'https://www.strava.com/routes/3',
         distance_km: 61,
         source: 'third-party',
-        region: 'London',
+        country: 'United Kingdom',
+        region: 'Greater London',
       },
       geometry: {
         type: 'LineString',

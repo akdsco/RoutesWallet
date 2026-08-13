@@ -517,7 +517,9 @@ function RouteCard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SourceBadge source={r.source} />
-          <span className="text-[12px] text-muted">{r.region}</span>
+          {r.region && (
+            <span className="text-[12px] text-muted">{r.region}</span>
+          )}
           {nearKm != null && (
             <span className="text-[12px] text-muted">
               · {nearKm.toFixed(1)} km away

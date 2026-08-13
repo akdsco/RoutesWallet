@@ -30,6 +30,7 @@ import {
   biggestRelaxation,
   widenDistanceTarget,
   countyOf,
+  groupKeyOf,
   type Domains,
   type Filters,
   type Range,
@@ -266,7 +267,9 @@ export function App() {
   useEffect(() => {
     if (loading || routes.length === 0 || initialised) return;
     setInitialised(true);
-    const counties = [...new Set(routes.map(countyOf))];
+    const counties = [...new Set(routes.map(countyOf))].filter(
+      (c): c is string => c !== undefined
+    );
     const view = decodeView(window.location.search, counties, domains);
     setFilters(view.filters);
     // A sort that differs from the contextual default was chosen explicitly, so
@@ -336,12 +339,13 @@ export function App() {
     }));
   }, [flat, survivors, nearKm]);
 
-  // Use countyOf (not raw region) so a blank-region route resolves to 'Other' —
-  // matching the group label, so its group force-opens on select (§G fold rule).
+  // Use groupKeyOf (the list's grouping key, not the county-filter key) so the
+  // selected route's group — a UK county, or a collapsed country like "Spain" —
+  // force-opens on select (§G fold rule).
   const selectedRoute = selectedId
     ? (routes.find((r) => r.id === selectedId) ?? null)
     : null;
-  const selectedCounty = selectedRoute ? countyOf(selectedRoute) : null;
+  const selectedCounty = selectedRoute ? groupKeyOf(selectedRoute) : null;
   const singleCounty =
     filters.counties.size === 1 ? [...filters.counties][0]! : null;
   const openGroups = useMemo(() => {
@@ -733,7 +737,8 @@ export function App() {
               {hovered.name}
             </span>
             <span className="font-mono text-[12px] text-text-2">
-              {hovered.distance_km} km · {hovered.region}
+              {hovered.distance_km} km
+              {hovered.region ? ` · ${hovered.region}` : ''}
             </span>
             <span className="text-[12px] text-muted">
               {SOURCE_META[hovered.source].blurb}

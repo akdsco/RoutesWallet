@@ -2,13 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { groupByRegion, resolveOpenGroups } from './grouping.ts';
 import type { Route } from '../types.ts';
 
-function route(id: string, region: string): Route {
+function route(
+  id: string,
+  region: string,
+  country: string | null = 'United Kingdom'
+): Route {
   return {
     id,
     name: id,
     link: `https://example.com/${id}`,
     distance_km: 10,
     source: 'club-verified',
+    country,
     region,
     notes: '',
     cafe: '',
@@ -49,6 +54,16 @@ describe('groupByRegion', () => {
   it('falls back to "Other" for a blank region', () => {
     const [group] = groupByRegion([route('a', '')]);
     expect(group!.label).toBe('Other');
+  });
+
+  it('collapses a county-less country (Spain/Italy) to a country group, not "Other"', () => {
+    const groups = groupByRegion([
+      route('g1', '', 'Spain'),
+      route('g2', '', 'Spain'),
+      route('e1', 'Essex'),
+    ]);
+    // Spain has 2 routes, Essex 1 → Spain leads; no "Other" bucket appears.
+    expect(groups.map((g) => g.label)).toEqual(['Spain', 'Essex']);
   });
 });
 
