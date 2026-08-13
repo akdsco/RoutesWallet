@@ -83,7 +83,7 @@ describe('enrichFeatureFromGpx', () => {
 
   it('is idempotent — re-enriching yields an identical feature', () => {
     const once = enrichFeatureFromGpx(baseFeature(), RWGPS_GPX);
-    const twice = enrichFeatureFromGpx(once as Feature<LineString>, RWGPS_GPX);
+    const twice = enrichFeatureFromGpx(once, RWGPS_GPX);
     expect(twice).toEqual(once);
   });
 
