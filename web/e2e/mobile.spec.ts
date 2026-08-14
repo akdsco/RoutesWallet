@@ -129,6 +129,22 @@ test('the filter view commits back to the map via an on-screen footer (TB-66)', 
   await settleAt(page, h - 132);
 });
 
+test('the Filters pill toggles the filter view shut while the sheet is raised (TB-66)', async ({
+  page,
+}) => {
+  await filtersPill(page).click();
+  await expect(clearAll(page)).toBeVisible();
+  await expect(filtersPill(page)).toHaveAttribute('aria-expanded', 'true');
+
+  // The reported trap was the pill sitting behind the raised sheet and only ever
+  // re-opening. Tapping it here must be reachable AND close the form back to the
+  // list — the second design exit.
+  await filtersPill(page).click();
+  await expect(clearAll(page)).toHaveCount(0);
+  await expect(cards(page).first()).toBeVisible();
+  await expect(filtersPill(page)).toHaveAttribute('aria-expanded', 'false');
+});
+
 // NOTE — the raw finger-DRAG (pointerdown → move → release) is verified by eye on
 // a real device; Playwright's synthetic pointer-capture drag doesn't faithfully
 // reproduce it, and a flaky test would violate the retries:0 contract. What the
