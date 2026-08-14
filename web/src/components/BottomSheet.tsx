@@ -189,7 +189,7 @@ export function BottomSheet({
         onPointerUp={onPointerUp}
         onClick={onClick}
         onKeyDown={onKeyDown}
-        className="flex min-h-11 w-full flex-none touch-none items-center justify-center rounded-t-[10px] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
+        className="flex min-h-7 w-full flex-none touch-none items-center justify-center rounded-t-[10px] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
       >
         <span aria-hidden="true" className="h-1 w-9 rounded-full bg-line" />
       </button>

@@ -10,15 +10,16 @@ export type Snap = 'peek' | 'detail' | 'mid' | 'full';
 // Tunable, like the heat tiers — named constants, not inline literals.
 export const PEEK_PX = 132; // idle/search: results header + first card
 // Selected entry snap. §F sketched 192, but that predated our RouteDetail, which
-// carries the 44px sheet handle + a back row + name + meta + an always-present
-// trust badge (§7) + a 48px Open. §F requires Open visible without scrolling at
-// the entry snap, so the floor is sized to our real content (measured by eye).
+// carries the sheet handle + a back row + name + meta + an always-present trust
+// badge (§7) + a 48px Open. §F requires Open visible without scrolling at the
+// entry snap, so the floor is sized to our real content (measured by eye); the
+// slim handle (HANDLE_PX) leaves it comfortably in view.
 export const DETAIL_PX = 260;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
-// The drag handle's height (BottomSheet's handle button is `min-h-11` = 44px).
+// The drag handle's height (BottomSheet's handle button is `min-h-7` = 28px).
 // A content view that pins a footer to the visible bottom must subtract it — see
 // visibleContentPx.
-export const HANDLE_PX = 44;
+export const HANDLE_PX = 28;
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next
 // snap in the drag direction; slower settles to the nearest.

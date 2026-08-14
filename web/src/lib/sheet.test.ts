@@ -71,8 +71,9 @@ describe('snapsFor — the reachable snaps depend on selection (design §F)', ()
 
   it('filtering floors at mid; peek is unreachable (its 88px content cannot hold the commit footer)', () => {
     // The mobile filter form pins a "Show N routes" footer; the peek content
-    // budget (PEEK_PX − HANDLE_PX = 88px) is too small to show it, so peek must
-    // be off the reachable set while filtering or the exit traps again (TB-66).
+    // budget (PEEK_PX − HANDLE_PX = 104px) is too small for the form header +
+    // footer, so peek must be off the reachable set while filtering or the exit
+    // traps again (TB-66).
     expect(snapsFor(false, true)).toEqual<Snap[]>(['mid', 'full']);
     // filtering wins even if a selection lingers — you can't select while filtering.
     expect(snapsFor(true, true)).toEqual<Snap[]>(['mid', 'full']);
