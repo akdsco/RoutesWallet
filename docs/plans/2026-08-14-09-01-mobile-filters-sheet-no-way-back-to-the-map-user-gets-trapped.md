@@ -143,4 +143,95 @@ every step. Finish with `/ship`.
 - Risk: `HANDLE_PX` couples to the handle's `min-h-11`. Naming it a constant next
   to the other snap tunables keeps the coupling explicit and one place to change.
 
+## §H — compact mobile detail + content-fit open + desktop elevation (folded into this PR)
+
+Design source: `~/Downloads/RoutesWallet Web version-6-…/RoutesWallet A-D Spec.dc.html`
+§H (+ mobile-handoff §7/§8). Folded into PR #16 at the user's direction; desktop
+scope = **elevation + compact meta** (both agreed).
+
+### What changes (mobile selected-route sheet)
+
+- **Back moves onto the map** — a `← Routes` (idle) / `← Results` (search) pill,
+  top-left under the search row, in the slot the legend vacates while selected
+  (§F.3). 36px pill, 44px hit area, `aria-label` keeps the long form ("Back to N
+  results" / "Back to all routes"). The sheet loses its in-sheet back row →
+  nothing behind a drag (reinforces TB-66).
+- **Compact two rows:** title row = name + **trust ring glyph** (ring+tick =
+  verified · plain ring = member · dashed ring = third-party; shape not colour) +
+  a **right-aligned source button sized to its label** (`Strava ↗` / `RWGPS ↗` /
+  `Garmin ↗` / `GPX ↓`). Meta row = mono `106 km · ◺ 1,240 m · Essex · 3.2 km
+  away` (elevation now shown — all 125 routes carry `elevation_gain_m`; wraps at
+  360px, county drops first).
+- **Café + notes just show** below the meta (no §H collapse-to-one-line — see the
+  content-fit decision). Empty → muted "No notes for this route" (constant floor).
+
+### Content-fit open (supersedes §H's collapsed-line + the earlier binary)
+
+On selecting a route the sheet opens to **exactly fit the detail content, clamped
+to `[compact-floor, mid]`** — a short route opens compact (~132px), a route with
+notes opens just tall enough to show them, long notes cap at mid (drag to full for
+the rest, down to the floor). Mechanically: measure the rendered RouteDetail
+height (ref + `useLayoutEffect`/ResizeObserver), compute
+`detailPx = clamp(measured + HANDLE_PX, DETAIL_FLOOR_PX, midPx)`, and feed it as
+the **dynamic `detail` snap height** into the sheet. Peek stays unreachable while
+selected; `detail` is the floor.
+
+### Desktop influence (agreed: elevation + compact meta)
+
+- Route **cards**: `◺ climb` paired with distance (mono).
+- Desktop **detail panel**: adopt the one-line mono meta (`dist · ◺ climb ·
+  county · near`) and the source-named button; keep the labelled trust badge and
+  the in-sidebar back (desktop has the room).
+
+### Behaviours (Given/When/Then)
+
+- **H1** — *Given* a selected route on mobile, *When* the detail shows, *Then* it
+  renders name + trust ring glyph + a source-named button and a mono meta line
+  with `◺` elevation.
+- **H2** — *Given* a selected route, *When* the user taps the on-map `← Routes` /
+  `← Results` pill, *Then* the route deselects and the list returns (the sheet has
+  no back row).
+- **H3** — *Given* a route with notes/café, *When* it is selected, *Then* the
+  sheet opens tall enough to show them but never past mid; *Given* a route with
+  none, *Then* it opens compact and shows "No notes for this route".
+- **H4** — *Given* the desktop cards/panel, *When* a route has elevation, *Then*
+  `◺ climb` shows paired with distance.
+
+### Increments (test-first)
+
+1. **Format helpers (unit)** — `formatGain(m)` → `"1,240 m"`; `sourceShortLabel(link)`
+   → `Strava ↗`/`RWGPS ↗`/`Garmin ↗`/`GPX ↓`; a `metaParts` builder (dist · ◺ gain
+   · county · near). `src/lib/links.ts` + `src/lib/format.ts` (+ tests). → H1/H4.
+2. **Trust ring glyph (component)** — `TrustGlyph` (ring / ring+tick / dashed),
+   shape-only, `aria-label`. Render test. → H1.
+3. **Content-fit detail snap (unit + component)** — dynamic `detail` height:
+   `clampDetailPx(measured, vh)` = `clamp(measured+HANDLE_PX, DETAIL_FLOOR_PX,
+   midPx)` in `sheet.ts`; `BottomSheet` accepts a `detailPx?` override used in its
+   `heights`. Unit for the clamp; component for the override. → H3.
+4. **RouteDetail compact rework (component)** — two rows + meta + notes; reports
+   its measured height via `onMeasure`. Desktop variant keeps badge/back. → H1/H3.
+5. **On-map Back pill (integration + e2e)** — App renders the pill in the legend
+   slot while selected; remove the in-sheet back row; move focus-on-enter to the
+   pill. → H2.
+6. **Wire content-fit open (integration + e2e)** — App holds `detailContentPx`
+   from `onMeasure`, passes to BottomSheet; on select rest at the content-fit
+   detail snap. e2e: a notes route opens taller than a bare route, ≤ mid. → H3.
+7. **Desktop elevation + compact meta (integration)** — cards + panel. → H4.
+
+Each increment one commit; suite + tsc + lint/format green throughout. Re-`/ship`.
+
+### §H risks / notes
+
+- **Divergence from §H spec:** we drop the "collapse café+notes to one truncated
+  line + chevron" in favour of content-fit open (user's call). Documented here so
+  the spec and code don't look accidentally out of sync.
+- **Measurement round-trip:** first select measures then rests; use
+  `useLayoutEffect` (pre-paint) to avoid a visible jump. Fallback to a fixed
+  132px detail if measurement is unavailable (SSR/jsdom without layout).
+- **Test churn:** existing `mobile.spec.ts` detail-geometry assertions
+  (`h - 260`) change — detail is now content-fit; assert the source button /
+  meta are in-viewport rather than a fixed height.
+- **Scope:** this is really its own ticket; folded here at the user's request, so
+  PR #16 now spans TB-66 + §H. Commit messages tag `(§H)` to keep history legible.
+
 ## Notes
