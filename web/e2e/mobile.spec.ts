@@ -106,6 +106,22 @@ test('deselecting restores the pre-selection snap', async ({ page }) => {
   await settleAt(page, 132);
 });
 
+test('the top chip row fits without an internal scrollbar at phone widths (TB-66)', async ({
+  page,
+}) => {
+  // The POI chips are icon-only on mobile so the row (Filters + 4 POIs) fits
+  // instead of overflowing its overflow-x-auto container into a scrollbar.
+  for (const width of [390, 360, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    const overflow = await page.evaluate(() => {
+      const btn = document.querySelector('button[aria-label="Cafés"]');
+      const row = btn?.parentElement as HTMLElement | null;
+      return row ? row.scrollWidth - row.clientWidth : -1;
+    });
+    expect(overflow, `chip row fits @${width}px`).toBeLessThanOrEqual(0);
+  }
+});
+
 test('the filter view commits back to the map via an on-screen footer (TB-66)', async ({
   page,
 }) => {

@@ -710,6 +710,7 @@ export function App() {
                 key={t}
                 type="button"
                 aria-pressed={on}
+                aria-label={label}
                 title={label}
                 onClick={() => togglePoi(t)}
                 className={`flex flex-none items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
@@ -719,7 +720,10 @@ export function App() {
                 }`}
               >
                 <span aria-hidden="true">{icon}</span>
-                {label}
+                {/* Mobile is width-constrained (the chip row overflowed to a
+                    scrollbar), so drop the labels there — emoji + aria-label/title
+                    carry the meaning; desktop keeps the words (TB-66). */}
+                <span className="max-md:hidden">{label}</span>
               </button>
             );
           })}
