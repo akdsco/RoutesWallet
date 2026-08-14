@@ -102,25 +102,24 @@ sheet pattern. Within v1 scope and the frozen data contract.
    `visibleContentPx(vh, snap)` returns `snapHeights(vh)[snap] − HANDLE_PX` for
    each snap. → impl: add `HANDLE_PX` constant + `visibleContentPx` to `sheet.ts`.
 
-2. **BottomSheet can constrain content to the current snap (component).** — *serves AC1*
-   test (`src/components/BottomSheet.test.tsx`, red): with `constrainToSnap`, the
-   children region is capped to `visibleContentPx(vh, snap)`; without it (default),
-   it still fills (list/detail unchanged). → impl: add the opt-in prop; when set,
-   the children wrapper takes an explicit height instead of `flex-1`.
-
-3. **App passes the constraint in filter mode (E2E, the honest layer for the pixel).** — *serves AC1*
+2. **Footer commit is on-screen and exits to the list (E2E — the honest layer for a layout fact).** — *serves AC1*
    test (`e2e/mobile.spec.ts`, red): at phone width, open Filters via the pill →
    the "Show N routes" button `toBeInViewport()`; tap it → filter view closes, the
-   route list is shown, sheet settled at the pre-filter snap. → impl: pass
-   `constrainToSnap` to `<BottomSheet>` when `mobileFiltersOpen`.
+   route list is shown, sheet settled at the pre-filter snap. → impl: add an opt-in
+   `constrainToSnap` prop to `BottomSheet` that caps the children region to
+   `visibleContentPx(vh, snap)` (explicit height instead of `flex-1`); App passes
+   it only when `mobileFiltersOpen`. The prop is plumbing between the unit (inc 1)
+   and this E2E; jsdom has no layout so it can't honestly prove "on-screen" — the
+   E2E is that proof (same `toBeInViewport()` layer already used for RouteDetail's
+   "Open"). List/detail keep the 100dvh fill (default, unchanged).
 
-4. **Filters pill toggles the view closed (integration).** — *serves AC2*
+3. **Filters pill toggles the view closed (integration).** — *serves AC2*
    test (`src/App.test.tsx`, red): open Filters via the pill (filter body shows);
    the pill is `aria-expanded=true`; tap it again → filter body gone, route list
    back, pill `aria-expanded=false`. → impl: pill `onClick` toggles
    open/`closeMobileFilters`; add `aria-expanded={mobileFiltersOpen}`.
 
-5. **"Clear all" keeps the view open — sticky filters (integration guard).** — *serves AC3*
+4. **"Clear all" keeps the view open — sticky filters (integration guard).** — *serves AC3*
    test (`src/App.test.tsx`, red-or-characterising): open Filters, activate a
    county, tap "Clear all" → selection cleared but the filter body is still shown.
    → impl: none expected (guards current intent); if already green, note it as a
