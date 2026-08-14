@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { Route } from '../types.ts';
-import { sourceShortLabel, isGpxLink } from '../lib/links.ts';
+import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { TrustGlyph } from './TrustGlyph.tsx';
@@ -63,6 +63,9 @@ export function MobileRouteDetail({
           href={safeHref(r.link)}
           target="_blank"
           rel="noopener noreferrer"
+          // Visible label is the compact "Strava ↗"; the accessible name is the
+          // clearer full phrase so AT doesn't read the bare arrow glyph.
+          aria-label={openLabel(r.link)}
           className={`inline-flex h-11 flex-none items-center gap-1.5 rounded-[10px] bg-sel px-[15px] text-[13.5px] font-semibold ${
             theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
           }`}

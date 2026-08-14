@@ -463,6 +463,7 @@ function RouteCard({
   onHover: (id: string | null) => void;
 }) {
   const select = () => onSelect(r.id);
+  const gain = formatGain(r.elevation_gain_m);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -515,12 +516,7 @@ function RouteCard({
           <span className="flex-none whitespace-nowrap font-mono text-[12px] text-text-2">
             {r.distance_km} km
             {/* §H: total climb paired with distance, mono; muted so distance leads. */}
-            {formatGain(r.elevation_gain_m) && (
-              <span className="text-muted">
-                {' '}
-                · ◺ {formatGain(r.elevation_gain_m)}
-              </span>
-            )}
+            {gain && <span className="text-muted"> · ◺ {gain}</span>}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
-import { sourceShortLabel, isGpxLink } from '../lib/links.ts';
+import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { SourceBadge } from './SourceBadge.tsx';
@@ -34,6 +34,7 @@ export function RouteDetail({
 }: Props) {
   const pts = routeThumbnail(r.geometry.coordinates, 150, 104, 10);
   const [sx, sy] = (pts.split(' ')[0] ?? '0,0').split(',');
+  const gain = formatGain(r.elevation_gain_m);
 
   return (
     <div
@@ -91,13 +92,13 @@ export function RouteDetail({
               {r.distance_km} km
             </span>
             {/* §H: total climb paired with distance, mono (shown only when known). */}
-            {formatGain(r.elevation_gain_m) && (
+            {gain && (
               <span className="font-mono text-[14px] text-text">
                 <span aria-hidden="true" className="text-muted">
                   ◺{' '}
                 </span>
                 <span className="sr-only">climb </span>
-                {formatGain(r.elevation_gain_m)}
+                {gain}
               </span>
             )}
             {(r.region || nearKm != null) && (
@@ -120,6 +121,9 @@ export function RouteDetail({
           href={safeHref(r.link)}
           target="_blank"
           rel="noopener noreferrer"
+          // Visible label is the compact "Strava ↗"; the accessible name is the
+          // clearer full phrase so AT doesn't read the bare arrow glyph.
+          aria-label={openLabel(r.link)}
           className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-[9px] bg-sel text-[13.5px] font-semibold max-md:min-h-12 max-md:w-full ${
             theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
           }`}
