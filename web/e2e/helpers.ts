@@ -37,6 +37,11 @@ const ROUTES_FEED = {
         source: 'club-verified',
         country: 'United Kingdom',
         region: 'Cambridgeshire',
+        // Elevation + notes so the §H content-fit open has something to size to
+        // (Grantchester stays bare — the short/tall contrast the e2e asserts).
+        elevation_gain_m: 850,
+        cafe: 'Fitzbillies',
+        notes: 'Quiet fen lanes; gravel option past Grantchester.',
       },
       geometry: {
         type: 'LineString',

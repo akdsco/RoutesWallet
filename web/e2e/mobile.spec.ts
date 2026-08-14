@@ -70,7 +70,10 @@ test('the sheet rests at peek, rises to mid via the handle, detail on select', a
   await settleAt(page, h - Math.round(h * 0.56)); // mid
 
   await cards(page).first().click();
-  await settleAt(page, h - 260); // detail (DETAIL_PX)
+  // §H: detail is content-fit, not a fixed height — assert the detail shows and
+  // its exit is reachable rather than a hardcoded snap px.
+  await expect(detail(page)).toBeVisible();
+  await expect(detail(page).getByRole('link')).toBeInViewport();
 });
 
 test('search then select surfaces the Open exit fully in view (no scroll)', async ({
@@ -82,11 +85,52 @@ test('search then select surfaces the Open exit fully in view (no scroll)', asyn
 
   await cards(page).filter({ hasText: 'Cambridge Loop' }).click();
 
-  const open = detail(page).getByRole('link', { name: /open in strava/i });
+  // §H: the exit is the source-named button ("Strava ↗"), not "Open in Strava".
+  const open = detail(page).getByRole('link', { name: /strava/i });
   await expect(open).toBeVisible();
   // The one action the product exists to deliver must be reachable at the detail
   // snap without scrolling the sheet.
   await expect(open).toBeInViewport();
+});
+
+test('the selected sheet opens content-fit: a route with notes opens taller than a bare one, ≤ mid (§H)', async ({
+  page,
+}) => {
+  const h = page.viewportSize()!.height;
+  const mid = Math.round(h * 0.56);
+
+  // Poll until the sheet's top stops moving (rides out the snap transition).
+  const settledTop = async () => {
+    let last = -1;
+    await expect
+      .poll(
+        async () => {
+          const y = Math.round((await sheet(page).boundingBox())!.y);
+          const stable = y === last;
+          last = y;
+          return stable;
+        },
+        { timeout: 2000 }
+      )
+      .toBe(true);
+    return last;
+  };
+
+  await handle(page).click(); // peek → mid, so all cards are reachable
+
+  // Grantchester Spin is bare (no notes/elevation) → opens at the compact floor.
+  await cards(page).filter({ hasText: 'Grantchester' }).click();
+  await expect(detail(page)).toBeVisible();
+  const bareTop = await settledTop();
+  await page.getByRole('button', { name: /back to/i }).click();
+
+  // Cambridge Loop carries café + notes + elevation → opens taller to show them…
+  await cards(page).filter({ hasText: 'Cambridge Loop' }).click();
+  await expect(detail(page).getByText(/fitzbillies/i)).toBeVisible();
+  const notesTop = await settledTop();
+
+  expect(notesTop).toBeLessThan(bareTop); // taller sheet = smaller top y
+  expect(notesTop).toBeGreaterThanOrEqual(h - mid - 8); // …but never past mid
 });
 
 test('deselecting restores the pre-selection snap', async ({ page }) => {
@@ -98,9 +142,7 @@ test('deselecting restores the pre-selection snap', async ({ page }) => {
   await settleAt(page, 132); // full: top = vh − (vh − 132) = 132, whatever vh is
 
   await cards(page).first().click(); // → detail
-  await detail(page)
-    .getByRole('button', { name: /back to/i })
-    .click();
+  await page.getByRole('button', { name: /back to/i }).click(); // §H: on-map pill
 
   // Restored to full (132), NOT collapsed to mid — the old choreography bug.
   await settleAt(page, 132);

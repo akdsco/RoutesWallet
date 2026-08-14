@@ -8,11 +8,17 @@ import { SearchField } from './components/SearchField.tsx';
 import { RouteList, type FilterEmpty } from './components/RouteList.tsx';
 import { FilterPanel } from './components/FilterPanel.tsx';
 import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
+import { MobileRouteDetail } from './components/MobileRouteDetail.tsx';
 import { SortMenu } from './components/SortMenu.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
 import { useMediaQuery } from './lib/useMediaQuery.ts';
 import { useViewportHeight } from './lib/useViewportHeight.ts';
-import { snapsFor, snapHeights, type Snap } from './lib/sheet.ts';
+import {
+  snapsFor,
+  snapHeights,
+  clampDetailPx,
+  type Snap,
+} from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -122,6 +128,9 @@ export function App() {
   const [initialised, setInitialised] = useState(false);
   // Mobile: the filter view swaps into the sheet in place of the list (§F).
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // Mobile: measured height of the selected-route detail, so the sheet opens
+  // content-fit (§H) — as far as the content needs, capped at mid.
+  const [detailContentPx, setDetailContentPx] = useState(0);
   // Live slider position while dragging — drives the handle + the count preview
   // only. The heavier list/map re-render waits for release (commit), per §G.
   const [rangeDraft, setRangeDraft] = useState<{
@@ -346,6 +355,16 @@ export function App() {
     ? (routes.find((r) => r.id === selectedId) ?? null)
     : null;
   const selectedCounty = selectedRoute ? groupKeyOf(selectedRoute) : null;
+
+  // Mobile only: the selected sheet opens content-fit (§H). Feed the sheet a
+  // detail-snap height clamped to [compact-floor, mid] from the measured content.
+  const detailPx =
+    !isDesktop && selectedRoute
+      ? clampDetailPx(detailContentPx, vh)
+      : undefined;
+  // Focus lands on the on-map back pill when a route is selected, so keyboard
+  // users get the way out first (§E), the way the in-sheet back row used to.
+  const backPillRef = useRef<HTMLButtonElement>(null);
   const singleCounty =
     filters.counties.size === 1 ? [...filters.counties][0]! : null;
   const openGroups = useMemo(() => {
@@ -547,6 +566,8 @@ export function App() {
         snapBeforeSelect.current =
           snapRef.current === 'detail' ? 'peek' : snapRef.current;
         setSnap('detail');
+        // Land keyboard focus on the way out (§E/§H: back is the on-map pill now).
+        backPillRef.current?.focus();
       } else if (!selectedId && prev) {
         setSnap(snapBeforeSelect.current);
       }
@@ -737,6 +758,23 @@ export function App() {
           />
         )}
 
+        {/* §H: back moves out of the sheet onto the map — the slot the legend
+            vacates while a route is selected — so the exit can't be dragged out of
+            reach. Short word visible ("← Routes"/"← Results"); aria-label keeps the
+            long form. Mobile only; desktop exits via the sidebar's back row. */}
+        {!isDesktop && selectedRoute && (
+          <button
+            ref={backPillRef}
+            type="button"
+            onClick={onDeselect}
+            aria-label={backLabel}
+            className="absolute left-5 top-[112px] z-[500] inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
+          >
+            <span aria-hidden="true">←</span>
+            {matches ? 'Results' : 'Routes'}
+          </button>
+        )}
+
         {hovered && (
           <div
             aria-hidden="true"
@@ -806,6 +844,9 @@ export function App() {
             snap={snap}
             snaps={snaps}
             vh={vh}
+            // §H: open the selected sheet content-fit — as far as the detail needs,
+            // capped at mid (clampDetailPx from the measured content height).
+            detailPx={detailPx}
             // The filter form pins a "Show N routes" footer to its foot; cap the
             // content to the visible window so that footer stays on-screen at
             // every snap instead of below the 100dvh sheet's fold (TB-66).
@@ -820,6 +861,14 @@ export function App() {
                 matchCount={matches?.length ?? previewPoolCount}
                 onClearAll={clearFilters}
                 onDone={closeMobileFilters}
+              />
+            ) : selectedRoute ? (
+              // §H compact detail — back lives on the map (below), not in the sheet.
+              <MobileRouteDetail
+                route={selectedRoute}
+                nearKm={selectedId ? nearKm.get(selectedId) : undefined}
+                theme={theme}
+                onMeasure={setDetailContentPx}
               />
             ) : (
               <RouteList

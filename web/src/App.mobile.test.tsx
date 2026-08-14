@@ -142,16 +142,17 @@ describe('App — mobile layout (§F)', () => {
     await user.click(firstCard);
 
     const detail = screen.getByRole('region', { name: 'Route detail' });
-    expect(
-      within(detail).getByRole('button', { name: /back to/i })
-    ).toBeInTheDocument();
-    expect(within(detail).getByRole('link')).toBeInTheDocument(); // the exit
+    // §H: the exit is the source-named link inside the sheet; Back is the on-map
+    // pill (a top-level button), not inside the detail region any more.
+    expect(within(detail).getByRole('link')).toBeInTheDocument();
+    const back = screen.getByRole('button', { name: /back to/i });
+    expect(back).not.toBe(within(detail).queryByRole('button'));
     expect(screen.getByTestId('route-map')).toHaveAttribute(
       'data-selected',
       firstId!
     );
 
-    await user.click(within(detail).getByRole('button', { name: /back to/i }));
+    await user.click(back);
     expect(
       screen.queryByRole('region', { name: 'Route detail' })
     ).not.toBeInTheDocument();
@@ -169,12 +170,7 @@ describe('App — mobile layout (§F)', () => {
     expect(snapOf()).toBe('full');
 
     await user.click(routeCards()[0]!); // → detail
-    await user.click(
-      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
-        'button',
-        { name: /back to/i }
-      )
-    );
+    await user.click(screen.getByRole('button', { name: /back to/i })); // on-map pill
 
     expect(snapOf()).toBe('full'); // restored, would be 'mid' under the old bug
   });
@@ -188,12 +184,7 @@ describe('App — mobile layout (§F)', () => {
     await user.click(routeCards()[0]!);
     expect(screen.queryByLabelText('Map legend')).not.toBeInTheDocument();
 
-    await user.click(
-      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
-        'button',
-        { name: /back to/i }
-      )
-    );
+    await user.click(screen.getByRole('button', { name: /back to/i })); // on-map pill
     expect(screen.queryByLabelText('Map legend')).toBeInTheDocument();
   });
 
