@@ -16,6 +16,12 @@ const cards = (page: Page) => sheet(page).locator('[data-route-id]');
 const searchBox = (page: Page) => page.getByRole('textbox');
 const detail = (page: Page) =>
   page.getByRole('region', { name: /route detail/i });
+const filtersPill = (page: Page) =>
+  page.getByRole('button', { name: /^filters$/i });
+const clearAll = (page: Page) =>
+  sheet(page).getByRole('button', { name: /clear all/i });
+const commit = (page: Page) =>
+  sheet(page).getByRole('button', { name: /show \d+ routes?/i });
 
 async function sheetTop(page: Page): Promise<number> {
   const box = await sheet(page).boundingBox();
@@ -98,6 +104,29 @@ test('deselecting restores the pre-selection snap', async ({ page }) => {
 
   // Restored to full (132), NOT collapsed to mid — the old choreography bug.
   await settleAt(page, 132);
+});
+
+test('the filter view commits back to the map via an on-screen footer (TB-66)', async ({
+  page,
+}) => {
+  const h = page.viewportSize()!.height;
+  await settleAt(page, h - 132); // peek
+
+  // Open Filters from the pill → the sheet swaps to the filter form.
+  await filtersPill(page).click();
+  await expect(clearAll(page)).toBeVisible();
+
+  // The commit button that names the outcome must be reachable ON SCREEN at the
+  // opening snap — the trap was it living at the foot of the 100dvh sheet, below
+  // the fold at every snap. This is the layer that catches it (jsdom has no layout).
+  await expect(commit(page)).toBeInViewport();
+
+  // Committing leaves the form and returns to the route list at the pre-filter
+  // snap (peek), i.e. no longer trapped.
+  await commit(page).click();
+  await expect(clearAll(page)).toHaveCount(0);
+  await expect(cards(page).first()).toBeVisible();
+  await settleAt(page, h - 132);
 });
 
 // NOTE — the raw finger-DRAG (pointerdown → move → release) is verified by eye on

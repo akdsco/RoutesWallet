@@ -793,7 +793,16 @@ export function App() {
             </button>
           </form>
 
-          <BottomSheet snap={snap} snaps={snaps} vh={vh} onSnapChange={setSnap}>
+          <BottomSheet
+            snap={snap}
+            snaps={snaps}
+            vh={vh}
+            // The filter form pins a "Show N routes" footer to its foot; cap the
+            // content to the visible window so that footer stays on-screen at
+            // every snap instead of below the 100dvh sheet's fold (TB-66).
+            constrainToSnap={mobileFiltersOpen && initialised}
+            onSnapChange={setSnap}
+          >
             {mobileFiltersOpen && initialised ? (
               <MobileFilterSheet
                 {...filterBodyProps}

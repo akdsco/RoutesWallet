@@ -11,6 +11,7 @@ import {
   resolveSnap,
   cycleSnap,
   settleVelocity,
+  visibleContentPx,
   type Snap,
 } from '../lib/sheet.ts';
 
@@ -22,6 +23,12 @@ type Props = {
   /** Viewport height (px) — shared with App so both measure the sheet identically
    *  (one resize subscription, no dvh-vs-innerHeight drift). */
   vh: number;
+  /** Cap the content region to the visible window (snapHeights[snap] − handle)
+   *  instead of letting it fill the 100dvh sheet. A view that pins a footer to
+   *  its foot (the mobile filter form) needs this so the footer lands at the
+   *  visible bottom edge, not off-screen below it (TB-66). The list/detail leave
+   *  it off and fill, so peek's drag-to-reveal choreography is untouched. */
+  constrainToSnap?: boolean;
   onSnapChange: (s: Snap) => void;
   children: ReactNode;
 };
@@ -40,6 +47,7 @@ export function BottomSheet({
   snap,
   snaps,
   vh,
+  constrainToSnap = false,
   onSnapChange,
   children,
 }: Props) {
@@ -185,7 +193,20 @@ export function BottomSheet({
       >
         <span aria-hidden="true" className="h-1 w-9 rounded-full bg-line" />
       </button>
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div
+        className={
+          constrainToSnap
+            ? 'flex min-h-0 flex-col'
+            : 'flex min-h-0 flex-1 flex-col'
+        }
+        style={
+          constrainToSnap
+            ? { height: `${visibleContentPx(vh, snap)}px` }
+            : undefined
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }
