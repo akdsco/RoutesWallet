@@ -53,11 +53,13 @@ export function MobileRouteDetail({
       className="detail-enter flex flex-col gap-2 px-[18px] pb-[calc(16px+env(safe-area-inset-bottom))] pt-3"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <h3 className="truncate text-[16px] font-semibold tracking-[-0.01em] text-text">
+        <div className="flex min-w-0 items-start gap-2">
+          {/* Name expands to two lines, then ellipsis (the content-fit snap grows
+              to fit the second line). line-clamp-2 keeps a very long name bounded. */}
+          <h3 className="line-clamp-2 text-[16px] font-semibold leading-tight tracking-[-0.01em] text-text">
             {r.name}
           </h3>
-          <TrustGlyph source={r.source} />
+          <TrustGlyph source={r.source} className="mt-1" />
         </div>
         <a
           href={safeHref(r.link)}

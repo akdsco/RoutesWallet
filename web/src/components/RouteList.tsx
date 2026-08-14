@@ -515,8 +515,15 @@ function RouteCard({
           </span>
           <span className="flex-none whitespace-nowrap font-mono text-[12px] text-text-2">
             {r.distance_km} km
-            {/* §H: total climb paired with distance, mono; muted so distance leads. */}
-            {gain && <span className="text-muted"> · ◺ {gain}</span>}
+            {/* §H: total climb paired with distance, mono; muted so distance leads.
+                The · and ◺ are decorative — AT hears "climb" instead. */}
+            {gain && (
+              <span className="text-muted">
+                <span aria-hidden="true"> · ◺ </span>
+                <span className="sr-only">climb </span>
+                {gain}
+              </span>
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">

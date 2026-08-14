@@ -218,6 +218,55 @@ test('the Filters pill toggles the filter view shut while the sheet is raised (T
   await expect(filtersPill(page)).toHaveAttribute('aria-expanded', 'false');
 });
 
+test('the map-style button rides the content-fit sheet’s top edge (§H)', async ({
+  page,
+}) => {
+  await handle(page).click(); // peek → mid, reach the cards
+  await cards(page).filter({ hasText: 'Cambridge Loop' }).click(); // notes → taller sheet
+  await expect(detail(page)).toBeVisible();
+
+  const styleBtn = page.getByRole('button', { name: /map style/i });
+  // The button must sit just above the sheet's actual (content-fit) top edge, not
+  // detached at the fixed detail height — a ~12px gap, never overlapping.
+  await expect
+    .poll(
+      async () => {
+        const s = (await sheet(page).boundingBox())!;
+        const b = (await styleBtn.boundingBox())!;
+        const gap = s.y - (b.y + b.height);
+        return gap >= 4 && gap <= 24;
+      },
+      { timeout: 2000 }
+    )
+    .toBe(true);
+});
+
+test('the back pill sits under the search row, not floating with a gap (§H)', async ({
+  page,
+}) => {
+  await handle(page).click();
+  await cards(page).first().click();
+  const back = page.getByRole('button', { name: /back to/i });
+  await expect(back).toBeVisible();
+
+  const search = (await searchBox(page).boundingBox())!;
+  const backBox = (await back.boundingBox())!;
+  // Starts in the top-left control slot right under the search field, not ~56px
+  // lower where the empty chip-row gap used to leave it.
+  expect(backBox.y - (search.y + search.height)).toBeLessThan(28);
+});
+
+test('the selected route name clamps to two lines, then ellipsis (§H)', async ({
+  page,
+}) => {
+  await handle(page).click();
+  await cards(page).first().click();
+  const clamp = await detail(page)
+    .getByRole('heading')
+    .evaluate((el) => getComputedStyle(el).webkitLineClamp);
+  expect(clamp).toBe('2'); // two-line clamp, not single-line truncate
+});
+
 // NOTE — the raw finger-DRAG (pointerdown → move → release) is verified by eye on
 // a real device; Playwright's synthetic pointer-capture drag doesn't faithfully
 // reproduce it, and a flaky test would violate the retries:0 contract. What the

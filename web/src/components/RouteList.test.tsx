@@ -140,6 +140,12 @@ describe('RouteList — county groups', () => {
     const card = screen.getByText('Climby').closest('[data-route-id]')!;
     expect(card).toHaveTextContent('40 km');
     expect(card).toHaveTextContent('1,036 m');
+    // The ◺ glyph is decorative; AT hears "climb" instead (matches the detail views).
+    expect(card).toHaveTextContent(/climb/i);
+    const hiddenHasGlyph = [
+      ...card.querySelectorAll('[aria-hidden="true"]'),
+    ].some((el) => el.textContent?.includes('◺'));
+    expect(hiddenHasGlyph).toBe(true);
   });
 });
 
