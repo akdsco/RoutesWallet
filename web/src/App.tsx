@@ -675,8 +675,13 @@ export function App() {
           {!isDesktop && initialised && (
             <button
               type="button"
-              onClick={openMobileFilters}
+              // The pill is the second design exit (§G.6): it toggles the filter
+              // view, so re-tapping it closes the form back to the map (TB-66).
+              onClick={
+                mobileFiltersOpen ? closeMobileFilters : openMobileFilters
+              }
               aria-label="Filters"
+              aria-expanded={mobileFiltersOpen}
               className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-semibold ${
                 activeCount > 0
                   ? 'border-sel bg-sel text-white dark:text-bg'

@@ -238,6 +238,54 @@ describe('App — mobile layout (§F)', () => {
     await waitFor(() => expect(routeCards()).toHaveLength(2));
   });
 
+  it('re-tapping the Filters pill closes the filter view, back to the list (TB-66)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const pill = screen.getByRole('button', { name: /^filters$/i });
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+
+    // Open: the sheet swaps to the filter form (commit footer appears, list gone).
+    await user.click(pill);
+    expect(pill).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', { name: /show 3 routes/i })
+    ).toBeInTheDocument();
+
+    // The second design exit (§G.6): re-tapping the pill closes the form and
+    // returns to the list — the user is not trapped in Filters.
+    await user.click(pill);
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('button', { name: /show 3 routes/i })
+    ).not.toBeInTheDocument();
+    expect(routeCards().length).toBeGreaterThan(0);
+  });
+
+  it('"Clear all" clears selections but keeps the filter view open (sticky, TB-66)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    await user.click(
+      screen
+        .getAllByRole('button', { name: /cambridgeshire/i })
+        .find((b) => b.hasAttribute('aria-pressed'))!
+    );
+    expect(
+      await screen.findByRole('button', { name: /show 2 routes/i })
+    ).toBeInTheDocument();
+
+    // Clear all removes the selection (count back to the full 3)…
+    await user.click(screen.getByRole('button', { name: /clear all/i }));
+    expect(
+      await screen.findByRole('button', { name: /show 3 routes/i })
+    ).toBeInTheDocument();
+    // …but it is NOT an exit: the form stays open, the list stays hidden. Only
+    // the commit footer and the pill leave the view.
+    expect(routeCards()).toHaveLength(0);
+  });
+
   it('shows the active basemap credit in the sheet and updates it on switch', async () => {
     const user = userEvent.setup();
     await renderLoaded();
