@@ -23,6 +23,19 @@ const clearAll = (page: Page) =>
 const commit = (page: Page) =>
   sheet(page).getByRole('button', { name: /show \d+ routes?/i });
 
+/** Search a place and WAIT for the results to resolve (the count-line banner
+ *  appears), so a following card-count assertion doesn't race the initial full
+ *  list still on screen before the geocode returns — deterministic under load. */
+async function search(page: Page, place: string): Promise<void> {
+  await searchBox(page).fill(place);
+  await page.keyboard.press('Enter');
+  // The count line inside the sheet (not the sr-only aria-live announcement) is
+  // the "results resolved" signal.
+  await expect(sheet(page).getByText(/within 25 km of/i)).toBeVisible({
+    timeout: 10_000,
+  });
+}
+
 async function sheetTop(page: Page): Promise<number> {
   const box = await sheet(page).boundingBox();
   return box!.y;
@@ -79,8 +92,7 @@ test('the sheet rests at peek, rises to mid via the handle, detail on select', a
 test('search then select surfaces the Open exit fully in view (no scroll)', async ({
   page,
 }) => {
-  await searchBox(page).fill('Cambridge');
-  await page.keyboard.press('Enter');
+  await search(page, 'Cambridge');
   await expect(cards(page)).toHaveCount(2);
 
   await cards(page).filter({ hasText: 'Cambridge Loop' }).click();
@@ -134,8 +146,7 @@ test('the selected sheet opens content-fit: a route with notes opens taller than
 });
 
 test('deselecting restores the pre-selection snap', async ({ page }) => {
-  await searchBox(page).fill('Cambridge');
-  await page.keyboard.press('Enter');
+  await search(page, 'Cambridge');
   await expect(cards(page)).toHaveCount(2); // auto-snapped to mid
 
   await handle(page).click(); // mid → full
