@@ -3,12 +3,14 @@ import {
   PEEK_PX,
   DETAIL_PX,
   MAP_STRIP_PX,
+  HANDLE_PX,
   STALE_MOVE_MS,
   snapHeights,
   snapsFor,
   resolveSnap,
   cycleSnap,
   settleVelocity,
+  visibleContentPx,
   type Snap,
 } from './sheet.ts';
 
@@ -37,6 +39,24 @@ describe('snapHeights', () => {
   it('never collapses full below the detail floor on a tiny viewport', () => {
     const tiny = snapHeights(120);
     expect(tiny.full).toBeGreaterThanOrEqual(PEEK_PX);
+  });
+});
+
+describe('visibleContentPx — the content height below the handle at a snap', () => {
+  // The sheet is 100dvh translated down so only snapHeights[snap] px is visible;
+  // the handle eats HANDLE_PX of that. A view whose footer must sit at the screen
+  // edge (the filter form) sizes its content to what's left, so the footer lands
+  // at the visible bottom instead of the 100dvh element's off-screen foot (TB-66).
+  it('is the snap height minus the handle, per snap', () => {
+    expect(visibleContentPx(VP, 'mid')).toBe(H.mid - HANDLE_PX);
+    expect(visibleContentPx(VP, 'full')).toBe(H.full - HANDLE_PX);
+    expect(visibleContentPx(VP, 'peek')).toBe(H.peek - HANDLE_PX);
+  });
+
+  it('grows with the snap (mid < full), so a taller snap shows more form', () => {
+    expect(visibleContentPx(VP, 'mid')).toBeLessThan(
+      visibleContentPx(VP, 'full')
+    );
   });
 });
 

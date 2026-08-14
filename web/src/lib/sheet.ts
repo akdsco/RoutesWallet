@@ -15,6 +15,10 @@ export const PEEK_PX = 132; // idle/search: results header + first card
 // the entry snap, so the floor is sized to our real content (measured by eye).
 export const DETAIL_PX = 260;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
+// The drag handle's height (BottomSheet's handle button is `min-h-11` = 44px).
+// A content view that pins a footer to the visible bottom must subtract it — see
+// visibleContentPx.
+export const HANDLE_PX = 44;
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next
 // snap in the drag direction; slower settles to the nearest.
@@ -37,6 +41,17 @@ export function snapHeights(viewportPx: number): Record<Snap, number> {
     mid: Math.round(viewportPx * MID_FRACTION),
     full: Math.max(PEEK_PX, viewportPx - MAP_STRIP_PX),
   };
+}
+
+/**
+ * Height (px) available to a sheet view's content at a snap — the visible window
+ * (snapHeights[snap]) minus the handle above it. The sheet element is 100dvh
+ * translated down, so a view laid out to *this* height (rather than filling the
+ * 100dvh element) keeps a pinned footer at the visible bottom edge, not off-screen
+ * below it. Used by the mobile filter form's commit button (TB-66).
+ */
+export function visibleContentPx(viewportPx: number, snap: Snap): number {
+  return snapHeights(viewportPx)[snap] - HANDLE_PX;
 }
 
 /**
