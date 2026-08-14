@@ -23,6 +23,10 @@ type Props = {
   /** Viewport height (px) — shared with App so both measure the sheet identically
    *  (one resize subscription, no dvh-vs-innerHeight drift). */
   vh: number;
+  /** Content-fit height for the `detail` snap (§H): overrides the fixed detail
+   *  height so the selected-route sheet opens exactly as far as its content needs
+   *  (clampDetailPx). Absent → the fixed DETAIL_PX. */
+  detailPx?: number;
   /** Cap the content region to the visible window (snapHeights[snap] − handle)
    *  instead of letting it fill the 100dvh sheet. A view that pins a footer to
    *  its foot (the mobile filter form) needs this so the footer lands at the
@@ -47,6 +51,7 @@ export function BottomSheet({
   snap,
   snaps,
   vh,
+  detailPx,
   constrainToSnap = false,
   onSnapChange,
   children,
@@ -58,7 +63,11 @@ export function BottomSheet({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ease = reduceMotion ? 'none' : EASE;
 
-  const heights = snapHeights(vh);
+  // §H: the detail snap is content-fit, so let App override its height; the rest
+  // are fixed. Everything downstream (rest position, drag clamp, snap resolution)
+  // reads this map, so the override flows through with no other change.
+  const base = snapHeights(vh);
+  const heights = detailPx != null ? { ...base, detail: detailPx } : base;
   const restY = (s: Snap) => vh - heights[s]; // translateY that leaves height[s] visible
   const shortest = snaps[0]!; // most closed reachable snap
   const tallest = snaps[snaps.length - 1]!; // most open reachable snap
@@ -92,7 +101,7 @@ export function BottomSheet({
     el.style.transform = `translateY(${restY(snap)}px)`;
     didInit.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snap, vh, snaps.join(',')]);
+  }, [snap, vh, snaps.join(','), detailPx]);
 
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;

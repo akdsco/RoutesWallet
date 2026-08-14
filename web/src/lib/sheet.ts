@@ -15,6 +15,10 @@ export const PEEK_PX = 132; // idle/search: results header + first card
 // entry snap, so the floor is sized to our real content (measured by eye); the
 // slim handle (HANDLE_PX) leaves it comfortably in view.
 export const DETAIL_PX = 260;
+// §H compact floor: the shortest the selected-route sheet ever opens — enough for
+// the name row + one meta line + the source button. The actual detail snap is
+// content-fit (clampDetailPx): this floor, up to a mid ceiling.
+export const DETAIL_FLOOR_PX = 132;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
 // The drag handle's height (BottomSheet's handle button is `min-h-7` = 28px).
 // A content view that pins a footer to the visible bottom must subtract it — see
@@ -53,6 +57,21 @@ export function snapHeights(viewportPx: number): Record<Snap, number> {
  */
 export function visibleContentPx(viewportPx: number, snap: Snap): number {
   return snapHeights(viewportPx)[snap] - HANDLE_PX;
+}
+
+/**
+ * Content-fit height for the selected-route detail snap (§H): open exactly as far
+ * as the detail content needs — its measured height plus the handle — but never
+ * shorter than the compact floor nor taller than mid. A bare route opens compact;
+ * one with notes opens to show them; long notes cap at mid (drag to full for the
+ * rest). Feeds the sheet as the dynamic `detail` snap height.
+ */
+export function clampDetailPx(contentPx: number, viewportPx: number): number {
+  const mid = snapHeights(viewportPx).mid;
+  return Math.max(
+    DETAIL_FLOOR_PX,
+    Math.min(mid, Math.round(contentPx) + HANDLE_PX)
+  );
 }
 
 /**

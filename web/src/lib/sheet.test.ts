@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   PEEK_PX,
   DETAIL_PX,
+  DETAIL_FLOOR_PX,
   MAP_STRIP_PX,
   HANDLE_PX,
   STALE_MOVE_MS,
@@ -11,6 +12,7 @@ import {
   cycleSnap,
   settleVelocity,
   visibleContentPx,
+  clampDetailPx,
   type Snap,
 } from './sheet.ts';
 
@@ -57,6 +59,27 @@ describe('visibleContentPx — the content height below the handle at a snap', (
     expect(visibleContentPx(VP, 'mid')).toBeLessThan(
       visibleContentPx(VP, 'full')
     );
+  });
+});
+
+describe('clampDetailPx — the content-fit detail snap (§H), floored and capped at mid', () => {
+  it('floors at DETAIL_FLOOR_PX when the content is short (bare two rows)', () => {
+    // A tiny detail (name row + meta, no notes) never opens shorter than the floor.
+    expect(clampDetailPx(40, VP)).toBe(DETAIL_FLOOR_PX);
+  });
+
+  it('fits the content plus the handle when it lands between floor and mid', () => {
+    // 300px of content + the 28px handle = 328, comfortably under mid on VP=800.
+    expect(clampDetailPx(300, VP)).toBe(300 + HANDLE_PX);
+    expect(clampDetailPx(300, VP)).toBeLessThan(H.mid);
+  });
+
+  it('caps at mid for tall content (long notes) — drag to full for the rest', () => {
+    expect(clampDetailPx(5000, VP)).toBe(H.mid);
+  });
+
+  it('rounds sub-pixel content heights', () => {
+    expect(clampDetailPx(300.6, VP)).toBe(301 + HANDLE_PX);
   });
 });
 
