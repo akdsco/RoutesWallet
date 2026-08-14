@@ -68,10 +68,28 @@ export function visibleContentPx(viewportPx: number, snap: Snap): number {
  */
 export function clampDetailPx(contentPx: number, viewportPx: number): number {
   const mid = snapHeights(viewportPx).mid;
-  return Math.max(
-    DETAIL_FLOOR_PX,
-    Math.min(mid, Math.round(contentPx) + HANDLE_PX)
+  // mid is the hard ceiling (outermost min) so the detail snap can never out-grow
+  // it — otherwise the shortest→tallest ordering detail < mid < full breaks on a
+  // tiny viewport where the floor itself exceeds mid.
+  return Math.min(
+    mid,
+    Math.max(DETAIL_FLOOR_PX, Math.round(contentPx) + HANDLE_PX)
   );
+}
+
+/**
+ * The sheet's actual visible height at rest — the fixed snap height, except at the
+ * `detail` snap where it is the content-fit `detailPx` (§H) when known. Map overlays
+ * that ride above the sheet (the map-style button, the legend) must measure against
+ * this, not the fixed detail height, or they detach from the fluid sheet's edge.
+ */
+export function sheetHeightPx(
+  snap: Snap,
+  viewportPx: number,
+  detailPx?: number
+): number {
+  if (snap === 'detail' && detailPx != null) return detailPx;
+  return snapHeights(viewportPx)[snap];
 }
 
 /**

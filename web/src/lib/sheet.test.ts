@@ -13,6 +13,7 @@ import {
   settleVelocity,
   visibleContentPx,
   clampDetailPx,
+  sheetHeightPx,
   type Snap,
 } from './sheet.ts';
 
@@ -80,6 +81,31 @@ describe('clampDetailPx — the content-fit detail snap (§H), floored and cappe
 
   it('rounds sub-pixel content heights', () => {
     expect(clampDetailPx(300.6, VP)).toBe(301 + HANDLE_PX);
+  });
+
+  it('never exceeds mid, even when the floor would be taller (tiny viewport)', () => {
+    // vh=200 → mid=112 < floor(132); the detail snap must not out-grow mid, or
+    // the shortest→tallest snap ordering (detail < mid < full) breaks.
+    const tiny = 200;
+    expect(clampDetailPx(40, tiny)).toBeLessThanOrEqual(snapHeights(tiny).mid);
+  });
+});
+
+describe('sheetHeightPx — the sheet’s actual rest height, honouring the content-fit detail snap', () => {
+  it('uses the content-fit detailPx at the detail snap so overlays ride the fluid sheet', () => {
+    // Map-style button, legend etc. must track the real sheet edge, not the fixed
+    // detail height, now that detail is content-fit (§H).
+    expect(sheetHeightPx('detail', VP, 300)).toBe(300);
+  });
+
+  it('falls back to the fixed detail height when no content measurement is given', () => {
+    expect(sheetHeightPx('detail', VP, undefined)).toBe(H.detail);
+  });
+
+  it('ignores detailPx for the other snaps (they are fixed)', () => {
+    expect(sheetHeightPx('peek', VP, 300)).toBe(H.peek);
+    expect(sheetHeightPx('mid', VP, 300)).toBe(H.mid);
+    expect(sheetHeightPx('full', VP, 300)).toBe(H.full);
   });
 });
 
