@@ -15,8 +15,8 @@ import { useMediaQuery } from './lib/useMediaQuery.ts';
 import { useViewportHeight } from './lib/useViewportHeight.ts';
 import {
   snapsFor,
-  snapHeights,
   clampDetailPx,
+  sheetHeightPx,
   type Snap,
 } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
@@ -563,6 +563,11 @@ export function App() {
     if (!isDesktop) {
       const prev = prevSelForSnap.current;
       if (selectedId && !prev) {
+        // A route detail and the filter form are different views of the sheet —
+        // selecting a route (e.g. tapping its line on the map) closes the filter
+        // view, so it can't be left resting at a snap its commit footer can't
+        // reach (TB-66). Filter selections stay applied; only the view closes.
+        setMobileFiltersOpen(false);
         snapBeforeSelect.current =
           snapRef.current === 'detail' ? 'peek' : snapRef.current;
         setSnap('detail');
@@ -570,6 +575,10 @@ export function App() {
         backPillRef.current?.focus();
       } else if (!selectedId && prev) {
         setSnap(snapBeforeSelect.current);
+        // Return focus to the deselected card rather than stranding it on <body>.
+        document
+          .querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+          ?.focus();
       }
     }
     prevSelForSnap.current = selectedId;
@@ -682,7 +691,14 @@ export function App() {
           theme={theme}
           onChange={setBasemap}
           mobile={!isDesktop}
-          bottomCss={isDesktop ? undefined : `${snapHeights(vh)[snap] + 12}px`}
+          // Ride the sheet's ACTUAL edge — the content-fit detail height when a
+          // route is selected, not the fixed snap height (§H), so the button
+          // tracks the fluid sheet instead of detaching from it.
+          bottomCss={
+            isDesktop
+              ? undefined
+              : `${sheetHeightPx(snap, vh, detailPx) + 12}px`
+          }
         />
 
         <div
@@ -758,17 +774,19 @@ export function App() {
           />
         )}
 
-        {/* §H: back moves out of the sheet onto the map — the slot the legend
-            vacates while a route is selected — so the exit can't be dragged out of
-            reach. Short word visible ("← Routes"/"← Results"); aria-label keeps the
-            long form. Mobile only; desktop exits via the sidebar's back row. */}
+        {/* §H: back moves out of the sheet onto the map — sitting in the top-left
+            control slot the POI/Filters row + legend vacate while a route is
+            selected (top-[68px], right under the search), so it reads as the top
+            control rather than floating with a gap, and the exit can't be dragged
+            out of reach. Short word visible ("← Routes"/"← Results"); aria-label
+            keeps the long form. Mobile only; desktop exits via the sidebar. */}
         {!isDesktop && selectedRoute && (
           <button
             ref={backPillRef}
             type="button"
             onClick={onDeselect}
             aria-label={backLabel}
-            className="absolute left-5 top-[112px] z-[500] inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
+            className="absolute left-5 top-[68px] z-[500] inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
           >
             <span aria-hidden="true">←</span>
             {matches ? 'Results' : 'Routes'}

@@ -7,8 +7,21 @@ import { ThemeProvider } from 'next-themes';
 vi.mock('./lib/routes-data.ts', () => ({ loadRoutes: vi.fn() }));
 vi.mock('./lib/geocode.ts', () => ({ geocode: vi.fn() }));
 vi.mock('./components/RouteMap.tsx', () => ({
-  RouteMap: (props: { selectedId: string | null }) => (
-    <div data-testid="route-map" data-selected={props.selectedId ?? ''} />
+  // Stub reflects selection into data-* and exposes a button that calls onSelect,
+  // so a test can simulate tapping a route line on the map (there are no list
+  // cards to click while the filter view is open).
+  RouteMap: (props: {
+    selectedId: string | null;
+    routes: { id: string }[];
+    onSelect: (id: string) => void;
+  }) => (
+    <div data-testid="route-map" data-selected={props.selectedId ?? ''}>
+      <button
+        type="button"
+        data-testid="map-select-first"
+        onClick={() => props.routes[0] && props.onSelect(props.routes[0].id)}
+      />
+    </div>
   ),
 }));
 
@@ -284,6 +297,43 @@ describe('App — mobile layout (§F)', () => {
     // …but it is NOT an exit: the form stays open, the list stays hidden. Only
     // the commit footer and the pill leave the view.
     expect(routeCards()).toHaveLength(0);
+  });
+
+  it('selecting a route from the map closes the filter view — no orphaned commit footer (TB-66 regression guard)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    expect(
+      screen.getByRole('button', { name: /show \d+ routes/i })
+    ).toBeInTheDocument();
+
+    // Tap a route line on the map while the filter form is open.
+    await user.click(screen.getByTestId('map-select-first'));
+
+    // The filter form (and its commit footer) is replaced by the route detail;
+    // the sheet is not left resting at a snap the filter footer can't reach.
+    expect(
+      screen.queryByRole('button', { name: /show \d+ routes/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Route detail' })
+    ).toBeInTheDocument();
+  });
+
+  it('exiting via the back pill returns focus to the route list (no focus dead-end)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const firstId = routeCards()[0]!.getAttribute('data-route-id');
+    await user.click(routeCards()[0]!);
+    await user.click(screen.getByRole('button', { name: /back to/i }));
+
+    // Focus is not stranded on <body>; it returns to the deselected card.
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active?.getAttribute('data-route-id')).toBe(firstId);
+    });
   });
 
   it('shows the active basemap credit in the sheet and updates it on switch', async () => {
