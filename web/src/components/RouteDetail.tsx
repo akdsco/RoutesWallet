@@ -1,7 +1,8 @@
 import type { RefObject } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
-import { openLabel } from '../lib/links.ts';
+import { sourceShortLabel, isGpxLink } from '../lib/links.ts';
+import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { SourceBadge } from './SourceBadge.tsx';
 
@@ -89,6 +90,16 @@ export function RouteDetail({
             <span className="font-mono text-[14px] text-text">
               {r.distance_km} km
             </span>
+            {/* §H: total climb paired with distance, mono (shown only when known). */}
+            {formatGain(r.elevation_gain_m) && (
+              <span className="font-mono text-[14px] text-text">
+                <span aria-hidden="true" className="text-muted">
+                  ◺{' '}
+                </span>
+                <span className="sr-only">climb </span>
+                {formatGain(r.elevation_gain_m)}
+              </span>
+            )}
             {(r.region || nearKm != null) && (
               <>
                 <span className="h-[3px] w-[3px] rounded-full bg-muted" />
@@ -113,8 +124,8 @@ export function RouteDetail({
             theme === 'dark' ? 'text-[#0B0E10]' : 'text-white'
           }`}
         >
-          {openLabel(r.link)}
-          <span aria-hidden="true">↗</span>
+          {sourceShortLabel(r.link)}
+          <span aria-hidden="true">{isGpxLink(r.link) ? '↓' : '↗'}</span>
         </a>
 
         <div className="flex flex-col gap-2.5 border-t border-line-2 pt-3">

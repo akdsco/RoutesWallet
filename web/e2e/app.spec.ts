@@ -60,10 +60,11 @@ test('opens the route’s existing link when a card is selected', async ({
   // Click the Cambridge Loop card by name, not by index — order-independent.
   await routeCards(page).filter({ hasText: 'Cambridge Loop' }).click();
 
-  // Selecting opens the detail panel (§E), which owns the Open link.
+  // Selecting opens the detail panel (§E), which owns the exit — source-named
+  // ("Strava ↗") per §H, not "Open in Strava".
   const link = page
     .getByRole('region', { name: /route detail/i })
-    .getByRole('link', { name: /open in strava/i });
+    .getByRole('link', { name: /strava/i });
   await expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
   await expect(link).toHaveAttribute('target', '_blank');
 });

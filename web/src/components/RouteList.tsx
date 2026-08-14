@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
+import { formatGain } from '../lib/format.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
 import {
   buildNavRows,
@@ -513,6 +514,13 @@ function RouteCard({
           </span>
           <span className="flex-none whitespace-nowrap font-mono text-[12px] text-text-2">
             {r.distance_km} km
+            {/* §H: total climb paired with distance, mono; muted so distance leads. */}
+            {formatGain(r.elevation_gain_m) && (
+              <span className="text-muted">
+                {' '}
+                · ◺ {formatGain(r.elevation_gain_m)}
+              </span>
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
