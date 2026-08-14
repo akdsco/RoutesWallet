@@ -578,9 +578,13 @@ export function App() {
         setSnap(snapBeforeSelect.current);
         // Return focus to the deselected card rather than stranding it on <body>.
         // Escape the id (it's data) so a special char can't break the selector.
-        document
-          .querySelector<HTMLElement>(`[data-route-id="${cssEscape(prev)}"]`)
-          ?.focus();
+        // Fall back to the first visible card if that route's group is collapsed
+        // (or it dropped out of the list), so focus never lands on <body>.
+        const restore =
+          document.querySelector<HTMLElement>(
+            `[data-route-id="${cssEscape(prev)}"]`
+          ) ?? document.querySelector<HTMLElement>('[data-route-id]');
+        restore?.focus();
       } else if (selectedId && !snapsFor(true).includes(snapRef.current)) {
         // Crossed into the mobile layout while a route was already selected (e.g.
         // a desktop→mobile resize): the snap may be one the selected set excludes,
