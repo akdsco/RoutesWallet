@@ -194,11 +194,9 @@ export function BottomSheet({
         <span aria-hidden="true" className="h-1 w-9 rounded-full bg-line" />
       </button>
       <div
-        className={
-          constrainToSnap
-            ? 'flex min-h-0 flex-col'
-            : 'flex min-h-0 flex-1 flex-col'
-        }
+        // constrainToSnap: fixed height (visible window) so a pinned footer lands
+        // at the visible bottom; otherwise flex-1 to fill the 100dvh sheet.
+        className={`flex min-h-0 flex-col${constrainToSnap ? '' : ' flex-1'}`}
         style={
           constrainToSnap
             ? { height: `${visibleContentPx(vh, snap)}px` }

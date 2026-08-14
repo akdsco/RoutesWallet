@@ -43,7 +43,11 @@ export function MobileFilterSheet({
         <FilterBody {...body} />
       </div>
 
-      <div className="border-t border-line px-4 pb-[18px] pt-3">
+      {/* pb includes the safe-area inset: the filter view caps its content to the
+          visible window (so this footer sits at the screen edge), which places the
+          sheet's own bottom safe-area padding off-screen — so the button needs the
+          inset here to clear a home indicator (TB-66). */}
+      <div className="border-t border-line px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
         <button
           type="button"
           onClick={onDone}
