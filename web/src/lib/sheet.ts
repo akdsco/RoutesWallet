@@ -57,8 +57,13 @@ export function visibleContentPx(viewportPx: number, snap: Snap): number {
 /**
  * Reachable snaps, shortest→tallest, for the current mode. Selecting a route
  * swaps peek for the taller detail floor (§F: peek is unreachable while selected).
+ * The mobile filter form floors at mid: its pinned commit footer can't fit the
+ * peek content budget (88px), so peek would re-trap the user (TB-66). Filtering
+ * wins over selection — the two are mutually exclusive on mobile (the pill hides
+ * while a route is selected).
  */
-export function snapsFor(selected: boolean): Snap[] {
+export function snapsFor(selected: boolean, filtering = false): Snap[] {
+  if (filtering) return ['mid', 'full'];
   return selected ? ['detail', 'mid', 'full'] : ['peek', 'mid', 'full'];
 }
 

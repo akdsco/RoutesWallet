@@ -147,7 +147,7 @@ export function App() {
   const [snap, setSnap] = useState<Snap>('peek');
   const snapRef = useRef<Snap>(snap);
   snapRef.current = snap;
-  const snaps = snapsFor(!!selectedId);
+  const snaps = snapsFor(!!selectedId, mobileFiltersOpen);
 
   const togglePoi = useCallback(
     (t: string) =>

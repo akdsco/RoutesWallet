@@ -262,6 +262,15 @@ describe('App — mobile layout (§F)', () => {
     expect(routeCards().length).toBeGreaterThan(0);
   });
 
+  // NOTE — that the filter view floors at mid (peek unreachable, or its 88px
+  // content budget would hide the commit footer and re-trap the user) is covered
+  // where it can be asserted honestly: the snap set in sheet.test.ts
+  // (snapsFor(_, true) === ['mid','full']) and the real sheet geometry in
+  // mobile.spec.ts (the commit button stays in-viewport across handle cycles).
+  // jsdom can't express it here — snapOf() reads the handle's aria-expanded,
+  // which is relative to the reachable set, so 'mid' (the filter floor) and
+  // 'peek' are indistinguishable without layout.
+
   it('"Clear all" clears selections but keeps the filter view open (sticky, TB-66)', async () => {
     const user = userEvent.setup();
     await renderLoaded();

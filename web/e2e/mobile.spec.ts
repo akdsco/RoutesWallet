@@ -129,6 +129,21 @@ test('the filter view commits back to the map via an on-screen footer (TB-66)', 
   await settleAt(page, h - 132);
 });
 
+test('the commit footer stays on-screen after cycling the handle in the filter view (TB-66)', async ({
+  page,
+}) => {
+  await filtersPill(page).click();
+  await expect(commit(page)).toBeInViewport();
+
+  // The filter view floors at mid: cycling the handle must never reach peek,
+  // whose content budget hides the footer. Tap through the reachable snaps and
+  // assert the commit button stays reachable at each.
+  await handle(page).click(); // mid → full
+  await expect(commit(page)).toBeInViewport();
+  await handle(page).click(); // full → mid (NOT peek)
+  await expect(commit(page)).toBeInViewport();
+});
+
 test('the Filters pill toggles the filter view shut while the sheet is raised (TB-66)', async ({
   page,
 }) => {
