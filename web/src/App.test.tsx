@@ -452,7 +452,8 @@ describe('App — selecting a route', () => {
     // Selecting replaces the list with the detail region (§E), which owns the
     // single Open exit for the route.
     const detail = await screen.findByRole('region', { name: /route detail/i });
-    const link = within(detail).getByRole('link', { name: /open in strava/i });
+    // §H: the exit is source-named ("Strava ↗"), not "Open in Strava".
+    const link = within(detail).getByRole('link', { name: /strava/i });
     expect(link).toHaveAttribute('href', 'https://www.strava.com/routes/1');
     expect(link).toHaveAttribute('target', '_blank');
     // The list is gone while the detail is shown.

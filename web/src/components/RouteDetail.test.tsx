@@ -41,14 +41,23 @@ function render(route: Route, extra: { nearKm?: number } = {}) {
 }
 
 describe('RouteDetail', () => {
-  it('shows name, distance, region, trust badge and an Open link to the route', () => {
+  it('shows name, distance, region, trust badge and a source-named link to the route', () => {
     const html = render(makeRoute());
     expect(html).toContain('Leith Hill circuit');
     expect(html).toContain('58 km');
     expect(html).toContain('Surrey');
     expect(html).toContain('Verified'); // trust badge label
-    expect(html).toContain('Open in Strava');
+    expect(html).toContain('Strava'); // §H: source-named exit ("Strava ↗")
+    expect(html).toContain('↗');
     expect(html).toContain('href="https://www.strava.com/routes/123"');
+  });
+
+  it('pairs total climb with distance in the meta when elevation is known (§H)', () => {
+    const withEle = render(makeRoute({ elevation_gain_m: 1036 }));
+    expect(withEle).toContain('1,036 m');
+    expect(withEle).toContain('◺');
+    // …and shows no elevation glyph when the figure is absent.
+    expect(render(makeRoute())).not.toContain('◺');
   });
 
   it('names the exit destination on the back row', () => {

@@ -11,6 +11,7 @@ import {
   resolveSnap,
   cycleSnap,
   settleVelocity,
+  visibleContentPx,
   type Snap,
 } from '../lib/sheet.ts';
 
@@ -22,6 +23,16 @@ type Props = {
   /** Viewport height (px) — shared with App so both measure the sheet identically
    *  (one resize subscription, no dvh-vs-innerHeight drift). */
   vh: number;
+  /** Content-fit height for the `detail` snap (§H): overrides the fixed detail
+   *  height so the selected-route sheet opens exactly as far as its content needs
+   *  (clampDetailPx). Absent → the fixed DETAIL_PX. */
+  detailPx?: number;
+  /** Cap the content region to the visible window (snapHeights[snap] − handle)
+   *  instead of letting it fill the 100dvh sheet. A view that pins a footer to
+   *  its foot (the mobile filter form) needs this so the footer lands at the
+   *  visible bottom edge, not off-screen below it (TB-66). The list/detail leave
+   *  it off and fill, so peek's drag-to-reveal choreography is untouched. */
+  constrainToSnap?: boolean;
   onSnapChange: (s: Snap) => void;
   children: ReactNode;
 };
@@ -40,6 +51,8 @@ export function BottomSheet({
   snap,
   snaps,
   vh,
+  detailPx,
+  constrainToSnap = false,
   onSnapChange,
   children,
 }: Props) {
@@ -50,7 +63,11 @@ export function BottomSheet({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const ease = reduceMotion ? 'none' : EASE;
 
-  const heights = snapHeights(vh);
+  // §H: the detail snap is content-fit, so let App override its height; the rest
+  // are fixed. Everything downstream (rest position, drag clamp, snap resolution)
+  // reads this map, so the override flows through with no other change.
+  const base = snapHeights(vh);
+  const heights = detailPx != null ? { ...base, detail: detailPx } : base;
   const restY = (s: Snap) => vh - heights[s]; // translateY that leaves height[s] visible
   const shortest = snaps[0]!; // most closed reachable snap
   const tallest = snaps[snaps.length - 1]!; // most open reachable snap
@@ -84,7 +101,7 @@ export function BottomSheet({
     el.style.transform = `translateY(${restY(snap)}px)`;
     didInit.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snap, vh, snaps.join(',')]);
+  }, [snap, vh, snaps.join(','), detailPx]);
 
   const onPointerDown = (e: PointerEvent<HTMLButtonElement>) => {
     const el = sheetRef.current;
@@ -181,11 +198,22 @@ export function BottomSheet({
         onPointerUp={onPointerUp}
         onClick={onClick}
         onKeyDown={onKeyDown}
-        className="flex min-h-11 w-full flex-none touch-none items-center justify-center rounded-t-[10px] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
+        className="flex min-h-7 w-full flex-none touch-none items-center justify-center rounded-t-[10px] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
       >
         <span aria-hidden="true" className="h-1 w-9 rounded-full bg-line" />
       </button>
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div
+        // constrainToSnap: fixed height (visible window) so a pinned footer lands
+        // at the visible bottom; otherwise flex-1 to fill the 100dvh sheet.
+        className={`flex min-h-0 flex-col${constrainToSnap ? '' : ' flex-1'}`}
+        style={
+          constrainToSnap
+            ? { height: `${visibleContentPx(vh, snap)}px` }
+            : undefined
+        }
+      >
+        {children}
+      </div>
     </div>
   );
 }

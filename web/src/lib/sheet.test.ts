@@ -2,13 +2,18 @@ import { describe, it, expect } from 'vitest';
 import {
   PEEK_PX,
   DETAIL_PX,
+  DETAIL_FLOOR_PX,
   MAP_STRIP_PX,
+  HANDLE_PX,
   STALE_MOVE_MS,
   snapHeights,
   snapsFor,
   resolveSnap,
   cycleSnap,
   settleVelocity,
+  visibleContentPx,
+  clampDetailPx,
+  sheetHeightPx,
   type Snap,
 } from './sheet.ts';
 
@@ -40,6 +45,70 @@ describe('snapHeights', () => {
   });
 });
 
+describe('visibleContentPx — the content height below the handle at a snap', () => {
+  // The sheet is 100dvh translated down so only snapHeights[snap] px is visible;
+  // the handle eats HANDLE_PX of that. A view whose footer must sit at the screen
+  // edge (the filter form) sizes its content to what's left, so the footer lands
+  // at the visible bottom instead of the 100dvh element's off-screen foot (TB-66).
+  it('is the snap height minus the handle, per snap', () => {
+    expect(visibleContentPx(VP, 'mid')).toBe(H.mid - HANDLE_PX);
+    expect(visibleContentPx(VP, 'full')).toBe(H.full - HANDLE_PX);
+    expect(visibleContentPx(VP, 'peek')).toBe(H.peek - HANDLE_PX);
+  });
+
+  it('grows with the snap (mid < full), so a taller snap shows more form', () => {
+    expect(visibleContentPx(VP, 'mid')).toBeLessThan(
+      visibleContentPx(VP, 'full')
+    );
+  });
+});
+
+describe('clampDetailPx — the content-fit detail snap (§H), floored and capped at mid', () => {
+  it('floors at DETAIL_FLOOR_PX when the content is short (bare two rows)', () => {
+    // A tiny detail (name row + meta, no notes) never opens shorter than the floor.
+    expect(clampDetailPx(40, VP)).toBe(DETAIL_FLOOR_PX);
+  });
+
+  it('fits the content plus the handle when it lands between floor and mid', () => {
+    // 300px of content + the 28px handle = 328, comfortably under mid on VP=800.
+    expect(clampDetailPx(300, VP)).toBe(300 + HANDLE_PX);
+    expect(clampDetailPx(300, VP)).toBeLessThan(H.mid);
+  });
+
+  it('caps at mid for tall content (long notes) — drag to full for the rest', () => {
+    expect(clampDetailPx(5000, VP)).toBe(H.mid);
+  });
+
+  it('rounds sub-pixel content heights', () => {
+    expect(clampDetailPx(300.6, VP)).toBe(301 + HANDLE_PX);
+  });
+
+  it('never exceeds mid, even when the floor would be taller (tiny viewport)', () => {
+    // vh=200 → mid=112 < floor(132); the detail snap must not out-grow mid, or
+    // the shortest→tallest snap ordering (detail < mid < full) breaks.
+    const tiny = 200;
+    expect(clampDetailPx(40, tiny)).toBeLessThanOrEqual(snapHeights(tiny).mid);
+  });
+});
+
+describe('sheetHeightPx — the sheet’s actual rest height, honouring the content-fit detail snap', () => {
+  it('uses the content-fit detailPx at the detail snap so overlays ride the fluid sheet', () => {
+    // Map-style button, legend etc. must track the real sheet edge, not the fixed
+    // detail height, now that detail is content-fit (§H).
+    expect(sheetHeightPx('detail', VP, 300)).toBe(300);
+  });
+
+  it('falls back to the fixed detail height when no content measurement is given', () => {
+    expect(sheetHeightPx('detail', VP, undefined)).toBe(H.detail);
+  });
+
+  it('ignores detailPx for the other snaps (they are fixed)', () => {
+    expect(sheetHeightPx('peek', VP, 300)).toBe(H.peek);
+    expect(sheetHeightPx('mid', VP, 300)).toBe(H.mid);
+    expect(sheetHeightPx('full', VP, 300)).toBe(H.full);
+  });
+});
+
 describe('snapsFor — the reachable snaps depend on selection (design §F)', () => {
   it('idle/search can reach peek but not detail', () => {
     expect(snapsFor(false)).toEqual<Snap[]>(['peek', 'mid', 'full']);
@@ -47,6 +116,16 @@ describe('snapsFor — the reachable snaps depend on selection (design §F)', ()
 
   it('selected floors at detail; peek is unreachable', () => {
     expect(snapsFor(true)).toEqual<Snap[]>(['detail', 'mid', 'full']);
+  });
+
+  it('filtering floors at mid; peek is unreachable (its 88px content cannot hold the commit footer)', () => {
+    // The mobile filter form pins a "Show N routes" footer; the peek content
+    // budget (PEEK_PX − HANDLE_PX = 104px) is too small for the form header +
+    // footer, so peek must be off the reachable set while filtering or the exit
+    // traps again (TB-66).
+    expect(snapsFor(false, true)).toEqual<Snap[]>(['mid', 'full']);
+    // filtering wins even if a selection lingers — you can't select while filtering.
+    expect(snapsFor(true, true)).toEqual<Snap[]>(['mid', 'full']);
   });
 });
 

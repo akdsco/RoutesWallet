@@ -118,6 +118,35 @@ describe('RouteList — county groups', () => {
     expect(screen.getByText('2 of 5 routes')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sort' })).toBeInTheDocument();
   });
+
+  it('shows total climb paired with distance on a card when elevation is known (§H)', () => {
+    const withEle = route('ele', 'Climby');
+    withEle.elevation_gain_m = 1036;
+    render(
+      <RouteList
+        query=""
+        banner="none"
+        placeLabel=""
+        groups={[{ label: 'Essex', count: 1, items: [{ route: withEle }] }]}
+        selectedId={null}
+        backLabel="Back"
+        theme="light"
+        onClear={() => {}}
+        onSelect={() => {}}
+        onDeselect={() => {}}
+        onHover={() => {}}
+      />
+    );
+    const card = screen.getByText('Climby').closest('[data-route-id]')!;
+    expect(card).toHaveTextContent('40 km');
+    expect(card).toHaveTextContent('1,036 m');
+    // The ◺ glyph is decorative; AT hears "climb" instead (matches the detail views).
+    expect(card).toHaveTextContent(/climb/i);
+    const hiddenHasGlyph = [
+      ...card.querySelectorAll('[aria-hidden="true"]'),
+    ].some((el) => el.textContent?.includes('◺'));
+    expect(hiddenHasGlyph).toBe(true);
+  });
 });
 
 describe('RouteList — filter-empty state', () => {

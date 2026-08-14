@@ -8,6 +8,8 @@ import {
 } from 'react';
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
+import { formatGain } from '../lib/format.ts';
+import { cssEscape } from '../lib/css.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
 import {
   buildNavRows,
@@ -66,9 +68,6 @@ const GROUP_NAV = new Set<string>([
   'ArrowLeft',
   'ArrowRight',
 ]);
-
-const cssEscape = (s: string) =>
-  typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s;
 
 /**
  * The scrollable body shared by the desktop sidebar and the mobile sheet: the
@@ -462,6 +461,7 @@ function RouteCard({
   onHover: (id: string | null) => void;
 }) {
   const select = () => onSelect(r.id);
+  const gain = formatGain(r.elevation_gain_m);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -513,6 +513,15 @@ function RouteCard({
           </span>
           <span className="flex-none whitespace-nowrap font-mono text-[12px] text-text-2">
             {r.distance_km} km
+            {/* §H: total climb paired with distance, mono; muted so distance leads.
+                The · and ◺ are decorative — AT hears "climb" instead. */}
+            {gain && (
+              <span className="text-muted">
+                <span aria-hidden="true"> · ◺ </span>
+                <span className="sr-only">climb </span>
+                {gain}
+              </span>
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">

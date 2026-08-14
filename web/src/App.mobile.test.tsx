@@ -7,8 +7,21 @@ import { ThemeProvider } from 'next-themes';
 vi.mock('./lib/routes-data.ts', () => ({ loadRoutes: vi.fn() }));
 vi.mock('./lib/geocode.ts', () => ({ geocode: vi.fn() }));
 vi.mock('./components/RouteMap.tsx', () => ({
-  RouteMap: (props: { selectedId: string | null }) => (
-    <div data-testid="route-map" data-selected={props.selectedId ?? ''} />
+  // Stub reflects selection into data-* and exposes a button that calls onSelect,
+  // so a test can simulate tapping a route line on the map (there are no list
+  // cards to click while the filter view is open).
+  RouteMap: (props: {
+    selectedId: string | null;
+    routes: { id: string }[];
+    onSelect: (id: string) => void;
+  }) => (
+    <div data-testid="route-map" data-selected={props.selectedId ?? ''}>
+      <button
+        type="button"
+        data-testid="map-select-first"
+        onClick={() => props.routes[0] && props.onSelect(props.routes[0].id)}
+      />
+    </div>
   ),
 }));
 
@@ -142,16 +155,17 @@ describe('App — mobile layout (§F)', () => {
     await user.click(firstCard);
 
     const detail = screen.getByRole('region', { name: 'Route detail' });
-    expect(
-      within(detail).getByRole('button', { name: /back to/i })
-    ).toBeInTheDocument();
-    expect(within(detail).getByRole('link')).toBeInTheDocument(); // the exit
+    // §H: the exit is the source-named link inside the sheet; Back is the on-map
+    // pill (a top-level button), not inside the detail region any more.
+    expect(within(detail).getByRole('link')).toBeInTheDocument();
+    const back = screen.getByRole('button', { name: /back to/i });
+    expect(back).not.toBe(within(detail).queryByRole('button'));
     expect(screen.getByTestId('route-map')).toHaveAttribute(
       'data-selected',
       firstId!
     );
 
-    await user.click(within(detail).getByRole('button', { name: /back to/i }));
+    await user.click(back);
     expect(
       screen.queryByRole('region', { name: 'Route detail' })
     ).not.toBeInTheDocument();
@@ -169,12 +183,7 @@ describe('App — mobile layout (§F)', () => {
     expect(snapOf()).toBe('full');
 
     await user.click(routeCards()[0]!); // → detail
-    await user.click(
-      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
-        'button',
-        { name: /back to/i }
-      )
-    );
+    await user.click(screen.getByRole('button', { name: /back to/i })); // on-map pill
 
     expect(snapOf()).toBe('full'); // restored, would be 'mid' under the old bug
   });
@@ -188,12 +197,7 @@ describe('App — mobile layout (§F)', () => {
     await user.click(routeCards()[0]!);
     expect(screen.queryByLabelText('Map legend')).not.toBeInTheDocument();
 
-    await user.click(
-      within(screen.getByRole('region', { name: 'Route detail' })).getByRole(
-        'button',
-        { name: /back to/i }
-      )
-    );
+    await user.click(screen.getByRole('button', { name: /back to/i })); // on-map pill
     expect(screen.queryByLabelText('Map legend')).toBeInTheDocument();
   });
 
@@ -236,6 +240,100 @@ describe('App — mobile layout (§F)', () => {
     // …and committing returns to the (now filtered) list.
     await user.click(screen.getByRole('button', { name: /show 2 routes/i }));
     await waitFor(() => expect(routeCards()).toHaveLength(2));
+  });
+
+  it('re-tapping the Filters pill closes the filter view, back to the list (TB-66)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const pill = screen.getByRole('button', { name: /^filters$/i });
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+
+    // Open: the sheet swaps to the filter form (commit footer appears, list gone).
+    await user.click(pill);
+    expect(pill).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', { name: /show 3 routes/i })
+    ).toBeInTheDocument();
+
+    // The second design exit (§G.6): re-tapping the pill closes the form and
+    // returns to the list — the user is not trapped in Filters.
+    await user.click(pill);
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('button', { name: /show 3 routes/i })
+    ).not.toBeInTheDocument();
+    expect(routeCards().length).toBeGreaterThan(0);
+  });
+
+  // NOTE — that the filter view floors at mid (peek unreachable, or its 88px
+  // content budget would hide the commit footer and re-trap the user) is covered
+  // where it can be asserted honestly: the snap set in sheet.test.ts
+  // (snapsFor(_, true) === ['mid','full']) and the real sheet geometry in
+  // mobile.spec.ts (the commit button stays in-viewport across handle cycles).
+  // jsdom can't express it here — snapOf() reads the handle's aria-expanded,
+  // which is relative to the reachable set, so 'mid' (the filter floor) and
+  // 'peek' are indistinguishable without layout.
+
+  it('"Clear all" clears selections but keeps the filter view open (sticky, TB-66)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    await user.click(
+      screen
+        .getAllByRole('button', { name: /cambridgeshire/i })
+        .find((b) => b.hasAttribute('aria-pressed'))!
+    );
+    expect(
+      await screen.findByRole('button', { name: /show 2 routes/i })
+    ).toBeInTheDocument();
+
+    // Clear all removes the selection (count back to the full 3)…
+    await user.click(screen.getByRole('button', { name: /clear all/i }));
+    expect(
+      await screen.findByRole('button', { name: /show 3 routes/i })
+    ).toBeInTheDocument();
+    // …but it is NOT an exit: the form stays open, the list stays hidden. Only
+    // the commit footer and the pill leave the view.
+    expect(routeCards()).toHaveLength(0);
+  });
+
+  it('selecting a route from the map closes the filter view — no orphaned commit footer (TB-66 regression guard)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.click(screen.getByRole('button', { name: /^filters$/i }));
+    expect(
+      screen.getByRole('button', { name: /show \d+ routes/i })
+    ).toBeInTheDocument();
+
+    // Tap a route line on the map while the filter form is open.
+    await user.click(screen.getByTestId('map-select-first'));
+
+    // The filter form (and its commit footer) is replaced by the route detail;
+    // the sheet is not left resting at a snap the filter footer can't reach.
+    expect(
+      screen.queryByRole('button', { name: /show \d+ routes/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Route detail' })
+    ).toBeInTheDocument();
+  });
+
+  it('exiting via the back pill returns focus to the route list (no focus dead-end)', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const firstId = routeCards()[0]!.getAttribute('data-route-id');
+    await user.click(routeCards()[0]!);
+    await user.click(screen.getByRole('button', { name: /back to/i }));
+
+    // Focus is not stranded on <body>; it returns to the deselected card.
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active?.getAttribute('data-route-id')).toBe(firstId);
+    });
   });
 
   it('shows the active basemap credit in the sheet and updates it on switch', async () => {

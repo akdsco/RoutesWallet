@@ -10,11 +10,20 @@ export type Snap = 'peek' | 'detail' | 'mid' | 'full';
 // Tunable, like the heat tiers — named constants, not inline literals.
 export const PEEK_PX = 132; // idle/search: results header + first card
 // Selected entry snap. §F sketched 192, but that predated our RouteDetail, which
-// carries the 44px sheet handle + a back row + name + meta + an always-present
-// trust badge (§7) + a 48px Open. §F requires Open visible without scrolling at
-// the entry snap, so the floor is sized to our real content (measured by eye).
+// carries the sheet handle + a back row + name + meta + an always-present trust
+// badge (§7) + a 48px Open. §F requires Open visible without scrolling at the
+// entry snap, so the floor is sized to our real content (measured by eye); the
+// slim handle (HANDLE_PX) leaves it comfortably in view.
 export const DETAIL_PX = 260;
+// §H compact floor: the shortest the selected-route sheet ever opens — enough for
+// the name row + one meta line + the source button. The actual detail snap is
+// content-fit (clampDetailPx): this floor, up to a mid ceiling.
+export const DETAIL_FLOOR_PX = 132;
 export const MAP_STRIP_PX = 132; // map kept visible above a full sheet
+// The drag handle's height (BottomSheet's handle button is `min-h-7` = 28px).
+// A content view that pins a footer to the visible bottom must subtract it — see
+// visibleContentPx.
+export const HANDLE_PX = 28;
 export const MID_FRACTION = 0.56; // mid = 56dvh
 // A release faster than this (px of height-change per ms) throws to the next
 // snap in the drag direction; slower settles to the nearest.
@@ -40,10 +49,59 @@ export function snapHeights(viewportPx: number): Record<Snap, number> {
 }
 
 /**
+ * Height (px) available to a sheet view's content at a snap — the visible window
+ * (snapHeights[snap]) minus the handle above it. The sheet element is 100dvh
+ * translated down, so a view laid out to *this* height (rather than filling the
+ * 100dvh element) keeps a pinned footer at the visible bottom edge, not off-screen
+ * below it. Used by the mobile filter form's commit button (TB-66).
+ */
+export function visibleContentPx(viewportPx: number, snap: Snap): number {
+  return snapHeights(viewportPx)[snap] - HANDLE_PX;
+}
+
+/**
+ * Content-fit height for the selected-route detail snap (§H): open exactly as far
+ * as the detail content needs — its measured height plus the handle — but never
+ * shorter than the compact floor nor taller than mid. A bare route opens compact;
+ * one with notes opens to show them; long notes cap at mid (drag to full for the
+ * rest). Feeds the sheet as the dynamic `detail` snap height.
+ */
+export function clampDetailPx(contentPx: number, viewportPx: number): number {
+  const mid = snapHeights(viewportPx).mid;
+  // mid is the hard ceiling (outermost min) so the detail snap can never out-grow
+  // it — otherwise the shortest→tallest ordering detail < mid < full breaks on a
+  // tiny viewport where the floor itself exceeds mid.
+  return Math.min(
+    mid,
+    Math.max(DETAIL_FLOOR_PX, Math.round(contentPx) + HANDLE_PX)
+  );
+}
+
+/**
+ * The sheet's actual visible height at rest — the fixed snap height, except at the
+ * `detail` snap where it is the content-fit `detailPx` (§H) when known. Map overlays
+ * that ride above the sheet (the map-style button, the legend) must measure against
+ * this, not the fixed detail height, or they detach from the fluid sheet's edge.
+ */
+export function sheetHeightPx(
+  snap: Snap,
+  viewportPx: number,
+  detailPx?: number
+): number {
+  if (snap === 'detail' && detailPx != null) return detailPx;
+  return snapHeights(viewportPx)[snap];
+}
+
+/**
  * Reachable snaps, shortest→tallest, for the current mode. Selecting a route
  * swaps peek for the taller detail floor (§F: peek is unreachable while selected).
+ * The mobile filter form floors at mid: its pinned commit footer can't fit the
+ * peek content budget (88px), so peek would re-trap the user (TB-66). Filtering
+ * wins over selection — the two are mutually exclusive on mobile (the pill hides
+ * while a route is selected).
  */
-export function snapsFor(selected: boolean): Snap[] {
+export function snapsFor(selected: boolean, filtering = false): Snap[] {
+  if (filtering) return ['mid', 'full'];
   return selected ? ['detail', 'mid', 'full'] : ['peek', 'mid', 'full'];
 }
 
