@@ -12,8 +12,11 @@ describe('formatGain — total climb for the §H meta line', () => {
     expect(formatGain(1240.6)).toBe('1,241 m');
   });
 
-  it('is empty when there is no elevation (never renders a bare "m")', () => {
+  it('is empty when there is no meaningful climb (null, undefined, or 0)', () => {
     expect(formatGain(undefined)).toBe('');
     expect(formatGain(null)).toBe('');
+    // 0 reads as a data gap / "flat" more than a useful figure — the `{gain && …}`
+    // guards must not render a misleading "◺ 0 m" chip.
+    expect(formatGain(0)).toBe('');
   });
 });

@@ -9,6 +9,7 @@ import {
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { formatGain } from '../lib/format.ts';
+import { cssEscape } from '../lib/css.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
 import {
   buildNavRows,
@@ -67,9 +68,6 @@ const GROUP_NAV = new Set<string>([
   'ArrowLeft',
   'ArrowRight',
 ]);
-
-const cssEscape = (s: string) =>
-  typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s;
 
 /**
  * The scrollable body shared by the desktop sidebar and the mobile sheet: the

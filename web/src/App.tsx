@@ -11,6 +11,7 @@ import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
 import { MobileRouteDetail } from './components/MobileRouteDetail.tsx';
 import { SortMenu } from './components/SortMenu.tsx';
 import { BottomSheet } from './components/BottomSheet.tsx';
+import { cssEscape } from './lib/css.ts';
 import { useMediaQuery } from './lib/useMediaQuery.ts';
 import { useViewportHeight } from './lib/useViewportHeight.ts';
 import {
@@ -576,9 +577,15 @@ export function App() {
       } else if (!selectedId && prev) {
         setSnap(snapBeforeSelect.current);
         // Return focus to the deselected card rather than stranding it on <body>.
+        // Escape the id (it's data) so a special char can't break the selector.
         document
-          .querySelector<HTMLElement>(`[data-route-id="${prev}"]`)
+          .querySelector<HTMLElement>(`[data-route-id="${cssEscape(prev)}"]`)
           ?.focus();
+      } else if (selectedId && !snapsFor(true).includes(snapRef.current)) {
+        // Crossed into the mobile layout while a route was already selected (e.g.
+        // a desktop→mobile resize): the snap may be one the selected set excludes,
+        // like 'peek'. Floor it at detail so the sheet doesn't rest at a stray height.
+        setSnap('detail');
       }
     }
     prevSelForSnap.current = selectedId;
