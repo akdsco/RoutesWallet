@@ -5,6 +5,7 @@ import { Legend } from './components/Legend.tsx';
 import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { SearchField } from './components/SearchField.tsx';
+import { ConnectStrava } from './components/ConnectStrava.tsx';
 import { RouteList, type FilterEmpty } from './components/RouteList.tsx';
 import { FilterPanel } from './components/FilterPanel.tsx';
 import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
@@ -664,6 +665,7 @@ export function App() {
           backLabel={backLabel}
           theme={theme}
           filterPanel={filterPanel}
+          connectSlot={<ConnectStrava />}
           countLine={countLineText}
           sortControl={sortControl}
           flat={flat}

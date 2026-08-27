@@ -18,6 +18,8 @@ type Props = {
   theme: 'light' | 'dark';
   /** The §G filter panel, rendered between the search field and the list. */
   filterPanel?: ReactNode;
+  /** The "Connect Strava" CTA (TB-110), rendered in the search header. */
+  connectSlot?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -54,6 +56,7 @@ export function Sidebar(props: Props) {
     backLabel,
     theme,
     filterPanel,
+    connectSlot,
     countLine,
     sortControl,
     flat,
@@ -114,6 +117,8 @@ export function Sidebar(props: Props) {
             />
             <span className="min-h-4 text-[12px] text-muted">{hint}</span>
           </form>
+
+          {connectSlot}
         </div>
       )}
 
