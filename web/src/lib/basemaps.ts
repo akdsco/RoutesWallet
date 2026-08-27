@@ -90,7 +90,52 @@ export const BASEMAP_ORDER: readonly BasemapId[] = ['standard', 'cyclosm'];
 
 export const DEFAULT_BASEMAP: BasemapId = 'standard';
 
-export function tileConfig(id: BasemapId, theme: Theme): TileConfig {
+/**
+ * Resolve a basemap + theme to a concrete tile config, given the CARTO API key
+ * (from `import.meta.env.VITE_CARTO_BASEMAP_KEY`, passed in at the RouteMap
+ * boundary so this stays a pure, testable resolver).
+ *
+ * CARTO now requires a free API key for its raster basemaps; keyless requests
+ * are watermarked "API KEY REQUIRED". So the Standard (CARTO) tiles are
+ * authenticated with the key when it is set. When it is NOT set, a keyless CARTO
+ * request would ship that watermark to visitors — so we fall back to the keyless
+ * CyclOSM tiles for the Standard slot and warn loudly, making the missing key
+ * observable in logs rather than defacing the map. CyclOSM is already keyless and
+ * ignores the key entirely.
+ */
+export function tileConfig(
+  id: BasemapId,
+  theme: Theme,
+  apiKey?: string
+): TileConfig {
+  if (id === 'standard') {
+    if (apiKey) {
+      const def = BASEMAPS.standard;
+      return {
+        // Query string, not a Leaflet {…} placeholder, so tile-coordinate
+        // substitution ({s}/{z}/{x}/{y}/{r}) is untouched.
+        url: `${def.urls[theme]}?api_key=${apiKey}`,
+        attribution: def.attribution,
+        subdomains: def.subdomains,
+        maxZoom: def.maxZoom,
+      };
+    }
+    // No key configured — degrade to keyless CyclOSM tiles so no watermark can
+    // appear, and surface the misconfiguration (observable, not a silent
+    // swallow). Prod sets the key via Cloudflare env; dev via .env.local.
+    console.warn(
+      'VITE_CARTO_BASEMAP_KEY is not set — the Standard basemap needs a free CARTO ' +
+        'key (https://carto.com/basemaps/apikey). Falling back to keyless CyclOSM ' +
+        'tiles to avoid the "API KEY REQUIRED" watermark.'
+    );
+    const fb = BASEMAPS.cyclosm;
+    return {
+      url: fb.urls[theme],
+      attribution: fb.attribution,
+      subdomains: fb.subdomains,
+      maxZoom: fb.maxZoom,
+    };
+  }
   const def = BASEMAPS[id];
   return {
     url: def.urls[theme],
