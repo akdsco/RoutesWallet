@@ -128,11 +128,23 @@ ride-counts for the heatmap** (which is why Supabase's bundled auth is appealing
 
 ## 9. Environment & secrets
 
-None today — every service is keyless. When a keyed one appears (a paid geocoder,
-or the Supabase anon key), put it in **Cloudflare Pages → Settings → environment
-variables** and read it via Vite's `import.meta.env.VITE_*` (only `VITE_`-prefixed
-vars are exposed to the browser). The Supabase _anon_ key is safe client-side
-**because** row-level security enforces access — never ship a service-role key.
+**`VITE_CARTO_BASEMAP_KEY`** — the one env var today. CARTO now requires a free
+API key for its raster basemaps and watermarks keyless requests ("API KEY
+REQUIRED"), so the "Standard" basemap is authenticated with it. Set it in
+**Cloudflare Pages → Settings → environment variables** (Production **and**
+Preview) and, for local dev, in `web/.env.local` (gitignored; see
+`web/.env.example`). Get a key free — email + domain, no account — at
+https://carto.com/basemaps/apikey. It's a public, domain-restricted basemap key
+(exposed in client tile requests by design), kept out of the repo, not a private
+secret. **If it's unset the Standard basemap falls back to keyless CyclOSM tiles
+and logs a warning** — no watermark ships, but the intended Voyager/Dark Matter
+look only returns once the key is set.
+
+Any future keyed service (a paid geocoder, or the Supabase anon key) follows the
+same pattern: put it in Cloudflare Pages env and read it via Vite's
+`import.meta.env.VITE_*` (only `VITE_`-prefixed vars reach the browser). The
+Supabase _anon_ key is safe client-side **because** row-level security enforces
+access — never ship a service-role key.
 
 ## 10. CI vs deploy
 
