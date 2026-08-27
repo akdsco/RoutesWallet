@@ -150,13 +150,17 @@ kept only as the D1 **seed** source.
 
 ```
 cd web
-npx wrangler d1 create routeswallet            # paste the id into wrangler.toml
+npx wrangler d1 create routeswallet
 npx wrangler d1 execute routeswallet --file=./migrations/0001_routes.sql
 npm run build:seed-sql
 npx wrangler d1 execute routeswallet --file=./migrations/seed-routes.sql
 ```
 
-In the Pages project: bind the D1 database as `DB`, and set the env vars in §9.
+In the Pages project: **bind the D1 database as `DB`** (Settings → Functions → D1
+database bindings) and set the env vars in §9. The binding is set in the dashboard,
+**not** in `wrangler.toml` — a committed placeholder `database_id` fails the Pages
+deploy's binding validation, so `wrangler.toml` deliberately carries no `[[d1_databases]]`
+block. (For local `wrangler pages dev`, pass `--d1 DB=<database_id>`.)
 Register a **Strava API application** with the Authorization Callback Domain set to
 the Pages domain (e.g. `routeswallet.pages.dev`).
 

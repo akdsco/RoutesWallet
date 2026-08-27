@@ -5,17 +5,15 @@ name = "routeswallet"
 pages_build_output_dir = "dist"
 compatibility_date = "2024-11-01"
 
-# The shared route pool. Create once, then paste the id here:
+# The shared route pool lives in D1. For Cloudflare PAGES the D1 binding named `DB`
+# is set in the dashboard (Settings → Functions → D1 database bindings), NOT here —
+# a committed placeholder id fails the deploy binding-validation. Create + seed once:
 #   wrangler d1 create routeswallet
 #   wrangler d1 execute routeswallet --file=./migrations/0001_routes.sql
 #   npm run build:seed-sql
 #   wrangler d1 execute routeswallet --file=./migrations/seed-routes.sql
-[[d1_databases]]
-binding = "DB"
-database_name = "routeswallet"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
-
-# Secrets (NEVER commit) — set in the Pages dashboard or via wrangler:
-#   wrangler pages secret put STRAVA_CLIENT_SECRET
-# and STRAVA_CLIENT_ID (also exposed to the build as VITE_STRAVA_CLIENT_ID for the
-# authorize URL). See docs/DEPLOYMENT.md.
+# then bind it as `DB` in the dashboard. For local `wrangler pages dev`, pass
+# `--d1 DB=<database_id>`. See docs/DEPLOYMENT.md §8a.
+#
+# Secrets (NEVER commit) — set in the Pages dashboard: STRAVA_CLIENT_SECRET
+# (server-only) + STRAVA_CLIENT_ID, and VITE_STRAVA_CLIENT_ID as a build var.
