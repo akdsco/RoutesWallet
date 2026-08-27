@@ -7,9 +7,9 @@ import {
 } from './strava-api.ts';
 
 const ok = (body: unknown): Response =>
-  ({ ok: true, status: 200, json: async () => body }) as Response;
+  ({ ok: true, status: 200, json: () => Promise.resolve(body) }) as Response;
 const fail = (status: number): Response =>
-  ({ ok: false, status, json: async () => ({}) }) as Response;
+  ({ ok: false, status, json: () => Promise.resolve({}) }) as Response;
 
 describe('hasRequiredScope', () => {
   it('requires activity:read_all (Strava returns "read,activity:read_all")', () => {
@@ -34,7 +34,7 @@ describe('exchangeToken', () => {
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toContain('/oauth/token');
     expect(init!.method).toBe('POST');
-    const sent = JSON.parse(init!.body as string);
+    const sent = JSON.parse(init!.body as string) as Record<string, unknown>;
     expect(sent).toMatchObject({
       code: 'C',
       client_id: 'CID',

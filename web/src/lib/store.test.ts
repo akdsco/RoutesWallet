@@ -29,19 +29,19 @@ class FakeD1 implements D1Like {
     return this.stmt(sql, []);
   }
   private stmt(sql: string, args: unknown[]): D1PreparedLike {
-    const db = this;
     return {
-      bind: (...v: unknown[]) => db.stmt(sql, v),
-      run: async () => {
+      bind: (...v: unknown[]) => this.stmt(sql, v),
+      run: () => {
         if (/^INSERT/i.test(sql)) {
           const [id, owner, feature] = args as [string, string | null, string];
-          db.rows.set(id, { owner, feature });
+          this.rows.set(id, { owner, feature });
         }
-        return {};
+        return Promise.resolve({});
       },
-      all: async () => ({
-        results: [...db.rows.values()].map((r) => ({ feature: r.feature })),
-      }),
+      all: () =>
+        Promise.resolve({
+          results: [...this.rows.values()].map((r) => ({ feature: r.feature })),
+        }),
     } as D1PreparedLike;
   }
 }
@@ -92,7 +92,7 @@ describe('store: upsertFeatures / readAllFeatures', () => {
 });
 
 describe('store: buildSeedSql', () => {
-  it('emits one INSERT OR REPLACE per feature, escaping quotes safely', async () => {
+  it('emits one INSERT OR REPLACE per feature, escaping quotes safely', () => {
     const sql = buildSeedSql([feat('a'), feat('b')]);
     expect(sql.match(/INSERT OR REPLACE INTO routes/g)).toHaveLength(2);
     // A single quote in the JSON must be doubled so it can't break the statement.

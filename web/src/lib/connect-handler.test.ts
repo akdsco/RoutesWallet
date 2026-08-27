@@ -18,18 +18,20 @@ function fakeStore(): D1Like & { written: string[] } {
   const written: string[] = [];
   const prepared = (args: unknown[]): ReturnType<D1Like['prepare']> => ({
     bind: (...v: unknown[]) => prepared(v),
-    run: async () => {
+    run: () => {
       if (args.length) written.push(args[0] as string);
-      return {};
+      return Promise.resolve({});
     },
-    all: async () => ({ results: [] }),
+    all: () => Promise.resolve({ results: [] }),
   });
   return { written, prepare: () => prepared([]) };
 }
 
 const baseDeps = (over: Partial<ConnectDeps> = {}): ConnectDeps => ({
-  exchangeToken: vi.fn(async () => ({ accessToken: 'AT', athleteId: 9 })),
-  fetchRoutes: vi.fn(async () => [route('a'), route('b')]),
+  exchangeToken: vi.fn(() =>
+    Promise.resolve({ accessToken: 'AT', athleteId: 9 })
+  ),
+  fetchRoutes: vi.fn(() => Promise.resolve([route('a'), route('b')])),
   lookups: { countyOf: () => 'Kent', countryOf: () => 'United Kingdom' },
   store: fakeStore(),
   ...over,
@@ -51,10 +53,12 @@ describe('handleConnect', () => {
     const store = fakeStore();
     const deps = baseDeps({
       store,
-      fetchRoutes: vi.fn(async () => [
-        route('good'),
-        { ...route('bad'), map: { summary_polyline: '' } },
-      ]),
+      fetchRoutes: vi.fn(() =>
+        Promise.resolve([
+          route('good'),
+          { ...route('bad'), map: { summary_polyline: '' } },
+        ])
+      ),
     });
     const res = await handleConnect('CODE', deps);
     expect(res).toMatchObject({ ingested: 1, skipped: 1 });
@@ -63,9 +67,9 @@ describe('handleConnect', () => {
 
   it('propagates a token-exchange failure (fail loud, no swallow)', async () => {
     const deps = baseDeps({
-      exchangeToken: vi.fn(async () => {
-        throw new Error('token exchange failed: 400');
-      }),
+      exchangeToken: vi.fn(() =>
+        Promise.reject(new Error('token exchange failed: 400'))
+      ),
     });
     await expect(handleConnect('CODE', deps)).rejects.toThrow(/token exchange/);
   });

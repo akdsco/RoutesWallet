@@ -316,7 +316,7 @@ describe('loadRoutes', () => {
   it('reads the shared pool from /api/routes by default', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue({ ok: true, json: async () => fc });
+      .mockResolvedValue({ ok: true, json: () => Promise.resolve(fc) });
     vi.stubGlobal('fetch', fetchMock);
 
     const routes = await loadRoutes();

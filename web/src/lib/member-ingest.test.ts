@@ -45,7 +45,9 @@ describe('ingestMemberRoutes', () => {
     const { fc, ingested, skipped } = ingestMemberRoutes(routes, kentLookups);
     expect(ingested).toBe(1);
     expect(skipped).toBe(1);
-    expect(fc.features.map((f) => f.properties?.id)).toEqual(['good']);
+    expect(
+      fc.features.map((f) => (f.properties as Record<string, unknown>).id)
+    ).toEqual(['good']);
   });
 
   it('leaves region null for an away-country ride while still setting country', () => {
