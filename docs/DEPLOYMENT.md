@@ -3,16 +3,18 @@
 How the web app is hosted, what it depends on at runtime, and where a database
 slots in later. Written so the deploy story doesn't live only in someone's head.
 
-> **Status:** not yet deployed. Recommended host is **Cloudflare Pages** (see
-> §3). Target domain: `routeswallet.app`.
+> **Status:** deployed & live on **Cloudflare Pages** (`*.pages.dev`; custom
+> domain `routeswallet.app` still optional-later). **v2 (TB-110)** adds a thin
+> serverless edge — two Pages Functions + one D1 table — for the member-contributed
+> route pool; the pivot §8 anticipated has been taken (see §8a for the runbook).
 
 ## 1. What it is
 
-A **static single-page app** — Vite + React + TypeScript, Leaflet + Turf.
-There is **no backend, no database, no auth** (v1). `npm run build` produces
-plain static files; a CDN serves them. Nothing runs on a server, so there is
-nothing to keep warm, scale, or patch — a static CDN serves 50 concurrent users
-as easily as 5.
+A **static single-page app** — Vite + React + TypeScript, Leaflet + Turf. The app
+itself is still 100% static files a CDN serves — nothing to keep warm, scale, or
+patch. The **only** server code is the thin v2 member-pool edge (two Cloudflare
+Pages Functions + one D1 table; §8a); the SPA still has no backend of its own and
+the Strava login is the only auth.
 
 Route data ships **as static files in the bundle** today:
 `public/routes.geojson` (~6 MB, ~1–2 MB after the CDN's brotli),
@@ -126,13 +128,63 @@ rest of the app is untouched. Keep that seam clean.
 Likely first DB uses: **user accounts, community route submissions, and real
 ride-counts for the heatmap** (which is why Supabase's bundled auth is appealing).
 
+## 8a. TB-110 realised — member pool on D1 + Pages Functions
+
+We took the **All-Cloudflare** column (D1 + Functions), not Supabase: one vendor,
+same origin, no second dashboard. The `loadRoutes()` seam above is exactly what
+moved — its default URL is now `/api/routes` (the pool), with `routes.geojson`
+kept only as the D1 **seed** source.
+
+**Pieces:**
+
+- `web/functions/api/routes.ts` → `GET /api/routes`: reads the D1 pool, returns GeoJSON.
+- `web/functions/connect/callback.ts` → `GET /connect/callback`: Strava OAuth
+  redirect target — server-side token exchange (the client secret), list-only route
+  pull, region/country normalise (bundled `functions/assets/uk-counties.json`),
+  upsert into D1. Errors log + redirect home `?connect=error` (never a bare 500).
+- `web/migrations/0001_routes.sql` (schema) + `npm run build:seed-sql` →
+  `migrations/seed-routes.sql` (the 125 club routes; gitignored, ~7 MB).
+- `web/wrangler.toml` binds the D1 database as `DB`.
+
+**One-time setup:**
+
+```
+cd web
+npx wrangler d1 create routeswallet            # paste the id into wrangler.toml
+npx wrangler d1 execute routeswallet --file=./migrations/0001_routes.sql
+npm run build:seed-sql
+npx wrangler d1 execute routeswallet --file=./migrations/seed-routes.sql
+```
+
+In the Pages project: bind the D1 database as `DB`, and set the env vars in §9.
+Register a **Strava API application** with the Authorization Callback Domain set to
+the Pages domain (e.g. `routeswallet.pages.dev`).
+
+**Bundle note:** the Function bundles only the 427 KB counties asset (region), and
+derives country as "United Kingdom or null" — the 1.6 MB world-country file stays
+out, so overseas member routes get `country: null` (seeded club routes keep their
+real country from the offline normalise). Full-res geometry + the elevation
+**profile** for member routes is a deferred GPX-enrichment follow-up.
+
+**Teardown (it's a lean experiment):** delete the Pages env vars + D1 binding,
+`npx wrangler d1 delete routeswallet`, remove `web/functions/`, and revert the
+`loadRoutes()` default to `/routes.geojson`. The static app returns untouched.
+
 ## 9. Environment & secrets
 
-None today — every service is keyless. When a keyed one appears (a paid geocoder,
-or the Supabase anon key), put it in **Cloudflare Pages → Settings → environment
-variables** and read it via Vite's `import.meta.env.VITE_*` (only `VITE_`-prefixed
-vars are exposed to the browser). The Supabase _anon_ key is safe client-side
-**because** row-level security enforces access — never ship a service-role key.
+**TB-110 introduced the first keyed services.** Set these in **Cloudflare Pages →
+Settings → environment variables** (never in the repo):
+
+- `STRAVA_CLIENT_ID` — Strava app id. Also set `VITE_STRAVA_CLIENT_ID` (same value)
+  as a **build** var so the "Connect Strava" authorize URL can include it; only
+  `VITE_`-prefixed vars reach the browser, and the client id is public by design.
+- `STRAVA_CLIENT_SECRET` — **server-side only** (no `VITE_`). Read solely inside
+  `functions/connect/callback.ts` for the OAuth token exchange. Never expose it.
+- `DB` — the D1 binding (set as a binding, not a plain var).
+
+Every other service is still keyless. A future Supabase _anon_ key would be safe
+client-side **because** row-level security enforces access — never ship a
+service-role key.
 
 ## 10. CI vs deploy
 
