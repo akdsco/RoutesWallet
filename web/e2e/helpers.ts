@@ -90,6 +90,16 @@ export async function stubExternal(page: Page): Promise<void> {
     (route) => route.abort()
   );
 
+  // The live source is now /api/routes (the Cloudflare Function reading the D1
+  // pool). `vite preview` doesn't run Functions, so serve the same fixture feed
+  // there. routes.geojson is kept stubbed as the (now inert) on-disk seed source.
+  await page.route('**/api/routes', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(ROUTES_FEED),
+    })
+  );
+
   await page.route('**/routes.geojson', (route) =>
     route.fulfill({
       contentType: 'application/json',
