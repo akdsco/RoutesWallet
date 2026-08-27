@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { FeatureCollection } from 'geojson';
-import { featuresToRoutes } from './routes-data.ts';
+import { featuresToRoutes, loadRoutes } from './routes-data.ts';
 
 const fc: FeatureCollection = {
   type: 'FeatureCollection',
@@ -257,6 +257,31 @@ describe('featuresToRoutes', () => {
     expect(r.region).not.toBe('Other');
   });
 
+  it('maps a club-member source tier (member-contributed routes)', () => {
+    const member = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: {
+            id: 'm',
+            name: 'M',
+            link: 'https://e/m',
+            source: 'club-member',
+          },
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [0, 0],
+              [1, 1],
+            ],
+          },
+        },
+      ],
+    } as unknown as FeatureCollection;
+    expect(featuresToRoutes(member)[0]!.source).toBe('club-member');
+  });
+
   it('coerces an unknown source to the least-trusted tier', () => {
     const odd = {
       type: 'FeatureCollection',
@@ -280,5 +305,31 @@ describe('featuresToRoutes', () => {
       ],
     } as unknown as FeatureCollection;
     expect(featuresToRoutes(odd)[0]!.source).toBe('third-party');
+  });
+});
+
+describe('loadRoutes', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // The live source is the shared member pool served by the /api/routes Function,
+  // not the baked-in file — /routes.geojson survives only as the D1 seed source.
+  it('reads the shared pool from /api/routes by default', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => fc });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const routes = await loadRoutes();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/routes');
+    expect(routes.map((r) => r.id)).toEqual(['a']);
+  });
+
+  it('throws loudly (never silently empty) on a non-ok response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 503 })
+    );
+    await expect(loadRoutes()).rejects.toThrow(/503/);
   });
 });
