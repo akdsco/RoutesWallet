@@ -14,3 +14,7 @@ node_modules/
 # build outputs
 dist/
 build/
+
+# ephemeral /ship working files — per-branch, never committed
+docs/ship-reviews/
+docs/ship-playbook.md
