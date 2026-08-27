@@ -17,3 +17,8 @@ migrations/seed-routes.sql
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Cloudflare local dev: secrets for `wrangler pages dev` + its local D1 state.
+# NEVER commit — the Strava client secret lives here for local testing only.
+.dev.vars
+.wrangler/
