@@ -1,0 +1,21 @@
+# Cloudflare Pages + Functions config for RoutesWallet web (TB-110).
+# The static site still builds with Vite (`npm run build` → dist/); the Functions
+# in ./functions add /api/routes and /connect/callback on the same origin.
+name = "routeswallet"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# The shared route pool. Create once, then paste the id here:
+#   wrangler d1 create routeswallet
+#   wrangler d1 execute routeswallet --file=./migrations/0001_routes.sql
+#   npm run build:seed-sql
+#   wrangler d1 execute routeswallet --file=./migrations/seed-routes.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "routeswallet"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Secrets (NEVER commit) — set in the Pages dashboard or via wrangler:
+#   wrangler pages secret put STRAVA_CLIENT_SECRET
+# and STRAVA_CLIENT_ID (also exposed to the build as VITE_STRAVA_CLIENT_ID for the
+# authorize URL). See docs/DEPLOYMENT.md.

@@ -16,7 +16,7 @@
     "e2e:report": "playwright show-report",
     "enrich:non-strava": "node scripts/enrich-non-strava.mjs",
     "build:seed-sql": "node scripts/build-seed-sql.mjs",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.functions.json",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
