@@ -24,13 +24,13 @@ database_name = "routeswallet-db"
 database_id = "10d6b848-5027-4ffb-ab10-db6fe4626942"
 
 # The "Sign in with Strava" token bridge (TB-116): a KV namespace holding the
-# ephemeral, single-use access token between the callback and /connect/sync. Create
-# it (`npx wrangler kv namespace create SYNC`) and paste the returned id below, then
-# uncomment — a placeholder id would fail deploy validation, so it stays commented
-# until the real namespace exists (mirrors how the D1 id is only added once real).
-# [[kv_namespaces]]
-# binding = "SYNC"
-# id = "<kv-namespace-id-from-wrangler-kv-namespace-create>"
+# ephemeral, single-use access token between the callback and /connect/sync. The
+# namespace id is a resource identifier, not a secret, so it is committed (like the
+# D1 id above) — it binds `SYNC` for the deployed Functions and local `pages dev`.
+# Created via `npx wrangler kv namespace create SYNC`.
+[[kv_namespaces]]
+binding = "SYNC"
+id = "b5c4f807dbe74dccac77f2a31ebbb2b6"
 
 # Secrets (NEVER commit) — set in the Pages dashboard: STRAVA_CLIENT_SECRET
 # (server-only) + STRAVA_CLIENT_ID, VITE_STRAVA_CLIENT_ID as a build var, and

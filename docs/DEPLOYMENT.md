@@ -198,16 +198,21 @@ table, no stored tokens** (the conscious scope step past TB-110's anonymous pool
 the browser holds only the opaque handle (the normal "BFF" pattern). KV's TTL makes
 it ephemeral (not a stored token, not a new table).
 
-**Runbook (once, on top of §8a):**
+**Provisioning status (done — on top of §8a):**
 
-```bash
-npx wrangler kv namespace create SYNC   # paste the id into wrangler.toml, uncomment
-```
+- ✅ KV namespace `SYNC` created (`id b5c4f807dbe74dccac77f2a31ebbb2b6`) and
+  committed in `wrangler.toml` as the `SYNC` binding — the git-connected Pages
+  build reads it, so it binds on the next production deploy.
+- ✅ `SESSION_SECRET` set as an encrypted **production** Secret on the
+  `routeswallet` Pages project (`wrangler pages secret put SESSION_SECRET`).
+- ⬜ **Preview** deployments: set `SESSION_SECRET` for the Preview environment in
+  the Pages dashboard (Settings → Env vars → Preview) — wrangler's `pages secret
+  put` only targets production. Only needed to exercise the flow on branch previews.
+- ⬜ **Local** `wrangler pages dev`: add `SESSION_SECRET` to `.dev.vars`; the KV
+  binding is picked up from `wrangler.toml` (a local namespace is auto-provisioned).
 
-Then in the Pages project: **bind the KV namespace as `SYNC`** and set
-**`SESSION_SECRET`** as an encrypted Secret (see §9). For local `wrangler pages
-dev`, declare the KV binding (uncomment the block with a local id, or pass
-`--kv SYNC`) and put `SESSION_SECRET` in `.dev.vars`.
+To recreate from scratch: `npx wrangler kv namespace create SYNC` → put the id in
+`wrangler.toml`; then set the two secrets as above.
 
 ## 9. Environment & secrets
 
