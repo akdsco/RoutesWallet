@@ -21,16 +21,23 @@ describe('hasRequiredScope', () => {
 
 describe('exchangeToken', () => {
   it('POSTs the code + secret and returns the token + athlete id', async () => {
-    const fetchImpl = vi
-      .fn<FetchLike>()
-      .mockResolvedValue(ok({ access_token: 'AT', athlete: { id: 42 } }));
+    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(
+      ok({
+        access_token: 'AT',
+        athlete: { id: 42, firstname: 'Ada', lastname: 'Lovelace' },
+      })
+    );
 
     const res = await exchangeToken(
       { code: 'C', clientId: 'CID', clientSecret: 'SEC' },
       fetchImpl
     );
 
-    expect(res).toEqual({ accessToken: 'AT', athleteId: 42 });
+    expect(res).toEqual({
+      accessToken: 'AT',
+      athleteId: 42,
+      athleteName: 'Ada Lovelace',
+    });
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toContain('/oauth/token');
     expect(init!.method).toBe('POST');
@@ -41,6 +48,26 @@ describe('exchangeToken', () => {
       client_secret: 'SEC',
       grant_type: 'authorization_code',
     });
+  });
+
+  it('derives a display name from firstname/lastname, falling back to the id', async () => {
+    const firstOnly = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi
+        .fn<FetchLike>()
+        .mockResolvedValue(
+          ok({ access_token: 'AT', athlete: { id: 7, firstname: 'Jo' } })
+        )
+    );
+    expect(firstOnly.athleteName).toBe('Jo');
+
+    const nameless = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi
+        .fn<FetchLike>()
+        .mockResolvedValue(ok({ access_token: 'AT', athlete: { id: 7 } }))
+    );
+    expect(nameless.athleteName).toBe('Athlete 7');
   });
 
   it('throws loudly on a non-ok token response', async () => {

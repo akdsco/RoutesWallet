@@ -31,10 +31,17 @@ export type ExchangeInput = {
   clientSecret: string;
 };
 
+export type ExchangeResult = {
+  accessToken: string;
+  athleteId: number;
+  /** Display name for "Signed in as …" — never a secret, safe in the cookie. */
+  athleteName: string;
+};
+
 export async function exchangeToken(
   { code, clientId, clientSecret }: ExchangeInput,
   fetchImpl: FetchLike = fetch
-): Promise<{ accessToken: string; athleteId: number }> {
+): Promise<ExchangeResult> {
   const res = await fetchImpl(TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -50,14 +57,31 @@ export async function exchangeToken(
   }
   const data = (await res.json()) as {
     access_token?: string;
-    athlete?: { id?: number };
+    athlete?: { id?: number; firstname?: string; lastname?: string };
   };
   if (!data.access_token || typeof data.athlete?.id !== 'number') {
     throw new Error(
       'Strava token exchange returned no access_token/athlete id'
     );
   }
-  return { accessToken: data.access_token, athleteId: data.athlete.id };
+  return {
+    accessToken: data.access_token,
+    athleteId: data.athlete.id,
+    athleteName: displayName(data.athlete),
+  };
+}
+
+/** Join firstname + lastname, falling back to "Athlete <id>" when Strava sends none. */
+function displayName(athlete: {
+  id: number;
+  firstname?: string;
+  lastname?: string;
+}): string {
+  const name = [athlete.firstname, athlete.lastname]
+    .filter((p): p is string => typeof p === 'string' && p.trim() !== '')
+    .join(' ')
+    .trim();
+  return name || `Athlete ${athlete.id}`;
 }
 
 /**
