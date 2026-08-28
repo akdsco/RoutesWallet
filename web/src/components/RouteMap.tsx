@@ -266,7 +266,15 @@ export function RouteMap({
     const map = mapRef.current;
     if (!map) return;
     const prev = tileRef.current;
-    const cfg = tileConfig(basemap, theme);
+    // CARTO's raster basemaps need a free API key (set in Cloudflare env for
+    // prod, .env.local for dev); when it's absent tileConfig still requests
+    // CARTO unauthenticated (visible "API KEY REQUIRED" watermark) and logs an
+    // error — the misconfiguration is surfaced, not masked. See src/lib/basemaps.ts.
+    const cfg = tileConfig(
+      basemap,
+      theme,
+      import.meta.env.VITE_CARTO_BASEMAP_KEY
+    );
     const next = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       subdomains: cfg.subdomains,

@@ -17,6 +17,7 @@ import {
   type NavRow,
   type NavTarget,
 } from '../lib/group-nav.ts';
+import { contributorName } from '../lib/contributor.ts';
 import { RouteDetail } from './RouteDetail.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
 
@@ -462,6 +463,7 @@ function RouteCard({
 }) {
   const select = () => onSelect(r.id);
   const gain = formatGain(r.elevation_gain_m);
+  const owner = contributorName(r.owner_name);
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -524,6 +526,9 @@ function RouteCard({
             )}
           </span>
         </div>
+        {owner && (
+          <span className="truncate text-[12px] text-muted">by {owner}</span>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <SourceBadge source={r.source} />
           {r.region && (

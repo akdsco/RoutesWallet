@@ -15,5 +15,6 @@ node_modules/
 dist/
 build/
 
-# Ephemeral, per-branch /ship review ledger — never commit (see ~/.claude/CLAUDE.md).
+# ephemeral /ship working files — per-branch, never committed
 docs/ship-reviews/
+docs/ship-playbook.md

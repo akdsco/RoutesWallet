@@ -104,4 +104,40 @@ describe('RouteDetail', () => {
     expect(render(makeRoute())).toContain(DOT); // region present
     expect(render(makeRoute({ region: null }), { nearKm: 3.2 })).toContain(DOT);
   });
+
+  it('attributes the contributor and links their Strava profile (TB-114)', () => {
+    const html = render(
+      makeRoute({
+        owner_name: 'Robbie de Santos',
+        owner_strava_id: '12955681',
+      })
+    );
+    expect(html).toContain('Robbie de Santos');
+    // A real anchor to the athlete's profile, opened in a new tab.
+    expect(html).toContain('href="https://www.strava.com/athletes/12955681"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    // Accessible name spells out the action rather than reading a bare name.
+    expect(html).toContain('View Robbie de Santos on Strava');
+  });
+
+  it('shows the name verbatim, keeping any club tag', () => {
+    const html = render(
+      makeRoute({ owner_name: 'Arkadiusz | HV', owner_strava_id: '24005105' })
+    );
+    expect(html).toContain('Arkadiusz | HV');
+  });
+
+  it('shows the contributor as plain text when the strava id is unusable', () => {
+    const html = render(
+      makeRoute({ owner_name: 'Nicolas Laurent', owner_strava_id: 'nope' })
+    );
+    expect(html).toContain('Nicolas Laurent');
+    expect(html).not.toContain('strava.com/athletes');
+  });
+
+  it('shows no attribution when the route has no owner', () => {
+    const html = render(makeRoute());
+    expect(html).not.toContain('strava.com/athletes');
+    expect(html).not.toMatch(/>\s*by\s/i);
+  });
 });

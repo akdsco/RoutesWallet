@@ -176,19 +176,39 @@ real country from the offline normalise). Full-res geometry + the elevation
 
 ## 9. Environment & secrets
 
-**TB-110 introduced the first keyed services.** Set these in **Cloudflare Pages →
-Settings → environment variables** (never in the repo):
+Two keyed concerns today: the Strava connect (TB-110) and the CARTO basemap.
 
-- `STRAVA_CLIENT_ID` — Strava app id. Also set `VITE_STRAVA_CLIENT_ID` (same value)
-  as a **build** var so the "Connect Strava" authorize URL can include it; only
-  `VITE_`-prefixed vars reach the browser, and the client id is public by design.
-- `STRAVA_CLIENT_SECRET` — **server-side only** (no `VITE_`). Read solely inside
-  `functions/connect/callback.ts` for the OAuth token exchange. Never expose it.
-- `DB` — the D1 binding (set as a binding, not a plain var).
+> ⚠️ **Env-var mechanism note (TB-110).** Introducing `wrangler.toml` changed how
+> Pages sources env vars: plaintext vars are managed in `wrangler.toml [vars]` and
+> the dashboard then manages only encrypted **Secrets**. Crucially, `[vars]` reach
+> the **Function runtime** but **not** the Vite **build**, so build-time `VITE_*`
+> vars have no working source via `[vars]`. This is why the Strava client id is a
+> committed default and why the dashboard-set `VITE_CARTO_BASEMAP_KEY` stops
+> applying — **to be reconciled before merge** (bind D1 in the dashboard and drop
+> the committed `wrangler.toml`, or find a build-time var path that coexists).
 
-Every other service is still keyless. A future Supabase _anon_ key would be safe
-client-side **because** row-level security enforces access — never ship a
-service-role key.
+**Strava (TB-110).**
+
+- `STRAVA_CLIENT_ID` — public Strava app id; read by the Function at runtime
+  (`wrangler.toml [vars]`). The frontend uses a **committed public default**
+  (`ConnectStrava.tsx`) because build-time `VITE_` vars aren't sourced from `[vars]`.
+- `STRAVA_CLIENT_SECRET` — **server-side only**; set as an encrypted **Secret** in
+  the Pages dashboard. Read solely in `functions/connect/callback.ts`. Never exposed.
+- `DB` — the D1 binding (in `wrangler.toml`).
+
+**CARTO basemap.** `VITE_CARTO_BASEMAP_KEY` — CARTO now requires a free API key for
+its raster basemaps and watermarks keyless requests ("API KEY REQUIRED"), so the
+"Standard" basemap is authenticated with it. Get one free (email + domain, no
+account) at https://carto.com/basemaps/apikey; set it Production **and** Preview,
+and in `web/.env.local` for local dev. It's a public, domain-restricted basemap key
+(exposed in client tile requests by design), not a private secret. If unset, the
+Standard basemap shows the "API KEY REQUIRED" watermark and logs an error — a
+*visible*, fixable miss. It is a build-time `VITE_` var, so it is subject to the
+mechanism note above.
+
+Any future keyed service (a paid geocoder, or the Supabase anon key) follows the
+same pattern; the Supabase _anon_ key is safe client-side **because** row-level
+security enforces access — never ship a service-role key.
 
 ## 10. CI vs deploy
 
