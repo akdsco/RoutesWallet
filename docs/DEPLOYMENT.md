@@ -184,7 +184,11 @@ table, no stored tokens** (the conscious scope step past TB-110's anonymous pool
 
 **The flow is two calls, so the slow pull never blocks the redirect:**
 
-- `GET /connect/callback` (call 1) — exchanges the OAuth code server-side, stashes
+- `GET /connect/start` — mints a random CSRF `state`, sets it in a short-lived
+  HttpOnly cookie, and redirects to Strava's consent screen (client id server-side).
+  The browser links here; it never builds the authorize URL. The callback rejects
+  any `code` whose `state` doesn't match the cookie → defeats login-CSRF.
+- `GET /connect/callback` (call 1) — validates `state`, exchanges the OAuth code, stashes
   the access token in KV under a random single-use handle, sets the signed identity
   cookie (`{athleteId, name}`) + the opaque handle cookie, and **redirects home
   instantly** (`?connect=start`). No pull here → no frozen blank.

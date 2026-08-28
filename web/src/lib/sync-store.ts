@@ -36,9 +36,13 @@ export async function stashToken(
 }
 
 /**
- * Consume the token for a handle: read it, delete it (single-use), and return it.
- * An unknown/expired/spent handle returns `null` — the caller turns that into a
- * 401 rather than a silent success.
+ * Consume the token for a handle: read it, delete it, and return it. An
+ * unknown/expired/spent handle returns `null` — the caller turns that into a 401
+ * rather than a silent success. Single-use is best-effort: KV has no atomic
+ * compare-and-delete, so two truly-concurrent takes of the same handle could both
+ * read before either delete lands. The blast radius is bounded — the handle is in
+ * an HttpOnly ~5-min cookie and `upsertFeatures` is idempotent — so a double
+ * consume just re-ingests the same routes, never a leak.
  */
 export async function takeToken(
   kv: KVLike,
@@ -58,10 +62,19 @@ export async function takeToken(
       const { accessToken, athleteId } = parsed as TokenBridge;
       return { accessToken, athleteId };
     }
+    // A present-but-malformed bridge is a should-never-happen (we only ever write
+    // a valid shape) — log it so this anomalous branch is distinguishable from an
+    // ordinary expiry, then 401 the caller. See CLAUDE.md fail-loud.
+    console.error('sync store: corrupt token bridge, ignoring', { syncId });
     return null;
-  } catch {
-    // silent-ok: a corrupt bridge value (never written by us with a bad shape) is
-    // treated as "no valid handle" → the caller 401s. Already deleted above.
+  } catch (err) {
+    // silent-ok: an unparseable bridge value is the same should-never-happen as
+    // above and is logged here, then treated as "no valid handle" → 401. Already
+    // deleted above, so it can't be retried.
+    console.error('sync store: unparseable token bridge, ignoring', {
+      syncId,
+      err,
+    });
     return null;
   }
 }

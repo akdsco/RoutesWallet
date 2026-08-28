@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  buildAuthorizeUrl,
   fetchSession,
   runSync,
   signOut,
@@ -8,11 +7,10 @@ import {
   type SessionState,
 } from '../lib/strava-connect.ts';
 
-// The Strava client id is public — it appears in the authorize URL, so it is not a
-// secret. It is committed as the default because Cloudflare Pages `[vars]` reach the
-// Function runtime but NOT the Vite build, so a build-time `VITE_STRAVA_CLIENT_ID`
-// can't be sourced from there; an env var still overrides it (e.g. a separate dev app).
-const DEFAULT_STRAVA_CLIENT_ID = '136750';
+// The OAuth flow starts server-side at /connect/start (it mints the CSRF state
+// nonce + builds the authorize URL from the server-side client id), so the browser
+// just links there — it never constructs the Strava URL or holds the client id.
+const CONNECT_START_URL = '/connect/start';
 
 /** The transient state of the connect flow, on top of the persistent session. */
 type Flow =
@@ -34,8 +32,6 @@ const FAIL_COPY: Record<'denied' | 'scope' | 'error' | 'sync-failed', string> =
 function clearConnectParam() {
   const url = new URL(window.location.href);
   url.searchParams.delete('connect');
-  url.searchParams.delete('added');
-  url.searchParams.delete('skipped');
   window.history.replaceState({}, '', url.toString());
 }
 
@@ -54,10 +50,6 @@ type Props = {
  * name with a Sign out; a plain anchor still drives the real OAuth redirect.
  */
 export function ConnectStrava({ onSessionChange, onSynced }: Props) {
-  const clientId =
-    (import.meta.env.VITE_STRAVA_CLIENT_ID as string | undefined) ||
-    DEFAULT_STRAVA_CLIENT_ID;
-
   // null = still asking the server; then a concrete signed-in / signed-out state.
   const [session, setSession] = useState<SessionState | null>(null);
   const [flow, setFlow] = useState<Flow>({ kind: 'idle' });
@@ -122,7 +114,6 @@ export function ConnectStrava({ onSessionChange, onSynced }: Props) {
     cbs.current.onSessionChange?.(out);
   }
 
-  const authorizeUrl = buildAuthorizeUrl(clientId, window.location.origin);
   const anchorClass =
     'inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
 
@@ -135,7 +126,7 @@ export function ConnectStrava({ onSessionChange, onSynced }: Props) {
           </p>
           <div className="flex items-center gap-2">
             <a
-              href={authorizeUrl}
+              href={CONNECT_START_URL}
               className={anchorClass}
               style={{ backgroundColor: '#FC4C02' }}
             >
@@ -154,7 +145,7 @@ export function ConnectStrava({ onSessionChange, onSynced }: Props) {
       ) : (
         <>
           <a
-            href={authorizeUrl}
+            href={CONNECT_START_URL}
             className={anchorClass}
             style={{ backgroundColor: '#FC4C02' }}
           >

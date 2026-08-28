@@ -12,11 +12,15 @@ import { signSession, verifySession, type Session } from './session.ts';
 export const SESSION_COOKIE = 'rw_session';
 /** The opaque handle to the KV token bridge (see sync-store.ts). */
 export const SYNC_COOKIE = 'rw_sync';
+/** The OAuth CSRF nonce, set by /connect/start and checked by the callback. */
+export const STATE_COOKIE = 'rw_oauth_state';
 
 /** ~90 days — a member stays signed in across visits without re-authing. */
 const MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
 /** ~5 minutes — matches the token bridge TTL; the handle is single-use anyway. */
 const SYNC_MAX_AGE_SECONDS = 300;
+/** ~10 minutes — long enough to consent at Strava and come back. */
+const STATE_MAX_AGE_SECONDS = 600;
 
 export type SessionState =
   { signedIn: true; athleteId: number; name: string } | { signedIn: false };
@@ -75,4 +79,32 @@ export function readSyncId(cookieHeader: string | null): string | null {
 /** Expire the sync-handle cookie (call 2 clears it once the token is consumed). */
 export function clearSyncCookie(): string {
   return `${SYNC_COOKIE}=; ${ATTRS}; Max-Age=0`;
+}
+
+/** Build the short-lived cookie carrying the OAuth CSRF state nonce. */
+export function buildStateCookie(state: string): string {
+  return `${STATE_COOKIE}=${state}; ${ATTRS}; Max-Age=${STATE_MAX_AGE_SECONDS}`;
+}
+
+/** Read the OAuth state nonce from a request's `Cookie` header, if present. */
+export function readOAuthState(cookieHeader: string | null): string | null {
+  return parseCookies(cookieHeader)[STATE_COOKIE] || null;
+}
+
+/** Expire the state cookie (the callback clears it once the code is validated). */
+export function clearStateCookie(): string {
+  return `${STATE_COOKIE}=; ${ATTRS}; Max-Age=0`;
+}
+
+/**
+ * Whether a callback's `state` query param matches the nonce this browser was
+ * given at `/connect/start`. Both must be present and equal — a forged callback
+ * (login-CSRF) carries no matching cookie and is rejected.
+ */
+export function oauthStateValid(
+  cookieHeader: string | null,
+  stateParam: string | null
+): boolean {
+  const expected = readOAuthState(cookieHeader);
+  return expected !== null && stateParam !== null && expected === stateParam;
 }

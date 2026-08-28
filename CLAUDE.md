@@ -37,7 +37,8 @@ table + a Strava login — **not** a platform. Anything beyond that narrow path 
 - **Static site + a thin serverless edge for the member path.** The app is still a
   static Vite bundle on Cloudflare Pages; the only server code is the Cloudflare
   Pages **Functions** in `web/functions/`: `/api/routes` reads the pool;
-  `/connect/callback` does the Strava OAuth token exchange then redirects fast;
+  `/connect/start` mints the OAuth CSRF `state` + redirects to Strava;
+  `/connect/callback` validates `state`, does the token exchange, then redirects fast;
   `/connect/sync` does the list-only pull + ingest; `/api/me` + `/connect/logout`
   are the session endpoints (TB-116). Persistent state is one **D1** table
   (`web/migrations/`, seeded from `routes.geojson`); TB-116 added a **signed

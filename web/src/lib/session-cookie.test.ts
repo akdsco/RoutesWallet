@@ -2,12 +2,17 @@ import { describe, it, expect } from 'vitest';
 import {
   SESSION_COOKIE,
   SYNC_COOKIE,
+  STATE_COOKIE,
   buildSessionCookie,
   buildSyncCookie,
+  buildStateCookie,
   clearSessionCookie,
   clearSyncCookie,
+  clearStateCookie,
   readSession,
   readSyncId,
+  readOAuthState,
+  oauthStateValid,
 } from './session-cookie.ts';
 
 const SECRET = 'cookie-secret-xyz';
@@ -77,7 +82,9 @@ describe('sync-handle cookie', () => {
     expect(setCookie.startsWith(`${SYNC_COOKIE}=handle-123`)).toBe(true);
     expect(setCookie).toMatch(/HttpOnly/);
     expect(setCookie).toMatch(/SameSite=Lax/);
-    expect(setCookie).toMatch(/Max-Age=[1-9]\d{0,3}(?!\d)/); // short (<= a few min)
+    const maxAge = Number(/Max-Age=(\d+)/.exec(setCookie)?.[1]);
+    expect(maxAge).toBeGreaterThan(0);
+    expect(maxAge).toBeLessThanOrEqual(600); // a few minutes, not hours
     expect(readSyncId(asRequestCookie(setCookie))).toBe('handle-123');
   });
 
@@ -90,5 +97,33 @@ describe('sync-handle cookie', () => {
     const setCookie = clearSyncCookie();
     expect(setCookie.startsWith(`${SYNC_COOKIE}=`)).toBe(true);
     expect(setCookie).toMatch(/Max-Age=0/);
+  });
+});
+
+describe('OAuth state cookie (CSRF nonce)', () => {
+  it('round-trips the state nonce as a short-lived HttpOnly cookie', () => {
+    const setCookie = buildStateCookie('nonce-abc');
+    expect(setCookie.startsWith(`${STATE_COOKIE}=nonce-abc`)).toBe(true);
+    expect(setCookie).toMatch(/HttpOnly/);
+    expect(setCookie).toMatch(/SameSite=Lax/);
+    const maxAge = Number(/Max-Age=(\d+)/.exec(setCookie)?.[1]);
+    expect(maxAge).toBeGreaterThan(0);
+    expect(maxAge).toBeLessThanOrEqual(600);
+    expect(readOAuthState(asRequestCookie(setCookie))).toBe('nonce-abc');
+  });
+
+  it('reads no state when the cookie is absent, and clears it immediately', () => {
+    expect(readOAuthState('other=1')).toBeNull();
+    expect(readOAuthState(null)).toBeNull();
+    expect(clearStateCookie()).toMatch(/Max-Age=0/);
+  });
+
+  it('validates the callback state only when it matches the cookie nonce', () => {
+    const header = asRequestCookie(buildStateCookie('n1'));
+    expect(oauthStateValid(header, 'n1')).toBe(true);
+    // Forged callback: right shape, wrong/absent nonce → rejected (login-CSRF).
+    expect(oauthStateValid(header, 'other')).toBe(false);
+    expect(oauthStateValid(header, null)).toBe(false);
+    expect(oauthStateValid(null, 'n1')).toBe(false);
   });
 });

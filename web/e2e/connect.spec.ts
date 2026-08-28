@@ -73,20 +73,16 @@ test.beforeEach(async ({ page }) => {
   await stubExternal(page);
 });
 
-test('offers a Connect Strava CTA linking to the OAuth consent screen', async ({
+test('offers a Connect Strava CTA that begins the server-side OAuth flow', async ({
   page,
 }) => {
   await page.goto('/');
 
   const link = page.getByRole('link', { name: CONNECT });
   await expect(link).toBeVisible();
-
-  const url = new URL((await link.getAttribute('href'))!);
-  expect(url.origin + url.pathname).toBe(
-    'https://www.strava.com/oauth/authorize'
-  );
-  expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
-  expect(url.searchParams.get('redirect_uri')).toContain('/connect/callback');
+  // The CTA links to /connect/start, which mints the CSRF state + redirects to
+  // Strava server-side (the authorize-URL shape is covered in unit tests).
+  expect(await link.getAttribute('href')).toBe('/connect/start');
 });
 
 test('signing in: progress → unmissable count, then the member is signed in', async ({

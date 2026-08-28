@@ -4,6 +4,8 @@ import { stashToken } from '../../src/lib/sync-store.ts';
 import {
   buildSessionCookie,
   buildSyncCookie,
+  clearStateCookie,
+  oauthStateValid,
 } from '../../src/lib/session-cookie.ts';
 import type { PagesContext } from '../_lib/env.ts';
 
@@ -33,11 +35,23 @@ export const onRequestGet = async ({
   const code = url.searchParams.get('code');
   const scope = url.searchParams.get('scope');
   const error = url.searchParams.get('error');
+  const state = url.searchParams.get('state');
+  const cookie = request.headers.get('cookie');
 
+  // CSRF guard: the `state` must match the nonce /connect/start set in this
+  // browser. A forged callback (login-CSRF) carries no matching cookie → reject.
+  // Clear the one-shot state cookie whichever way this goes.
+  if (!oauthStateValid(cookie, state)) {
+    return home(request, 'connect=error', [clearStateCookie()]);
+  }
   // The member denied access, or Strava sent no code.
-  if (error || !code) return home(request, 'connect=denied', []);
+  if (error || !code) {
+    return home(request, 'connect=denied', [clearStateCookie()]);
+  }
   // Must include activity:read_all, else the routes pull can't work.
-  if (!hasRequiredScope(scope)) return home(request, 'connect=scope', []);
+  if (!hasRequiredScope(scope)) {
+    return home(request, 'connect=scope', [clearStateCookie()]);
+  }
 
   try {
     const { session, syncId } = await startConnect(code, {
@@ -52,6 +66,7 @@ export const onRequestGet = async ({
     const cookies = [
       await buildSessionCookie(session, env.SESSION_SECRET),
       buildSyncCookie(syncId),
+      clearStateCookie(), // one-shot nonce spent
     ];
     return home(request, 'connect=start', cookies);
   } catch (err) {

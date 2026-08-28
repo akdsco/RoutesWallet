@@ -8,35 +8,29 @@ function setUrl(search: string) {
   window.history.replaceState({}, '', `/${search}`);
 }
 
-beforeEach(() => {
-  setUrl('');
-  vi.stubEnv('VITE_STRAVA_CLIENT_ID', 'CID123');
-});
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllEnvs();
-});
+beforeEach(() => setUrl(''));
+afterEach(() => vi.restoreAllMocks());
 
 describe('ConnectStrava — signed out', () => {
-  it('renders a Strava authorize link with the callback redirect + route scope', async () => {
+  it('offers a Connect CTA that starts the server-side OAuth flow', async () => {
     vi.spyOn(api, 'fetchSession').mockResolvedValue({ signedIn: false });
     render(<ConnectStrava />);
 
+    // The browser links to /connect/start (which mints the CSRF state + redirects
+    // to Strava); it never builds the Strava URL itself.
     const link = await screen.findByRole('link', { name: /connect strava/i });
-    const url = new URL(link.getAttribute('href')!);
-    expect(url.origin + url.pathname).toBe(
-      'https://www.strava.com/oauth/authorize'
-    );
-    expect(url.searchParams.get('client_id')).toBe('CID123');
-    expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
-    expect(url.searchParams.get('redirect_uri')).toContain('/connect/callback');
+    expect(link).toHaveAttribute('href', '/connect/start');
   });
 
-  it('shows the denial message when the callback reported connect=denied', async () => {
+  it.each([
+    ['denied', /cancel/i],
+    ['scope', /route access/i],
+    ['error', /went wrong/i],
+  ])('shows the %s message from the callback', async (state, copy) => {
     vi.spyOn(api, 'fetchSession').mockResolvedValue({ signedIn: false });
-    setUrl('?connect=denied');
+    setUrl(`?connect=${state}`);
     render(<ConnectStrava />);
-    expect(await screen.findByRole('status')).toHaveTextContent(/cancel/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(copy);
   });
 });
 
@@ -56,7 +50,7 @@ describe('ConnectStrava — signed in', () => {
     expect(screen.getByRole('button', { name: /sign out/i })).toBeVisible();
     expect(
       screen.getByRole('link', { name: /add more from strava/i })
-    ).toBeVisible();
+    ).toHaveAttribute('href', '/connect/start');
     await waitFor(() =>
       expect(onSessionChange).toHaveBeenCalledWith({
         signedIn: true,
@@ -87,12 +81,45 @@ describe('ConnectStrava — signed in', () => {
 
     resolveSync({ added: 12, skipped: 1 });
 
-    // The syncing status is replaced by the result status — re-query it.
-    const result = await screen.findByText(/added 12 routes/i);
-    expect(result).toHaveAttribute('role', 'status');
+    // The count is the unit under test — assert on the number, not the copy.
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(/12/)
+    );
     expect(onSynced).toHaveBeenCalledWith(12);
     // The ?connect=start is cleared so a refresh doesn't re-pull.
     expect(window.location.search).not.toContain('connect=start');
+  });
+
+  it('reports an observable failure (and does not fire onSynced) when the sync throws', async () => {
+    const onSynced = vi.fn();
+    vi.spyOn(api, 'fetchSession').mockResolvedValue({
+      signedIn: true,
+      athleteId: 9,
+      name: 'Jo',
+    });
+    vi.spyOn(api, 'runSync').mockRejectedValue(new Error('sync failed: 500'));
+    setUrl('?connect=start');
+    render(<ConnectStrava onSynced={onSynced} />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /couldn.t add your routes/i
+    );
+    expect(onSynced).not.toHaveBeenCalled();
+  });
+
+  it('names the no-new-routes case rather than a bare "Added 0"', async () => {
+    vi.spyOn(api, 'fetchSession').mockResolvedValue({
+      signedIn: true,
+      athleteId: 9,
+      name: 'Jo',
+    });
+    vi.spyOn(api, 'runSync').mockResolvedValue({ added: 0, skipped: 0 });
+    setUrl('?connect=start');
+    render(<ConnectStrava />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /no new routes/i
+    );
   });
 
   it('signs out: clears identity and returns to the Connect CTA', async () => {

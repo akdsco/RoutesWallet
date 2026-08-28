@@ -13,8 +13,10 @@ const jsonRes = (body: unknown, ok = true, status = 200): Response =>
 afterEach(() => vi.restoreAllMocks());
 
 describe('buildAuthorizeUrl', () => {
-  it('builds the Strava authorize URL with the callback redirect + route scope', () => {
-    const url = new URL(buildAuthorizeUrl('CID', 'https://routeswallet.app'));
+  it('builds the Strava authorize URL with the callback redirect, route scope + CSRF state', () => {
+    const url = new URL(
+      buildAuthorizeUrl('CID', 'https://routeswallet.app', 'STATE123')
+    );
     expect(url.origin + url.pathname).toBe(
       'https://www.strava.com/oauth/authorize'
     );
@@ -24,6 +26,7 @@ describe('buildAuthorizeUrl', () => {
       'https://routeswallet.app/connect/callback'
     );
     expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
+    expect(url.searchParams.get('state')).toBe('STATE123');
   });
 });
 
