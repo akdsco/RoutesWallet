@@ -4,6 +4,7 @@ import { routeThumbnail } from '../lib/thumbnail.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
+import { ContributorByline } from './ContributorByline.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
 
 type Props = {
@@ -115,6 +116,10 @@ export function RouteDetail({
           <span className="self-start">
             <SourceBadge source={r.source} />
           </span>
+          <ContributorByline
+            ownerName={r.owner_name}
+            ownerStravaId={r.owner_strava_id}
+          />
         </div>
 
         <a

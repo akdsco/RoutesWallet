@@ -27,6 +27,12 @@ const commit = (page: Page) =>
  *  appears), so a following card-count assertion doesn't race the initial full
  *  list still on screen before the geocode returns — deterministic under load. */
 async function search(page: Page, place: string): Promise<void> {
+  // Wait for the app to hydrate and the initial list to render BEFORE typing —
+  // otherwise a fill+Enter fired before the search wiring is live is silently
+  // lost (the geocode never runs), and the count line below never appears. On a
+  // slow CI webkit this raced and timed out; keying off a real precondition
+  // (cards present) is deterministic, not a bigger timeout papering over it.
+  await expect(cards(page).first()).toBeVisible();
   await searchBox(page).fill(place);
   await page.keyboard.press('Enter');
   // The count line inside the sheet (not the sr-only aria-live announcement) is

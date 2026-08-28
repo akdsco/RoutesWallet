@@ -69,4 +69,34 @@ describe('MobileRouteDetail — §H compact selected sheet', () => {
     expect(onMeasure).toHaveBeenCalled();
     expect(typeof onMeasure.mock.calls[0]![0]).toBe('number');
   });
+
+  it('attributes the contributor with a link to their Strava profile (TB-114)', () => {
+    setup({ owner_name: 'Robbie de Santos', owner_strava_id: '12955681' });
+    const region = screen.getByRole('region', { name: 'Route detail' });
+    // Byline text is split across the <p> and the link, so match on the region.
+    expect(region).toHaveTextContent(/by Robbie de Santos/i);
+    const profile = within(region).getByRole('link', {
+      name: /view Robbie de Santos on strava/i,
+    });
+    expect(profile).toHaveAttribute(
+      'href',
+      'https://www.strava.com/athletes/12955681'
+    );
+    expect(profile).toHaveAttribute('target', '_blank');
+  });
+
+  it('shows the contributor as plain text when the strava id is unusable', () => {
+    setup({ owner_name: 'Nicolas Laurent', owner_strava_id: 'nope' });
+    const region = screen.getByRole('region', { name: 'Route detail' });
+    expect(region).toHaveTextContent(/by Nicolas Laurent/i);
+    expect(
+      within(region).queryByRole('link', { name: /nicolas laurent/i })
+    ).toBeNull();
+  });
+
+  it('shows no attribution when the route has no owner', () => {
+    setup();
+    const region = screen.getByRole('region', { name: 'Route detail' });
+    expect(region).not.toHaveTextContent(/\bby /i);
+  });
 });

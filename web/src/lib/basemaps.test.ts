@@ -126,24 +126,32 @@ describe('tileConfig — CARTO API key handling', () => {
     }
   });
 
-  it('without a key, Standard never emits a watermarking CARTO url — it falls back to keyless tiles + warns (B3)', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('without a key, Standard stays CARTO (unauthenticated → visible watermark) and never masks with CyclOSM (B3)', () => {
+    // A missing key is a misconfiguration we WANT to see in review/prod — so
+    // Standard still requests CARTO (which renders its own "API KEY REQUIRED"
+    // watermark) rather than silently swapping to a plausible CyclOSM map that
+    // lies about what's selected. The failure must be visible, not masked.
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     for (const theme of ['light', 'dark'] as const) {
       const { url } = tileConfig('standard', theme);
-      expect(url).not.toContain('cartocdn');
-      expect(url).not.toContain('key=');
-      // Falls back to the keyless CyclOSM source so no watermark can appear.
-      expect(url).toContain('cyclosm');
+      expect(url).toContain('cartocdn'); // still the CARTO Standard source
+      expect(url).not.toContain('key='); // unauthenticated → watermark shows
+      expect(url).not.toContain('cyclosm'); // never masked by CyclOSM
     }
-    expect(warn).toHaveBeenCalled();
-    expect(String(warn.mock.calls[0]?.[0])).toContain('VITE_CARTO_BASEMAP_KEY');
+    expect(err).toHaveBeenCalled();
+    expect(String(err.mock.calls[0]?.[0])).toContain('VITE_CARTO_BASEMAP_KEY');
   });
 
   it('treats an empty-string key the same as no key (B3)', () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { url } = tileConfig('standard', 'light', '');
-    expect(url).not.toContain('cartocdn');
-    expect(url).toContain('cyclosm');
+    expect(url).toContain('cartocdn');
+    expect(url).not.toContain('key=');
+    expect(url).not.toContain('cyclosm');
+    // Same visible-failure contract as the no-key path: an empty key must also
+    // surface the misconfiguration loudly, not just render the keyless url.
+    expect(err).toHaveBeenCalled();
+    expect(String(err.mock.calls[0]?.[0])).toContain('VITE_CARTO_BASEMAP_KEY');
   });
 });
 

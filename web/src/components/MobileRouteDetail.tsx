@@ -3,6 +3,7 @@ import type { Route } from '../types.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
+import { ContributorByline } from './ContributorByline.tsx';
 import { TrustGlyph } from './TrustGlyph.tsx';
 
 type Props = {
@@ -108,6 +109,11 @@ export function MobileRouteDetail({
           </>
         )}
       </div>
+
+      <ContributorByline
+        ownerName={r.owner_name}
+        ownerStravaId={r.owner_strava_id}
+      />
 
       <div className="border-t border-line-2 pt-2 text-[12.5px] leading-relaxed">
         {hasNotes ? (
