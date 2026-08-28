@@ -47,10 +47,11 @@ in the card + both detail panels. No new screen, no new dependency, no state —
 inside frozen v1 scope.
 
 1. **`contributor.ts` — display helpers (pure, fail-safe).**
-   - `contributorName(owner_name?: string): string | null` — trims a trailing
-     pipe-delimited club tag (`"Arkadiusz | HV"` → `"Arkadiusz"`), collapses
-     whitespace, returns `null` for absent/empty/whitespace-only so the UI can omit
-     the byline cleanly (criterion 4).
+   - `contributorName(owner_name?: string): string | null` — returns the name
+     **verbatim** (trimmed only), returns `null` for absent/empty/whitespace-only so
+     the UI can omit the byline cleanly (criterion 4). Per the ticket owner's call:
+     **no suffix stripping / normalisation** — whatever name a contributor has is
+     shown as-is (a club tag like "Arkadiusz | HV" stays).
    - `stravaProfileUrl(owner_strava_id?: string): string | null` — returns
      `https://www.strava.com/athletes/{id}` **only** when the id is all digits; else
      `null`. Digits-only guard so a malformed CDN value can't build a junk/unsafe
@@ -84,9 +85,9 @@ inside frozen v1 scope.
 - **B4** (crit. 4) — Given a route with no `owner_name`, When a visitor views it, Then
   no attribution is shown (no blank/"by undefined") and the card/detail renders
   normally.
-- **B5** (normalisation, from the ticket's Consideration) — Given an `owner_name` with a
-  club-tag suffix ("Arkadiusz | HV"), When it's shown, Then the display name is the
-  person ("Arkadiusz").
+- **B5** (verbatim display, ticket owner's call) — Given an `owner_name` that carries
+  a club tag ("Arkadiusz | HV"), When it's shown, Then it's displayed **as-is** — no
+  stripping or normalisation.
 - **B6** (fail-safe) — Given a non-numeric/garbage `owner_strava_id`, When the detail
   renders, Then no profile link is built (name shown as plain text), never a junk href.
 
@@ -96,10 +97,11 @@ Each is one commit; `npm run test` + typecheck green at every step. Repo runners
 Vitest (unit `src/lib/*.test.ts`, integration `src/*.test.tsx`), Playwright e2e.
 
 1. **contributor.ts unit (B5, B4, B6).**
-   test (`src/lib/contributor.test.ts`, red): `contributorName` strips `" | HV"`,
-   collapses whitespace, returns `null` for `undefined`/`""`/`"   "`; `stravaProfileUrl`
-   builds the URL for `"24005105"`, returns `null` for `undefined`, `""`, `"abc"`,
-   `"12 3"`. → impl: write `contributor.ts` to pass (green).
+   test (`src/lib/contributor.test.ts`, red): `contributorName` returns the name
+   verbatim incl. a club tag ("Arkadiusz | HV" → "Arkadiusz | HV"), trims surrounding
+   whitespace, returns `null` for `undefined`/`""`/`"   "`; `stravaProfileUrl` builds
+   the URL for `"24005105"`, returns `null` for `undefined`, `""`, `"abc"`, `"12 3"`. →
+   impl: write `contributor.ts` to pass (green).
 
 2. **RouteCard byline (B1, B2, B4).**
    test (extend `src/components/RouteList.test.tsx`, red): a card whose route has an
