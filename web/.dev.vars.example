@@ -5,6 +5,11 @@
 STRAVA_CLIENT_ID=
 STRAVA_CLIENT_SECRET=
 
+# The HMAC key that signs the "Sign in with Strava" session cookie (TB-116).
+# Any long random string (e.g. `openssl rand -hex 32`). Server-side only; rotating
+# it just signs everyone out. In production it's an encrypted Pages Secret.
+SESSION_SECRET=
+
 # The FRONTEND authorize URL also needs the client id, at Vite dev/build time.
 # That is a separate mechanism (Vite `import.meta.env`, not wrangler), so put the
 # SAME client id in `.env.local` (gitignored via *.local):

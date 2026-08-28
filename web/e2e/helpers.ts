@@ -107,6 +107,28 @@ export async function stubExternal(page: Page): Promise<void> {
     })
   );
 
+  // The member-session endpoints (TB-116). `vite preview` doesn't run Functions,
+  // so default them to "signed out" / no-ops; a connect journey overrides these
+  // per-test (Playwright matches the last-registered handler first).
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ signedIn: false }),
+    })
+  );
+  await page.route('**/connect/logout', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ signedIn: false }),
+    })
+  );
+  await page.route('**/connect/sync', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ added: 0, skipped: 0 }),
+    })
+  );
+
   // UK postcode → postcodes.io, fixed to a Cambridge point so a postcode search
   // matches the two Cambridge routes.
   await page.route(/api\.postcodes\.io\//, (route) =>
