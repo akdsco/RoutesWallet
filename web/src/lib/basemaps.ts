@@ -112,9 +112,11 @@ export function tileConfig(
     if (apiKey) {
       const def = BASEMAPS.standard;
       return {
-        // Query string, not a Leaflet {…} placeholder, so tile-coordinate
-        // substitution ({s}/{z}/{x}/{y}/{r}) is untouched.
-        url: `${def.urls[theme]}?api_key=${apiKey}`,
+        // CARTO authenticates raster tiles with `?key=` (NOT `?api_key=`, which
+        // it silently ignores → still watermarked). Query string, not a Leaflet
+        // {…} placeholder, so tile-coordinate substitution ({s}/{z}/{x}/{y}/{r})
+        // is untouched.
+        url: `${def.urls[theme]}?key=${apiKey}`,
         attribution: def.attribution,
         subdomains: def.subdomains,
         maxZoom: def.maxZoom,

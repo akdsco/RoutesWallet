@@ -103,14 +103,17 @@ describe('tileConfig (with a CARTO key configured)', () => {
 describe('tileConfig — CARTO API key handling', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it('appends ?api_key to the CARTO Standard tiles in both themes (B1/B2)', () => {
+  it('appends ?key to the CARTO Standard tiles in both themes (B1/B2)', () => {
+    // CARTO authenticates with ?key= (not ?api_key=, which it ignores).
     const light = tileConfig('standard', 'light', KEY);
     const dark = tileConfig('standard', 'dark', KEY);
     expect(light.url).toContain('cartocdn');
     expect(light.url).toContain('voyager');
-    expect(light.url.endsWith(`?api_key=${KEY}`)).toBe(true);
+    expect(light.url.endsWith(`?key=${KEY}`)).toBe(true);
     expect(dark.url).toContain('dark_all');
-    expect(dark.url.endsWith(`?api_key=${KEY}`)).toBe(true);
+    expect(dark.url.endsWith(`?key=${KEY}`)).toBe(true);
+    // Guard against the ignored-param regression that shipped the watermark.
+    expect(light.url).not.toContain('api_key');
     // The retina placeholder must survive the query-string append.
     expect(light.url).toContain('{r}');
   });
@@ -118,7 +121,7 @@ describe('tileConfig — CARTO API key handling', () => {
   it('ignores the key for CyclOSM — it stays keyless in both themes (B4)', () => {
     for (const theme of ['light', 'dark'] as const) {
       const { url } = tileConfig('cyclosm', theme, KEY);
-      expect(url).not.toContain('api_key');
+      expect(url).not.toContain('key=');
       expect(url).toContain('cyclosm');
     }
   });
@@ -128,7 +131,7 @@ describe('tileConfig — CARTO API key handling', () => {
     for (const theme of ['light', 'dark'] as const) {
       const { url } = tileConfig('standard', theme);
       expect(url).not.toContain('cartocdn');
-      expect(url).not.toContain('api_key');
+      expect(url).not.toContain('key=');
       // Falls back to the keyless CyclOSM source so no watermark can appear.
       expect(url).toContain('cyclosm');
     }
