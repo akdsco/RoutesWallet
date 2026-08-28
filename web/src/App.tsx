@@ -6,6 +6,10 @@ import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { SearchField } from './components/SearchField.tsx';
 import { ConnectStrava } from './components/ConnectStrava.tsx';
+import {
+  RouteScopeToggle,
+  type RouteScope,
+} from './components/RouteScopeToggle.tsx';
 import { RouteList, type FilterEmpty } from './components/RouteList.tsx';
 import { FilterPanel } from './components/FilterPanel.tsx';
 import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
@@ -22,6 +26,8 @@ import {
   type Snap,
 } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
+import { scopeRoutes } from './lib/scope.ts';
+import type { SessionState } from './lib/strava-connect.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
 import { groupByRegion, resolveOpenGroups } from './lib/grouping.ts';
@@ -107,8 +113,12 @@ function relaxPhrase({ dimension, adds }: Relaxation): string {
 type Place = { lng: number; lat: number; name: string };
 
 export function App() {
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const [allRoutes, setAllRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
+  // The signed-in member (TB-116) + which routes they're viewing. `mine` narrows
+  // the whole pool to their own contributions via the owner id already on routes.
+  const [session, setSession] = useState<SessionState>({ signedIn: false });
+  const [scope, setScope] = useState<RouteScope>('all');
   const [query, setQuery] = useState('');
   const [place, setPlace] = useState<Place | null>(null);
   const [geoFail, setGeoFail] = useState(false);
@@ -174,11 +184,40 @@ export function App() {
   const { resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
 
-  useEffect(() => {
+  // Load (and reload) the shared pool. Exposed as a callback so a fresh member
+  // sync (below) can refresh it and see their just-added routes.
+  const reloadRoutes = useCallback(() => {
+    setLoading(true);
     loadRoutes()
-      .then(setRoutes)
-      .catch(() => setRoutes([]))
+      .then(setAllRoutes)
+      .catch((err: unknown) => {
+        // Observable degrade: log, then empty the pool so the UI shows its
+        // "no routes" state rather than silently freezing on stale data.
+        console.error('route load failed', err);
+        setAllRoutes([]);
+      })
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    reloadRoutes();
+  }, [reloadRoutes]);
+
+  // The viewer's pool: all club routes, or just the signed-in member's own when
+  // they've switched to "My routes".
+  const routes = useMemo(
+    () =>
+      scopeRoutes(
+        allRoutes,
+        scope === 'mine' && session.signedIn ? String(session.athleteId) : null
+      ),
+    [allRoutes, scope, session]
+  );
+
+  // Told by the connect card who's signed in; signing out drops back to all routes.
+  const handleSessionChange = useCallback((s: SessionState) => {
+    setSession(s);
+    if (!s.signedIn) setScope('all');
   }, []);
 
   // Domains + the filter pool. Before init, use the widest defaults so the pool
@@ -665,7 +704,17 @@ export function App() {
           backLabel={backLabel}
           theme={theme}
           filterPanel={filterPanel}
-          connectSlot={<ConnectStrava />}
+          connectSlot={
+            <ConnectStrava
+              onSessionChange={handleSessionChange}
+              onSynced={reloadRoutes}
+            />
+          }
+          scopeSlot={
+            session.signedIn ? (
+              <RouteScopeToggle value={scope} onChange={setScope} />
+            ) : null
+          }
           countLine={countLineText}
           sortControl={sortControl}
           flat={flat}

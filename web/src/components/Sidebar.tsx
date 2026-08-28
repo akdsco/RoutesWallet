@@ -20,6 +20,8 @@ type Props = {
   filterPanel?: ReactNode;
   /** The "Connect Strava" CTA (TB-110), rendered in the search header. */
   connectSlot?: ReactNode;
+  /** The "my routes vs all" toggle (TB-116), shown to signed-in members. */
+  scopeSlot?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -50,6 +52,7 @@ export function Sidebar(props: Props) {
     query,
     hint,
     banner,
+    scopeSlot,
     placeLabel,
     groups,
     selectedId,
@@ -119,6 +122,7 @@ export function Sidebar(props: Props) {
           </form>
 
           {connectSlot}
+          {scopeSlot}
         </div>
       )}
 
