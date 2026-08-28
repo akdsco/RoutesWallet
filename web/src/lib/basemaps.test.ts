@@ -143,11 +143,15 @@ describe('tileConfig — CARTO API key handling', () => {
   });
 
   it('treats an empty-string key the same as no key (B3)', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { url } = tileConfig('standard', 'light', '');
     expect(url).toContain('cartocdn');
     expect(url).not.toContain('key=');
     expect(url).not.toContain('cyclosm');
+    // Same visible-failure contract as the no-key path: an empty key must also
+    // surface the misconfiguration loudly, not just render the keyless url.
+    expect(err).toHaveBeenCalled();
+    expect(String(err.mock.calls[0]?.[0])).toContain('VITE_CARTO_BASEMAP_KEY');
   });
 });
 
