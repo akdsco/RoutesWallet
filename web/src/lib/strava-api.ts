@@ -59,29 +59,30 @@ export async function exchangeToken(
     access_token?: string;
     athlete?: { id?: number; firstname?: string; lastname?: string };
   };
-  if (!data.access_token || typeof data.athlete?.id !== 'number') {
+  const athlete = data.athlete;
+  if (!data.access_token || typeof athlete?.id !== 'number') {
     throw new Error(
       'Strava token exchange returned no access_token/athlete id'
     );
   }
   return {
     accessToken: data.access_token,
-    athleteId: data.athlete.id,
-    athleteName: displayName(data.athlete),
+    athleteId: athlete.id,
+    athleteName: displayName(athlete.id, athlete.firstname, athlete.lastname),
   };
 }
 
 /** Join firstname + lastname, falling back to "Athlete <id>" when Strava sends none. */
-function displayName(athlete: {
-  id: number;
-  firstname?: string;
-  lastname?: string;
-}): string {
-  const name = [athlete.firstname, athlete.lastname]
+function displayName(
+  id: number,
+  firstname?: string,
+  lastname?: string
+): string {
+  const name = [firstname, lastname]
     .filter((p): p is string => typeof p === 'string' && p.trim() !== '')
     .join(' ')
     .trim();
-  return name || `Athlete ${athlete.id}`;
+  return name || `Athlete ${id}`;
 }
 
 /**
