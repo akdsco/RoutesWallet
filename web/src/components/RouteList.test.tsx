@@ -149,6 +149,46 @@ describe('RouteList — county groups', () => {
   });
 });
 
+describe('RouteList — contributor attribution (TB-114)', () => {
+  function renderCard(r: Route) {
+    render(
+      <RouteList
+        query=""
+        banner="none"
+        placeLabel=""
+        groups={[{ label: 'Essex', count: 1, items: [{ route: r }] }]}
+        selectedId={null}
+        backLabel="Back"
+        theme="light"
+        onClear={() => {}}
+        onSelect={() => {}}
+        onDeselect={() => {}}
+        onHover={() => {}}
+      />
+    );
+    return screen.getByText(r.name).closest('[data-route-id]')!;
+  }
+
+  it('names the contributor on the card when the route has an owner', () => {
+    const r = route('own', 'Owned');
+    r.owner_name = 'Robbie de Santos';
+    const card = renderCard(r);
+    expect(card).toHaveTextContent(/by Robbie de Santos/i);
+  });
+
+  it('shows the name verbatim, keeping any club tag', () => {
+    const r = route('tag', 'Tagged');
+    r.owner_name = 'Arkadiusz | HV';
+    const card = renderCard(r);
+    expect(card).toHaveTextContent(/by Arkadiusz \| HV/i);
+  });
+
+  it('shows no attribution when the route has no owner', () => {
+    const card = renderCard(route('anon', 'Anonymous'));
+    expect(card).not.toHaveTextContent(/\bby\b/i);
+  });
+});
+
 describe('RouteList — filter-empty state', () => {
   function renderEmpty(empty: FilterEmpty) {
     render(
