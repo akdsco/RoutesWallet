@@ -10,9 +10,13 @@
 import { signSession, verifySession, type Session } from './session.ts';
 
 export const SESSION_COOKIE = 'rw_session';
+/** The opaque handle to the KV token bridge (see sync-store.ts). */
+export const SYNC_COOKIE = 'rw_sync';
 
 /** ~90 days — a member stays signed in across visits without re-authing. */
 const MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
+/** ~5 minutes — matches the token bridge TTL; the handle is single-use anyway. */
+const SYNC_MAX_AGE_SECONDS = 300;
 
 export type SessionState =
   { signedIn: true; athleteId: number; name: string } | { signedIn: false };
@@ -56,4 +60,19 @@ export async function buildSessionCookie(
 /** Build the `Set-Cookie` value that signs a member out (expires immediately). */
 export function clearSessionCookie(): string {
   return `${SESSION_COOKIE}=; ${ATTRS}; Max-Age=0`;
+}
+
+/** Build the short-lived cookie carrying the opaque token-bridge handle. */
+export function buildSyncCookie(syncId: string): string {
+  return `${SYNC_COOKIE}=${syncId}; ${ATTRS}; Max-Age=${SYNC_MAX_AGE_SECONDS}`;
+}
+
+/** Read the token-bridge handle from a request's `Cookie` header, if present. */
+export function readSyncId(cookieHeader: string | null): string | null {
+  return parseCookies(cookieHeader)[SYNC_COOKIE] || null;
+}
+
+/** Expire the sync-handle cookie (call 2 clears it once the token is consumed). */
+export function clearSyncCookie(): string {
+  return `${SYNC_COOKIE}=; ${ATTRS}; Max-Age=0`;
 }

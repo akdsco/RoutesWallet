@@ -1,21 +1,5 @@
 import type { D1Like } from '../../src/lib/store.ts';
-
-/**
- * The minimal Cloudflare Workers KV surface we use for the ephemeral token bridge
- * (TB-116): call 1 (the OAuth callback) `put`s the access token under a random
- * sync id with a short TTL; call 2 (`/connect/sync`) `get`s then `delete`s it.
- * The real `KVNamespace` satisfies this structurally, so no workers-types dep and
- * the sync logic stays testable against a fake.
- */
-export interface KVLike {
-  get(key: string): Promise<string | null>;
-  put(
-    key: string,
-    value: string,
-    options?: { expirationTtl?: number }
-  ): Promise<void>;
-  delete(key: string): Promise<void>;
-}
+import type { KVLike } from '../../src/lib/sync-store.ts';
 
 /**
  * Cloudflare Pages Function bindings. `DB` is the D1 route-pool database; `SYNC`
