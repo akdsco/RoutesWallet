@@ -1,23 +1,29 @@
-import { handleConnect } from '../../src/lib/connect-handler.ts';
+import { startConnect } from '../../src/lib/connect-handler.ts';
+import { exchangeToken, hasRequiredScope } from '../../src/lib/strava-api.ts';
+import { stashToken } from '../../src/lib/sync-store.ts';
 import {
-  exchangeToken,
-  fetchAllRoutes,
-  hasRequiredScope,
-} from '../../src/lib/strava-api.ts';
-import { buildLookups } from '../_lib/lookups.ts';
+  buildSessionCookie,
+  buildSyncCookie,
+} from '../../src/lib/session-cookie.ts';
 import type { PagesContext } from '../_lib/env.ts';
 
-/** Redirect home with a `connect=…` status the app reads to show a banner. */
-function home(request: Request, params: string): Response {
-  return Response.redirect(new URL(`/?${params}`, request.url).toString(), 302);
+/** Redirect home with a `connect=…` status and any identity/handle cookies. */
+function home(request: Request, params: string, cookies: string[]): Response {
+  const headers = new Headers({
+    location: new URL(`/?${params}`, request.url).toString(),
+  });
+  for (const c of cookies) headers.append('set-cookie', c);
+  return new Response(null, { status: 302, headers });
 }
 
 /**
- * GET /connect/callback — Strava's OAuth redirect target. Exchanges the code with
- * the client secret (server-side only), pulls the member's routes list-only,
- * ingests them (owner-stamped, region/country normalised) into the shared pool,
- * and redirects home with a status. The one piece the RN app does on-device that
- * a browser SPA can't — the secret token exchange — lives here.
+ * GET /connect/callback — Strava's OAuth redirect target (call 1 of the split
+ * flow). Exchanges the code with the client secret (server-side only), stashes
+ * the access token in KV under an opaque handle, and **redirects home instantly**
+ * signed in (`?connect=start`) — the several-second route pull is left to
+ * `/connect/sync` so the app can show progress instead of a frozen blank. Two
+ * cookies ride back: the signed identity (athlete id + name) and the short-lived
+ * opaque sync handle. No token is ever exposed to the browser.
  */
 export const onRequestGet = async ({
   request,
@@ -29,27 +35,29 @@ export const onRequestGet = async ({
   const error = url.searchParams.get('error');
 
   // The member denied access, or Strava sent no code.
-  if (error || !code) return home(request, 'connect=denied');
+  if (error || !code) return home(request, 'connect=denied', []);
   // Must include activity:read_all, else the routes pull can't work.
-  if (!hasRequiredScope(scope)) return home(request, 'connect=scope');
+  if (!hasRequiredScope(scope)) return home(request, 'connect=scope', []);
 
   try {
-    const { ingested, skipped } = await handleConnect(code, {
+    const { session, syncId } = await startConnect(code, {
       exchangeToken: (c) =>
         exchangeToken({
           code: c,
           clientId: env.STRAVA_CLIENT_ID,
           clientSecret: env.STRAVA_CLIENT_SECRET,
         }),
-      fetchRoutes: (token, athleteId) => fetchAllRoutes(token, athleteId),
-      lookups: buildLookups(),
-      store: env.DB,
+      stash: (bridge) => stashToken(env.SYNC, bridge),
     });
-    return home(request, `connect=ok&added=${ingested}&skipped=${skipped}`);
+    const cookies = [
+      await buildSessionCookie(session, env.SESSION_SECRET),
+      buildSyncCookie(syncId),
+    ];
+    return home(request, 'connect=start', cookies);
   } catch (err) {
     // Surface, don't swallow: log it and hand the member a visible ?connect=error
     // banner instead of a bare 500 they can't act on. An observable degrade.
     console.error('connect callback failed', err);
-    return home(request, 'connect=error');
+    return home(request, 'connect=error', []);
   }
 };

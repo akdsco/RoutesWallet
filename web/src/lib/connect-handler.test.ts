@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleConnect, type ConnectDeps } from './connect-handler.ts';
+import {
+  startConnect,
+  syncConnectedRoutes,
+  type StartDeps,
+  type SyncDeps,
+} from './connect-handler.ts';
 import type { StravaRouteInput } from './strava-route.ts';
 import type { D1Like } from './store.ts';
 
@@ -27,31 +32,67 @@ function fakeStore(): D1Like & { written: string[] } {
   return { written, prepare: () => prepared([]) };
 }
 
-const baseDeps = (over: Partial<ConnectDeps> = {}): ConnectDeps => ({
-  exchangeToken: vi.fn(() =>
-    Promise.resolve({ accessToken: 'AT', athleteId: 9 })
-  ),
-  fetchRoutes: vi.fn(() => Promise.resolve([route('a'), route('b')])),
-  lookups: { countyOf: () => 'Kent', countryOf: () => 'United Kingdom' },
-  store: fakeStore(),
-  ...over,
-});
+describe('startConnect (call 1 — exchange + stash, no pull)', () => {
+  it('exchanges the code, stashes the token, and returns the session + handle', async () => {
+    const deps: StartDeps = {
+      exchangeToken: vi.fn(() =>
+        Promise.resolve({
+          accessToken: 'AT',
+          athleteId: 9,
+          athleteName: 'Jo Rider',
+        })
+      ),
+      stash: vi.fn(() => Promise.resolve('SYNC-ID')),
+    };
 
-describe('handleConnect', () => {
-  it('exchanges the code, fetches routes, ingests and upserts them', async () => {
-    const store = fakeStore();
-    const deps = baseDeps({ store });
-    const res = await handleConnect('CODE', deps);
+    const res = await startConnect('CODE', deps);
 
     expect(deps.exchangeToken).toHaveBeenCalledWith('CODE');
+    expect(deps.stash).toHaveBeenCalledWith({
+      accessToken: 'AT',
+      athleteId: 9,
+    });
+    expect(res).toEqual({
+      session: { athleteId: 9, name: 'Jo Rider' },
+      syncId: 'SYNC-ID',
+    });
+  });
+
+  it('propagates a token-exchange failure (fail loud, no swallow)', async () => {
+    const deps: StartDeps = {
+      exchangeToken: vi.fn(() =>
+        Promise.reject(new Error('token exchange failed: 400'))
+      ),
+      stash: vi.fn(() => Promise.resolve('X')),
+    };
+    await expect(startConnect('CODE', deps)).rejects.toThrow(/token exchange/);
+    expect(deps.stash).not.toHaveBeenCalled();
+  });
+});
+
+describe('syncConnectedRoutes (call 2 — take handle, pull, ingest)', () => {
+  const baseSyncDeps = (over: Partial<SyncDeps> = {}): SyncDeps => ({
+    take: vi.fn(() => Promise.resolve({ accessToken: 'AT', athleteId: 9 })),
+    fetchRoutes: vi.fn(() => Promise.resolve([route('a'), route('b')])),
+    lookups: { countyOf: () => 'Kent', countryOf: () => 'United Kingdom' },
+    store: fakeStore(),
+    ...over,
+  });
+
+  it('takes the handle, fetches, ingests and upserts, returning counts', async () => {
+    const store = fakeStore();
+    const deps = baseSyncDeps({ store });
+    const res = await syncConnectedRoutes('SYNC-ID', deps);
+
+    expect(deps.take).toHaveBeenCalledWith('SYNC-ID');
     expect(deps.fetchRoutes).toHaveBeenCalledWith('AT', 9);
-    expect(res).toMatchObject({ ingested: 2, skipped: 0, athleteId: 9 });
+    expect(res).toEqual({ ingested: 2, skipped: 0 });
     expect(store.written.sort()).toEqual(['a', 'b']);
   });
 
   it('counts skipped lineless routes and only upserts the usable ones', async () => {
     const store = fakeStore();
-    const deps = baseDeps({
+    const deps = baseSyncDeps({
       store,
       fetchRoutes: vi.fn(() =>
         Promise.resolve([
@@ -60,17 +101,14 @@ describe('handleConnect', () => {
         ])
       ),
     });
-    const res = await handleConnect('CODE', deps);
-    expect(res).toMatchObject({ ingested: 1, skipped: 1 });
+    const res = await syncConnectedRoutes('SYNC-ID', deps);
+    expect(res).toEqual({ ingested: 1, skipped: 1 });
     expect(store.written).toEqual(['good']);
   });
 
-  it('propagates a token-exchange failure (fail loud, no swallow)', async () => {
-    const deps = baseDeps({
-      exchangeToken: vi.fn(() =>
-        Promise.reject(new Error('token exchange failed: 400'))
-      ),
-    });
-    await expect(handleConnect('CODE', deps)).rejects.toThrow(/token exchange/);
+  it('returns null for an expired/invalid handle (no pull, caller 401s)', async () => {
+    const deps = baseSyncDeps({ take: vi.fn(() => Promise.resolve(null)) });
+    expect(await syncConnectedRoutes('SYNC-ID', deps)).toBeNull();
+    expect(deps.fetchRoutes).not.toHaveBeenCalled();
   });
 });
