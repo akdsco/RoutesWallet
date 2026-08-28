@@ -267,8 +267,9 @@ export function RouteMap({
     if (!map) return;
     const prev = tileRef.current;
     // CARTO's raster basemaps need a free API key (set in Cloudflare env for
-    // prod, .env.local for dev); tileConfig falls back to keyless tiles + warns
-    // when it's absent. See src/lib/basemaps.ts.
+    // prod, .env.local for dev); when it's absent tileConfig still requests
+    // CARTO unauthenticated (visible "API KEY REQUIRED" watermark) and logs an
+    // error — the misconfiguration is surfaced, not masked. See src/lib/basemaps.ts.
     const cfg = tileConfig(
       basemap,
       theme,

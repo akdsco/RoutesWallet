@@ -136,9 +136,11 @@ Preview) and, for local dev, in `web/.env.local` (gitignored; see
 `web/.env.example`). Get a key free — email + domain, no account — at
 https://carto.com/basemaps/apikey. It's a public, domain-restricted basemap key
 (exposed in client tile requests by design), kept out of the repo, not a private
-secret. **If it's unset the Standard basemap falls back to keyless CyclOSM tiles
-and logs a warning** — no watermark ships, but the intended Voyager/Dark Matter
-look only returns once the key is set.
+secret. **If it's unset the Standard basemap renders unauthenticated CARTO tiles
+— the "API KEY REQUIRED" watermark shows and an error is logged** — so a missing
+key (e.g. on a Preview deploy where the var wasn't set) is *visible* and gets
+fixed, rather than being masked behind a different basemap that lies about the
+selected style. Set the key for **both** the Production and Preview scopes above.
 
 Any future keyed service (a paid geocoder, or the Supabase anon key) follows the
 same pattern: put it in Cloudflare Pages env and read it via Vite's

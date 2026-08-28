@@ -97,11 +97,12 @@ export const DEFAULT_BASEMAP: BasemapId = 'standard';
  *
  * CARTO now requires a free API key for its raster basemaps; keyless requests
  * are watermarked "API KEY REQUIRED". So the Standard (CARTO) tiles are
- * authenticated with the key when it is set. When it is NOT set, a keyless CARTO
- * request would ship that watermark to visitors — so we fall back to the keyless
- * CyclOSM tiles for the Standard slot and warn loudly, making the missing key
- * observable in logs rather than defacing the map. CyclOSM is already keyless and
- * ignores the key entirely.
+ * authenticated with the key when it is set (`?key=`). When it is NOT set we
+ * deliberately do NOT mask the problem: Standard still requests CARTO — so the
+ * "API KEY REQUIRED" watermark renders — and we `console.error` loudly. A missing
+ * key is a misconfiguration we WANT visible in review/prod so it gets fixed; the
+ * old CyclOSM fallback hid it behind a plausible map that lied about the selected
+ * style. Surface the error, never mask it (see ~/.claude/CLAUDE.md, TB-99).
  */
 export function tileConfig(
   id: BasemapId,
@@ -109,33 +110,26 @@ export function tileConfig(
   apiKey?: string
 ): TileConfig {
   if (id === 'standard') {
-    if (apiKey) {
-      const def = BASEMAPS.standard;
-      return {
-        // CARTO authenticates raster tiles with `?key=` (NOT `?api_key=`, which
-        // it silently ignores → still watermarked). Query string, not a Leaflet
-        // {…} placeholder, so tile-coordinate substitution ({s}/{z}/{x}/{y}/{r})
-        // is untouched.
-        url: `${def.urls[theme]}?key=${apiKey}`,
-        attribution: def.attribution,
-        subdomains: def.subdomains,
-        maxZoom: def.maxZoom,
-      };
+    const def = BASEMAPS.standard;
+    if (!apiKey) {
+      // No key — surface it loudly rather than swapping in a different basemap.
+      // The unauthenticated CARTO request below renders CARTO's own watermark,
+      // making the misconfiguration obvious on the map as well as in logs.
+      console.error(
+        'VITE_CARTO_BASEMAP_KEY is not set — the Standard basemap needs a free CARTO ' +
+          'key (https://carto.com/basemaps/apikey). Rendering unauthenticated CARTO ' +
+          'tiles, which show an "API KEY REQUIRED" watermark until the key is set.'
+      );
     }
-    // No key configured — degrade to keyless CyclOSM tiles so no watermark can
-    // appear, and surface the misconfiguration (observable, not a silent
-    // swallow). Prod sets the key via Cloudflare env; dev via .env.local.
-    console.warn(
-      'VITE_CARTO_BASEMAP_KEY is not set — the Standard basemap needs a free CARTO ' +
-        'key (https://carto.com/basemaps/apikey). Falling back to keyless CyclOSM ' +
-        'tiles to avoid the "API KEY REQUIRED" watermark.'
-    );
-    const fb = BASEMAPS.cyclosm;
     return {
-      url: fb.urls[theme],
-      attribution: fb.attribution,
-      subdomains: fb.subdomains,
-      maxZoom: fb.maxZoom,
+      // CARTO authenticates raster tiles with `?key=` (NOT `?api_key=`, which it
+      // silently ignores → still watermarked). Query string, not a Leaflet {…}
+      // placeholder, so tile-coordinate substitution ({s}/{z}/{x}/{y}/{r}) is
+      // untouched. Keyless → no query appended → the watermark shows (intended).
+      url: apiKey ? `${def.urls[theme]}?key=${apiKey}` : def.urls[theme],
+      attribution: def.attribution,
+      subdomains: def.subdomains,
+      maxZoom: def.maxZoom,
     };
   }
   const def = BASEMAPS[id];
