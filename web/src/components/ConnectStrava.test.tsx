@@ -26,10 +26,13 @@ describe('ConnectStrava', () => {
     expect(url.searchParams.get('redirect_uri')).toContain('/connect/callback');
   });
 
-  it('renders nothing when the client id is not configured', () => {
+  it('falls back to the committed default client id when no env override is set', () => {
+    // Cloudflare Pages [vars] don't reach the Vite build, so the public client id
+    // is committed as a default; an env var overrides it when present.
     vi.stubEnv('VITE_STRAVA_CLIENT_ID', '');
-    const { container } = render(<ConnectStrava />);
-    expect(container).toBeEmptyDOMElement();
+    render(<ConnectStrava />);
+    const url = new URL(screen.getByRole('link').getAttribute('href')!);
+    expect(url.searchParams.get('client_id')).toBe('136750');
   });
 
   it('relabels the CTA once this browser has already contributed', () => {

@@ -19,11 +19,19 @@ const STATUS_COPY: Record<NonNullable<ConnectStatus>['state'], string> = {
  * full-page navigation to Strava's consent screen), so it's a plain anchor — no
  * faked JS navigation. Shows the callback's `?connect=…` status and, on success,
  * sets the browser "already contributed" flag so a return visit relabels the CTA
- * instead of re-pulling. Renders nothing when the client id isn't configured
- * (e.g. local dev without the env var).
+ * instead of re-pulling.
  */
+// The Strava client id is public — it appears in the authorize URL, so it is not a
+// secret. It is committed as the default because Cloudflare Pages `[vars]` reach the
+// Function runtime but NOT the Vite build, so a build-time `VITE_STRAVA_CLIENT_ID`
+// can't be sourced from there; an env var still overrides it (e.g. a separate dev
+// app). TB-116 will move connect config to a runtime source.
+const DEFAULT_STRAVA_CLIENT_ID = '136750';
+
 export function ConnectStrava() {
-  const clientId = import.meta.env.VITE_STRAVA_CLIENT_ID as string | undefined;
+  const clientId =
+    (import.meta.env.VITE_STRAVA_CLIENT_ID as string | undefined) ||
+    DEFAULT_STRAVA_CLIENT_ID;
   const [contributed, setContributed] = useState(false);
   const [status, setStatus] = useState<ConnectStatus>(null);
 
@@ -33,8 +41,6 @@ export function ConnectStrava() {
     setStatus(s);
     setContributed(hasContributed());
   }, []);
-
-  if (!clientId) return null;
 
   return (
     <div className="flex flex-col gap-1.5">
