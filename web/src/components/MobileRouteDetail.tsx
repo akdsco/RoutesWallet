@@ -3,6 +3,7 @@ import type { Route } from '../types.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
+import { contributorName, stravaProfileUrl } from '../lib/contributor.ts';
 import { TrustGlyph } from './TrustGlyph.tsx';
 
 type Props = {
@@ -44,6 +45,8 @@ export function MobileRouteDetail({
   const gain = formatGain(r.elevation_gain_m);
   const download = isGpxLink(r.link);
   const hasNotes = !!(r.cafe || r.notes);
+  const owner = contributorName(r.owner_name);
+  const ownerProfile = stravaProfileUrl(r.owner_strava_id);
 
   return (
     <div
@@ -108,6 +111,28 @@ export function MobileRouteDetail({
           </>
         )}
       </div>
+
+      {/* Contributor attribution (§TB-114): who shared this route. Name links to
+          their Strava profile when the athlete id is usable; degrades to plain
+          text (never a junk link) otherwise. */}
+      {owner && (
+        <p className="text-[12.5px] text-muted">
+          by{' '}
+          {ownerProfile ? (
+            <a
+              href={safeHref(ownerProfile)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`View ${owner} on Strava`}
+              className="font-medium text-text-2 underline decoration-line-2 underline-offset-2"
+            >
+              {owner}
+            </a>
+          ) : (
+            <span className="font-medium text-text-2">{owner}</span>
+          )}
+        </p>
+      )}
 
       <div className="border-t border-line-2 pt-2 text-[12.5px] leading-relaxed">
         {hasNotes ? (
