@@ -64,27 +64,31 @@ the token fast, sets the identity cookie, and redirects home **instantly**; the
 several-second route pull moves to a **separate sync step the UI drives and shows
 a spinner for**, then names the count.
 
-**KEY DECISION — how the sync step reaches the Strava access token** (see the AC
-"no Strava secret or token is exposed to the browser"). Two viable shapes; the
-increments below are written for **Approach A** and note the Approach-B delta.
-This is the one point I want your call on before building.
+**DECIDED — token bridge = server-side KV + an opaque handle (the "normal
+backend" / BFF pattern).** The redirect and the pull are two backend calls
+(callback = call 1, `/connect/sync` = call 2); the single-use OAuth `code` is
+exchanged in call 1, so the token must bridge to call 2 **server-side**, with the
+browser holding only an opaque id — never the token itself:
 
-- **Approach A (recommended) — client-driven sync, token in a short-lived
-  httpOnly cookie.** Callback also sets an encrypted, httpOnly, ~5-min `rw_sync`
-  cookie carrying the access token and redirects `?connect=start`. The app (signed
-  in + `start`) shows a progress indicator and `POST`s `/connect/sync`; that
-  Function reads the token from its httpOnly cookie, pulls + ingests, returns
-  `{ added, skipped }`, and expires the cookie. **Pros:** a real spinner for the
-  true duration and an **authoritative** added-count (nails AC1 + AC2); token is
-  httpOnly (never readable by page JS) and single-use. **Con:** the token
-  transits the cookie jar briefly — defensible as "not exposed to the browser"
-  (no script can read it), but it is the looser reading of that AC.
-- **Approach B — server background ingest, no token anywhere in the browser.**
-  Callback runs the pull via `context.waitUntil(...)` after redirecting instantly
-  (`?connect=syncing`); the app shows "Syncing in the background…" and refetches
-  `/api/routes` until its owned routes appear. **Pros:** strictly no token in the
-  browser (tightest AC6). **Con:** no crisp live progress or authoritative count —
-  AC2's "unmissable result naming how many" becomes best-effort (poll the pool).
+- **Call 1 (`/connect/callback`):** exchange the `code` → write
+  `{ accessToken, athleteId }` into **KV** under a random `sync-id` with a short
+  TTL (~5 min) → set the signed identity cookie `{ athleteId, name }` **and** an
+  httpOnly cookie holding only the `sync-id` → redirect home instantly
+  (`?connect=start`). No pull here.
+- **Call 2 (`POST /connect/sync`):** read the `sync-id` cookie → load the token
+  from KV → pull + ingest → return `{ added, skipped }` → **delete the KV entry**.
+
+The browser never holds the Strava token (only opaque handles), giving the
+strict AC6 reading *and* a real progress spinner + authoritative count (AC1 +
+AC2). Rejected alternatives: token in an httpOnly cookie (token transits the
+browser — looser AC6); token in a D1 row (a stored-token *table* — against the
+no-stored-tokens / no-per-user-table scope). Deliberate twist vs a normal
+backend: we **throw the token away after the one pull** — persistent *identity*,
+not persistent *capability* (no refresh, no long-term token store).
+
+**Two new Cloudflare bindings** the code will expect (set in the dashboard /
+`wrangler`, never committed): a **KV namespace** (`SYNC`) and a **`SESSION_SECRET`**
+var (HMAC key for the identity cookie).
 
 ## Increments (test-first)
 
@@ -107,21 +111,23 @@ This is the one point I want your call on before building.
    secret)` handler-lib returns `{signedIn:true, athleteId, name}` for a valid
    cookie and `{signedIn:false}` for none/invalid; logout returns a `Set-Cookie`
    that expires the session. → impl `functions/api/me.ts`, `functions/connect/logout.ts`,
-   sharing a `_lib/session-cookie.ts` reader; add `SESSION_SECRET` to `env.ts`.
+   sharing a `_lib/session-cookie.ts` reader; add `SESSION_SECRET` + the `SYNC` KV
+   namespace to `env.ts`.
 
-4. **Callback: instant redirect + identity cookie + sync-token cookie** (→ AC1,
-   AC6; Approach A). test: given a stub token exchange, the callback issues a 302
-   to `/?connect=start`, sets the signed identity cookie and the httpOnly `rw_sync`
-   cookie, and does **not** pull routes. → impl refactor `connect/callback.ts` to
-   stop calling the ingest; set cookies; redirect `start`. (Approach B: no
-   `rw_sync`; `context.waitUntil(ingest)`; redirect `syncing`.)
+4. **Callback: exchange → stash token in KV → set cookies → instant redirect**
+   (→ AC1, AC6). test: given a stub token exchange + a fake KV, the callback
+   writes `{accessToken, athleteId}` to KV under a random `sync-id` (with a TTL),
+   sets the signed identity cookie + the httpOnly `sync-id` cookie, issues a 302
+   to `/?connect=start`, and does **not** pull routes. → impl refactor
+   `connect/callback.ts`: stop calling the ingest; KV put; set cookies; redirect
+   `start`.
 
-5. **`/connect/sync` ingest endpoint** (→ AC1, AC2, AC6; Approach A). test: the
-   sync handler-lib, given the `rw_sync` token cookie + injected boundaries,
-   pulls + ingests and returns `{ added, skipped }`, then clears the cookie;
-   missing/expired cookie → 401 (not a silent success). → impl
-   `functions/connect/sync.ts` reusing the existing `handleConnect` ingest half.
-   (Approach B: this increment folds into #4's `waitUntil`.)
+5. **`/connect/sync` ingest endpoint** (→ AC1, AC2, AC6). test: the sync
+   handler-lib, given a `sync-id` cookie + a fake KV holding the token + injected
+   boundaries, loads the token, pulls + ingests, returns `{ added, skipped }`, and
+   **deletes** the KV entry; a missing/expired `sync-id` (no KV entry) → 401 (not
+   a silent success). → impl `functions/connect/sync.ts` reusing the existing
+   `handleConnect` ingest half.
 
 6. **ConnectStrava rework: signed-in UI + progress + unmissable count** (→ AC1,
    AC2, AC3, AC5). test (`ConnectStrava.test.tsx`, mock `fetch`): when `/api/me`
@@ -147,8 +153,11 @@ This is the one point I want your call on before building.
 
 ## Notes
 
-- **New env var:** `SESSION_SECRET` (Cloudflare Pages var, never committed) — the
-  HMAC key for the session cookie. Rotating it signs everyone out; acceptable.
+- **New Cloudflare bindings (never committed):** a **KV namespace** `SYNC` (the
+  ephemeral token bridge) and a **`SESSION_SECRET`** Pages var (HMAC key for the
+  identity cookie; rotating it signs everyone out — acceptable). I'll wire the
+  code to expect both; you create them in the dashboard / `wrangler`. For local
+  `wrangler pages dev`, a KV binding + a dev `SESSION_SECRET` are needed too.
 - **Cookies on the OAuth return:** the callback is a top-level GET redirect, so
   `SameSite=Lax; Secure; HttpOnly` cookies are set correctly on return, and the
   subsequent same-site `POST /connect/sync` sends them.
@@ -159,6 +168,8 @@ This is the one point I want your call on before building.
 - **Out of scope (say no):** relational user/club model, refresh-token storage,
   long-lived token persistence, multi-device session sync, per-route editing,
   share-consent. Anything here → stop and ask.
-- **Risk:** the Approach-A token-in-httpOnly-cookie reading of AC6 — the decision
-  above. If you prefer the strict reading, we take Approach B and accept a
-  best-effort count.
+- **Risk:** KV is eventually-consistent, but call 1 → call 2 is same-session and
+  seconds apart on one region — fine for a 5-min TTL handle. The `sync-id` cookie
+  must be `SameSite=Lax` so it survives the OAuth top-level GET return.
+- **Drift note:** the `SYNC` KV namespace is one new binding (infra), consciously
+  accepted as the "proper backend" token bridge — not a new data model.
