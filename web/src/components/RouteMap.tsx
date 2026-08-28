@@ -266,7 +266,14 @@ export function RouteMap({
     const map = mapRef.current;
     if (!map) return;
     const prev = tileRef.current;
-    const cfg = tileConfig(basemap, theme);
+    // CARTO's raster basemaps need a free API key (set in Cloudflare env for
+    // prod, .env.local for dev); tileConfig falls back to keyless tiles + warns
+    // when it's absent. See src/lib/basemaps.ts.
+    const cfg = tileConfig(
+      basemap,
+      theme,
+      import.meta.env.VITE_CARTO_BASEMAP_KEY
+    );
     const next = L.tileLayer(cfg.url, {
       attribution: cfg.attribution,
       subdomains: cfg.subdomains,
