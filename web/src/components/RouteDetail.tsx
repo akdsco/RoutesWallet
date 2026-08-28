@@ -4,7 +4,7 @@ import { routeThumbnail } from '../lib/thumbnail.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
 import { safeHref } from '../lib/sanitize.ts';
-import { contributorName, stravaProfileUrl } from '../lib/contributor.ts';
+import { ContributorByline } from './ContributorByline.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
 
 type Props = {
@@ -36,8 +36,6 @@ export function RouteDetail({
   const pts = routeThumbnail(r.geometry.coordinates, 150, 104, 10);
   const [sx, sy] = (pts.split(' ')[0] ?? '0,0').split(',');
   const gain = formatGain(r.elevation_gain_m);
-  const owner = contributorName(r.owner_name);
-  const ownerProfile = stravaProfileUrl(r.owner_strava_id);
 
   return (
     <div
@@ -118,27 +116,10 @@ export function RouteDetail({
           <span className="self-start">
             <SourceBadge source={r.source} />
           </span>
-          {/* Contributor attribution (§TB-114): who shared this route. The name
-              links to their Strava profile when we have a usable athlete id; a
-              missing/garbage id degrades to plain text (never a junk link). */}
-          {owner && (
-            <p className="text-[12.5px] text-muted">
-              by{' '}
-              {ownerProfile ? (
-                <a
-                  href={safeHref(ownerProfile)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`View ${owner} on Strava`}
-                  className="font-medium text-text-2 underline decoration-line-2 underline-offset-2 hover:text-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sel"
-                >
-                  {owner}
-                </a>
-              ) : (
-                <span className="font-medium text-text-2">{owner}</span>
-              )}
-            </p>
-          )}
+          <ContributorByline
+            ownerName={r.owner_name}
+            ownerStravaId={r.owner_strava_id}
+          />
         </div>
 
         <a
