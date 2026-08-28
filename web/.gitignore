@@ -8,7 +8,18 @@ dist/
 # enriched routes.geojson is the committed output, not the raw GPX inputs.
 scripts/non-strava-gpx/*.gpx
 
+# Generated D1 seed SQL (TB-110) — a ~7MB mirror of public/routes.geojson,
+# rebuilt at deploy time by `npm run build:seed-sql`. The generator is committed;
+# the artifact is not.
+migrations/seed-routes.sql
+
 # Playwright
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Cloudflare local dev: secrets for `wrangler pages dev` + its local D1 state.
+# NEVER commit — the Strava client secret lives here for local testing only.
+.dev.vars
+.wrangler/
+wrangler.local.toml

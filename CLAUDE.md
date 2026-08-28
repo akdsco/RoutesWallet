@@ -8,23 +8,39 @@ code). Repo-level workflow rules come from the user-level `~/.claude/CLAUDE.md`.
 - **`mobile/`** — the parked Expo/React Native app. Do not touch it unless asked; it
   has its own (double-quote) style and is excluded from Prettier.
 
-## web/ — frozen v1 scope
+## web/ — scope (v2: member-contributed pool)
 
-v1 is **one screen, three behaviours**. Nothing else ships in v1:
+The core screen is **one map, three behaviours**:
 
 1. Show **all** the club's routes on a map.
 2. Search **"near \<place\>"** → filter to routes whose line passes near that point.
 3. Click a route → open its **existing link** (Strava/GPX). The exit does not change.
 
-### Non-goals — do NOT build these in v1 (say no and stop)
+**v2 (TB-110) adds a fourth: members contribute their own routes.** A member clicks
+**Connect Strava**, authorises, and their routes are pulled (list-only), attributed,
+region/country-normalised, and appended to a **shared pool** every visitor then sees.
+This is the live direction we build forward on — not a throwaway. It deliberately
+lifted the old v1 "no backend/no auth/no database" freeze for this one narrow path;
+see the amended invariants below.
 
-Accounts / login · a mobile app · send-to-device · follow / social graph · cafe or
-winter-friendly metadata · monetisation / paywalls · **any backend or server**.
+### Non-goals — still out of scope (say no and stop)
+
+A relational user/club membership model · a mobile app · send-to-device · follow /
+social graph · winter-friendly metadata · monetisation / paywalls · RideWithGPS
+member import · share-consent flows · per-user route editing. The v2 backend is
+deliberately the **thinnest** thing that proves the aggregation wow — one dumb D1
+table + a Strava login — **not** a platform. Anything beyond that narrow path →
+**stop and ask**.
 
 ### Architecture invariants
 
-- **Static site.** No server, no database, no auth. Data is one `routes.geojson`
-  file served from the CDN. No secrets in the repo.
+- **Static site + a thin serverless edge for the member path.** The app is still a
+  static Vite bundle on Cloudflare Pages; the only server code is the two Cloudflare
+  Pages **Functions** in `web/functions/` (`/api/routes` reads the pool, and
+  `/connect/callback` does the Strava OAuth token exchange + ingest). State is one
+  **D1** table (`web/migrations/`), seeded from `routes.geojson`. **Still no secrets
+  in the repo** — the Strava client secret + D1 binding live in Cloudflare env vars
+  only. Do **not** grow this into a database schema, an ORM, or a user/club model.
 - Stack is fixed: **Vite + React + TypeScript (strict), Leaflet + OSM raster tiles,
   Turf.js** for geo maths. Do not swap the map lib or add a framework.
 - **Never hand-roll geo maths** — distance/near-point goes through Turf.

@@ -1,0 +1,11 @@
+# Local Cloudflare Pages Functions secrets — `wrangler pages dev` reads `.dev.vars`.
+# Copy this to `.dev.vars` (gitignored) and fill in from your Strava API app at
+# https://www.strava.com/settings/api. The client id is public; the SECRET is not
+# — it stays in `.dev.vars`, never committed, never in production source.
+STRAVA_CLIENT_ID=
+STRAVA_CLIENT_SECRET=
+
+# The FRONTEND authorize URL also needs the client id, at Vite dev/build time.
+# That is a separate mechanism (Vite `import.meta.env`, not wrangler), so put the
+# SAME client id in `.env.local` (gitignored via *.local):
+#   VITE_STRAVA_CLIENT_ID=<same client id>

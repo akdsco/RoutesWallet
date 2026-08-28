@@ -1,8 +1,10 @@
 import type { LineString } from 'geojson';
 
 /**
- * The route data contract. Backed by one static `routes.geojson` — no database,
- * no server. The map, the search, and routes.geojson all depend on this shape.
+ * The route data contract. The shape is identical whether a route comes from the
+ * seeded `routes.geojson` or a member's Strava contribution served via the
+ * `/api/routes` pool (TB-110) — one Feature shape, one loader. The map, the
+ * search, and the D1 store all depend on it.
  */
 
 /**

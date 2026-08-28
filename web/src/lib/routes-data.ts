@@ -82,7 +82,12 @@ export function featuresToRoutes(fc: FeatureCollection): Route[] {
   return out;
 }
 
-export async function loadRoutes(url = '/routes.geojson'): Promise<Route[]> {
+/**
+ * The live route source is the shared member pool served by the /api/routes
+ * Cloudflare Function (seeded 125 club routes + every member-contributed route).
+ * The baked-in /routes.geojson survives only as the D1 seed source on disk.
+ */
+export async function loadRoutes(url = '/api/routes'): Promise<Route[]> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load routes: ${res.status}`);
   return featuresToRoutes((await res.json()) as FeatureCollection);

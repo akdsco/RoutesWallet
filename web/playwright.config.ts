@@ -56,6 +56,10 @@ export default defineConfig({
   webServer: {
     command: `npm run build && npm run preview -- --port ${PORT} --strictPort`,
     port: PORT,
+    // A test client id so the "Connect Strava" CTA renders in the built bundle
+    // (it's hidden when unset). Never a real secret — the client id is public and
+    // only shapes the authorize URL; the secret lives server-side in the Function.
+    env: { VITE_STRAVA_CLIENT_ID: 'e2e-strava-client' },
     // Never reuse an existing server — always build + preview fresh, so the
     // browser can never run a stale `dist/` from a leftover preview. Local
     // behaviour then matches CI exactly. Build is ~1s; the safety is worth it.

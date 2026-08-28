@@ -1,0 +1,12 @@
+{
+  // Typecheck the Cloudflare Pages Functions too. The base tsconfig only includes
+  // `src`, so without this the functions ship un-typechecked (Pages' esbuild runs
+  // them with no type checking). Same strict options as the app; different file
+  // set. Functions run in the Workers runtime but use only DOM-lib globals
+  // (Request/Response/URL) plus our own typed `Env`, so no workers-types dep.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["functions"]
+}

@@ -3,16 +3,18 @@
 How the web app is hosted, what it depends on at runtime, and where a database
 slots in later. Written so the deploy story doesn't live only in someone's head.
 
-> **Status:** not yet deployed. Recommended host is **Cloudflare Pages** (see
-> §3). Target domain: `routeswallet.app`.
+> **Status:** deployed & live on **Cloudflare Pages** (`*.pages.dev`; custom
+> domain `routeswallet.app` still optional-later). **v2 (TB-110)** adds a thin
+> serverless edge — two Pages Functions + one D1 table — for the member-contributed
+> route pool; the pivot §8 anticipated has been taken (see §8a for the runbook).
 
 ## 1. What it is
 
-A **static single-page app** — Vite + React + TypeScript, Leaflet + Turf.
-There is **no backend, no database, no auth** (v1). `npm run build` produces
-plain static files; a CDN serves them. Nothing runs on a server, so there is
-nothing to keep warm, scale, or patch — a static CDN serves 50 concurrent users
-as easily as 5.
+A **static single-page app** — Vite + React + TypeScript, Leaflet + Turf. The app
+itself is still 100% static files a CDN serves — nothing to keep warm, scale, or
+patch. The **only** server code is the thin v2 member-pool edge (two Cloudflare
+Pages Functions + one D1 table; §8a); the SPA still has no backend of its own and
+the Strava login is the only auth.
 
 Route data ships **as static files in the bundle** today:
 `public/routes.geojson` (~6 MB, ~1–2 MB after the CDN's brotli),
@@ -126,27 +128,87 @@ rest of the app is untouched. Keep that seam clean.
 Likely first DB uses: **user accounts, community route submissions, and real
 ride-counts for the heatmap** (which is why Supabase's bundled auth is appealing).
 
+## 8a. TB-110 realised — member pool on D1 + Pages Functions
+
+We took the **All-Cloudflare** column (D1 + Functions), not Supabase: one vendor,
+same origin, no second dashboard. The `loadRoutes()` seam above is exactly what
+moved — its default URL is now `/api/routes` (the pool), with `routes.geojson`
+kept only as the D1 **seed** source.
+
+**Pieces:**
+
+- `web/functions/api/routes.ts` → `GET /api/routes`: reads the D1 pool, returns GeoJSON.
+- `web/functions/connect/callback.ts` → `GET /connect/callback`: Strava OAuth
+  redirect target — server-side token exchange (the client secret), list-only route
+  pull, region/country normalise (bundled `functions/assets/uk-counties.json`),
+  upsert into D1. Errors log + redirect home `?connect=error` (never a bare 500).
+- `web/migrations/0001_routes.sql` (schema) + `npm run build:seed-sql` →
+  `migrations/seed-routes.sql` (the 125 club routes; gitignored, ~7 MB).
+- `web/wrangler.toml` binds the D1 database as `DB`.
+
+**One-time setup:**
+
+```
+cd web
+npx wrangler d1 create routeswallet
+npx wrangler d1 execute routeswallet --file=./migrations/0001_routes.sql
+npm run build:seed-sql
+npx wrangler d1 execute routeswallet --file=./migrations/seed-routes.sql
+```
+
+In the Pages project: **bind the D1 database as `DB`** (Settings → Functions → D1
+database bindings) and set the env vars in §9. The binding is set in the dashboard,
+**not** in `wrangler.toml` — a committed placeholder `database_id` fails the Pages
+deploy's binding validation, so `wrangler.toml` deliberately carries no `[[d1_databases]]`
+block. (For local `wrangler pages dev`, pass `--d1 DB=<database_id>`.)
+Register a **Strava API application** with the Authorization Callback Domain set to
+the Pages domain (e.g. `routeswallet.pages.dev`).
+
+**Bundle note:** the Function bundles only the 427 KB counties asset (region), and
+derives country as "United Kingdom or null" — the 1.6 MB world-country file stays
+out, so overseas member routes get `country: null` (seeded club routes keep their
+real country from the offline normalise). Full-res geometry + the elevation
+**profile** for member routes is a deferred GPX-enrichment follow-up.
+
+**Teardown (it's a lean experiment):** delete the Pages env vars + D1 binding,
+`npx wrangler d1 delete routeswallet`, remove `web/functions/`, and revert the
+`loadRoutes()` default to `/routes.geojson`. The static app returns untouched.
+
 ## 9. Environment & secrets
 
-**`VITE_CARTO_BASEMAP_KEY`** — the one env var today. CARTO now requires a free
-API key for its raster basemaps and watermarks keyless requests ("API KEY
-REQUIRED"), so the "Standard" basemap is authenticated with it. Set it in
-**Cloudflare Pages → Settings → environment variables** (Production **and**
-Preview) and, for local dev, in `web/.env.local` (gitignored; see
-`web/.env.example`). Get a key free — email + domain, no account — at
-https://carto.com/basemaps/apikey. It's a public, domain-restricted basemap key
-(exposed in client tile requests by design), kept out of the repo, not a private
-secret. **If it's unset the Standard basemap renders unauthenticated CARTO tiles
-— the "API KEY REQUIRED" watermark shows and an error is logged** — so a missing
-key (e.g. on a Preview deploy where the var wasn't set) is *visible* and gets
-fixed, rather than being masked behind a different basemap that lies about the
-selected style. Set the key for **both** the Production and Preview scopes above.
+Two keyed concerns today: the Strava connect (TB-110) and the CARTO basemap.
+
+> ⚠️ **Env-var mechanism note (TB-110).** Introducing `wrangler.toml` changed how
+> Pages sources env vars: plaintext vars are managed in `wrangler.toml [vars]` and
+> the dashboard then manages only encrypted **Secrets**. Crucially, `[vars]` reach
+> the **Function runtime** but **not** the Vite **build**, so build-time `VITE_*`
+> vars have no working source via `[vars]`. This is why the Strava client id is a
+> committed default and why the dashboard-set `VITE_CARTO_BASEMAP_KEY` stops
+> applying — **to be reconciled before merge** (bind D1 in the dashboard and drop
+> the committed `wrangler.toml`, or find a build-time var path that coexists).
+
+**Strava (TB-110).**
+
+- `STRAVA_CLIENT_ID` — public Strava app id; read by the Function at runtime
+  (`wrangler.toml [vars]`). The frontend uses a **committed public default**
+  (`ConnectStrava.tsx`) because build-time `VITE_` vars aren't sourced from `[vars]`.
+- `STRAVA_CLIENT_SECRET` — **server-side only**; set as an encrypted **Secret** in
+  the Pages dashboard. Read solely in `functions/connect/callback.ts`. Never exposed.
+- `DB` — the D1 binding (in `wrangler.toml`).
+
+**CARTO basemap.** `VITE_CARTO_BASEMAP_KEY` — CARTO now requires a free API key for
+its raster basemaps and watermarks keyless requests ("API KEY REQUIRED"), so the
+"Standard" basemap is authenticated with it. Get one free (email + domain, no
+account) at https://carto.com/basemaps/apikey; set it Production **and** Preview,
+and in `web/.env.local` for local dev. It's a public, domain-restricted basemap key
+(exposed in client tile requests by design), not a private secret. If unset, the
+Standard basemap shows the "API KEY REQUIRED" watermark and logs an error — a
+*visible*, fixable miss. It is a build-time `VITE_` var, so it is subject to the
+mechanism note above.
 
 Any future keyed service (a paid geocoder, or the Supabase anon key) follows the
-same pattern: put it in Cloudflare Pages env and read it via Vite's
-`import.meta.env.VITE_*` (only `VITE_`-prefixed vars reach the browser). The
-Supabase _anon_ key is safe client-side **because** row-level security enforces
-access — never ship a service-role key.
+same pattern; the Supabase _anon_ key is safe client-side **because** row-level
+security enforces access — never ship a service-role key.
 
 ## 10. CI vs deploy
 
