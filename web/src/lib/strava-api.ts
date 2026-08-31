@@ -53,7 +53,13 @@ export async function exchangeToken(
     }),
   });
   if (!res.ok) {
-    throw new Error(`Strava token exchange failed: ${res.status}`);
+    // Fail loud + explicit: carry Strava's own error body so the log says WHY
+    // (a bad client_secret reads differently from a spent/invalid code), instead
+    // of a bare status the operator can't act on. Truncated to keep logs sane.
+    const body = await res.text().catch(() => '');
+    throw new Error(
+      `Strava token exchange failed: ${res.status} ${body.slice(0, 300)}`.trim()
+    );
   }
   const data = (await res.json()) as {
     access_token?: string;

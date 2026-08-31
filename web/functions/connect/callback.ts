@@ -1,5 +1,6 @@
 import { startConnect } from '../../src/lib/connect-handler.ts';
 import { exchangeToken, hasRequiredScope } from '../../src/lib/strava-api.ts';
+import { missingConnectConfig } from '../../src/lib/connect-config.ts';
 import { stashToken } from '../../src/lib/sync-store.ts';
 import {
   buildSessionCookie,
@@ -65,6 +66,19 @@ export const onRequestGet = async ({
   if (!hasRequiredScope(scope)) {
     console.error('connect callback: missing required scope', { scope });
     return home(request, 'connect=scope', [clearStateCookie()]);
+  }
+  // Fail loud on a PERMANENT server misconfiguration (a missing/blank secret) —
+  // surfaced distinctly from a transient Strava error, so a member is told it's
+  // unavailable (not "try again"), and the operator sees exactly what's unset.
+  const missing = missingConnectConfig(env);
+  if (missing.length > 0) {
+    console.error(
+      'connect callback: server misconfigured — set these env vars',
+      {
+        missing,
+      }
+    );
+    return home(request, 'connect=unavailable', [clearStateCookie()]);
   }
 
   try {

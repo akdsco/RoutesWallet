@@ -8,8 +8,13 @@ import {
 
 const ok = (body: unknown): Response =>
   ({ ok: true, status: 200, json: () => Promise.resolve(body) }) as Response;
-const fail = (status: number): Response =>
-  ({ ok: false, status, json: () => Promise.resolve({}) }) as Response;
+const fail = (status: number, body = ''): Response =>
+  ({
+    ok: false,
+    status,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(body),
+  }) as Response;
 
 describe('hasRequiredScope', () => {
   it('requires activity:read_all (Strava returns "read,activity:read_all")', () => {
@@ -70,11 +75,18 @@ describe('exchangeToken', () => {
     expect(nameless.athleteName).toBe('Athlete 7');
   });
 
-  it('throws loudly on a non-ok token response', async () => {
-    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(fail(400));
+  it('throws loudly on a non-ok token response, including Strava’s reason', async () => {
+    const fetchImpl = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(
+        fail(
+          400,
+          '{"message":"Bad Request","errors":[{"field":"client_secret"}]}'
+        )
+      );
     await expect(
       exchangeToken({ code: 'C', clientId: 'x', clientSecret: 'y' }, fetchImpl)
-    ).rejects.toThrow(/token exchange failed: 400/);
+    ).rejects.toThrow(/token exchange failed: 400.*client_secret/s);
   });
 });
 

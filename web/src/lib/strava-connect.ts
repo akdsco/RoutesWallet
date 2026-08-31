@@ -40,11 +40,18 @@ export function buildAuthorizeUrl(
  * The `?connect=…` status the callback redirects home with. `start` means "signed
  * in, now run the sync"; the rest are failures the member sees explained.
  */
-export type ConnectStatus = 'start' | 'denied' | 'scope' | 'error' | null;
+export type ConnectStatus =
+  'start' | 'denied' | 'scope' | 'error' | 'unavailable' | null;
 
 export function readConnectStatus(search: string): ConnectStatus {
   const c = new URLSearchParams(search).get('connect');
-  if (c === 'start' || c === 'denied' || c === 'scope' || c === 'error') {
+  if (
+    c === 'start' ||
+    c === 'denied' ||
+    c === 'scope' ||
+    c === 'error' ||
+    c === 'unavailable'
+  ) {
     return c;
   }
   return null;

@@ -36,6 +36,7 @@ describe('readConnectStatus', () => {
     expect(readConnectStatus('?connect=denied')).toBe('denied');
     expect(readConnectStatus('?connect=scope')).toBe('scope');
     expect(readConnectStatus('?connect=error')).toBe('error');
+    expect(readConnectStatus('?connect=unavailable')).toBe('unavailable');
   });
 
   it('is null when there is no connect param, and ignores unknown values', () => {

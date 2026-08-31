@@ -26,6 +26,7 @@ describe('ConnectStrava — signed out', () => {
     ['denied', /cancel/i],
     ['scope', /route access/i],
     ['error', /went wrong/i],
+    ['unavailable', /temporarily unavailable/i],
   ])('shows the %s message from the callback', async (state, copy) => {
     vi.spyOn(api, 'fetchSession').mockResolvedValue({ signedIn: false });
     setUrl(`?connect=${state}`);

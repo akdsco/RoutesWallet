@@ -18,15 +18,19 @@ type Flow =
   | { kind: 'syncing' }
   | { kind: 'synced'; added: number }
   | { kind: 'sync-failed' }
-  | { kind: 'denied' | 'scope' | 'error' };
+  | { kind: 'denied' | 'scope' | 'error' | 'unavailable' };
 
-const FAIL_COPY: Record<'denied' | 'scope' | 'error' | 'sync-failed', string> =
-  {
-    denied: 'Strava connection cancelled.',
-    scope: 'RoutesWallet needs route access to add your routes.',
-    error: 'Something went wrong connecting Strava. Please try again.',
-    'sync-failed': "Couldn't add your routes — please try connecting again.",
-  };
+type FailKind = 'denied' | 'scope' | 'error' | 'unavailable' | 'sync-failed';
+
+const FAIL_COPY: Record<FailKind, string> = {
+  denied: 'Strava connection cancelled.',
+  scope: 'RoutesWallet needs route access to add your routes.',
+  error: 'Something went wrong connecting Strava. Please try again.',
+  // Distinct from `error`: retrying won't help — it's a server-side config gap.
+  unavailable:
+    'Sign in with Strava is temporarily unavailable. Please try again later.',
+  'sync-failed': "Couldn't add your routes — please try connecting again.",
+};
 
 /** Strip the `?connect=…` param so a refresh doesn't re-run the flow. */
 function clearConnectParam() {
@@ -62,7 +66,12 @@ export function ConnectStrava({ onSessionChange, onSynced }: Props) {
   useEffect(() => {
     let cancelled = false;
     const status = readConnectStatus(window.location.search);
-    if (status === 'denied' || status === 'scope' || status === 'error') {
+    if (
+      status === 'denied' ||
+      status === 'scope' ||
+      status === 'error' ||
+      status === 'unavailable'
+    ) {
       setFlow({ kind: status });
       clearConnectParam();
     }
@@ -176,6 +185,7 @@ export function ConnectStrava({ onSessionChange, onSynced }: Props) {
       {(flow.kind === 'denied' ||
         flow.kind === 'scope' ||
         flow.kind === 'error' ||
+        flow.kind === 'unavailable' ||
         flow.kind === 'sync-failed') && (
         <p role="status" className="text-[12px] text-muted">
           {FAIL_COPY[flow.kind]}
