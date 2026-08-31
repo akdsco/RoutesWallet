@@ -6,6 +6,7 @@ import {
   buildSyncCookie,
   clearStateCookie,
   oauthStateValid,
+  readOAuthState,
 } from '../../src/lib/session-cookie.ts';
 import type { PagesContext } from '../_lib/env.ts';
 
@@ -42,14 +43,27 @@ export const onRequestGet = async ({
   // browser. A forged callback (login-CSRF) carries no matching cookie → reject.
   // Clear the one-shot state cookie whichever way this goes.
   if (!oauthStateValid(cookie, state)) {
+    // Surface, don't swallow: this bail-out is otherwise indistinguishable from a
+    // server error. Log which half is missing — a genuine CSRF attempt has no
+    // cookie, whereas a dropped state cookie (SameSite / a privacy browser eating
+    // it in the cross-site bounce) has the param but no cookie.
+    console.error('connect callback: OAuth state check failed', {
+      hasStateParam: state !== null,
+      hasStateCookie: readOAuthState(cookie) !== null,
+    });
     return home(request, 'connect=error', [clearStateCookie()]);
   }
   // The member denied access, or Strava sent no code.
   if (error || !code) {
+    console.error('connect callback: denied or no code', {
+      error,
+      hasCode: code !== null,
+    });
     return home(request, 'connect=denied', [clearStateCookie()]);
   }
   // Must include activity:read_all, else the routes pull can't work.
   if (!hasRequiredScope(scope)) {
+    console.error('connect callback: missing required scope', { scope });
     return home(request, 'connect=scope', [clearStateCookie()]);
   }
 
