@@ -215,6 +215,12 @@ it ephemeral (not a stored token, not a new table).
 - ⬜ **Local** `wrangler pages dev`: add `SESSION_SECRET` to `.dev.vars`; the KV
   binding is picked up from `wrangler.toml` (a local namespace is auto-provisioned).
 
+**Troubleshooting:** if Connect shows **"temporarily unavailable"**, a required
+secret is unset for that environment — the callback's config guard names which one
+in the Function log (`connect callback: server misconfigured … { missing: [...] }`,
+via `wrangler pages deployment tail <id>`). A dashboard secret only takes effect on
+the **next** deployment, so redeploy after adding one.
+
 To recreate from scratch: `npx wrangler kv namespace create SYNC` → put the id in
 `wrangler.toml`; then set the two secrets as above.
 
