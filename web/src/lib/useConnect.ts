@@ -23,9 +23,17 @@ export type Connect = {
   session: SessionState | null;
   sync: SyncPhase;
   banner: ConnectBanner;
+  /** Panel dismissed to the strip while the sync keeps running. */
+  syncHidden: boolean;
   signOut: () => Promise<void>;
   /** Dismiss the summary/failed sync back to idle (Done / close the strip). */
   dismissSync: () => void;
+  /** Hide the panel to a strip; the sync keeps running (design "Hide"). */
+  hideSync: () => void;
+  /** Reopen the panel from the strip (design strip "View"). */
+  showSync: () => void;
+  /** Stop watching — aborts the client pull; already-added routes stay (design "Stop"). */
+  stopSync: () => void;
 };
 
 /** Strip the `?connect=…` param so a refresh doesn't re-run the flow. */
@@ -46,9 +54,11 @@ export function useConnect(onSynced?: (result: SyncResult) => void): Connect {
   const [session, setSession] = useState<SessionState | null>(null);
   const [sync, setSync] = useState<SyncPhase>({ kind: 'idle' });
   const [banner, setBanner] = useState<ConnectBanner>(null);
+  const [syncHidden, setSyncHidden] = useState(false);
 
   const onSyncedRef = useRef(onSynced);
   onSyncedRef.current = onSynced;
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,9 +85,12 @@ export function useConnect(onSynced?: (result: SyncResult) => void): Connect {
 
       if (status === 'start' && me.signedIn) {
         setSync({ kind: 'syncing' });
+        setSyncHidden(false);
         clearConnectParam();
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
-          const result = await runSync();
+          const result = await runSync(controller.signal);
           if (cancelled) return;
           setSync({
             kind: 'synced',
@@ -87,6 +100,11 @@ export function useConnect(onSynced?: (result: SyncResult) => void): Connect {
           onSyncedRef.current?.(result);
         } catch (err) {
           if (cancelled) return;
+          // A deliberate Stop aborts the client fetch — not an error, back to idle.
+          if (controller.signal.aborted) {
+            setSync({ kind: 'idle' });
+            return;
+          }
           console.error('route sync failed', err);
           setSync({ kind: 'failed' });
         }
@@ -97,6 +115,17 @@ export function useConnect(onSynced?: (result: SyncResult) => void): Connect {
       cancelled = true;
     };
   }, []);
+
+  // The summary strip auto-dismisses after ~8s — by then the rider has seen the
+  // routes arrive in the list (design I.3).
+  useEffect(() => {
+    if (sync.kind !== 'synced' || !syncHidden) return;
+    const t = setTimeout(() => {
+      setSync({ kind: 'idle' });
+      setSyncHidden(false);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [sync, syncHidden]);
 
   async function signOut() {
     try {
@@ -111,7 +140,27 @@ export function useConnect(onSynced?: (result: SyncResult) => void): Connect {
     setBanner(null);
   }
 
-  const dismissSync = () => setSync({ kind: 'idle' });
+  const dismissSync = () => {
+    setSync({ kind: 'idle' });
+    setSyncHidden(false);
+  };
+  const hideSync = () => setSyncHidden(true);
+  const showSync = () => setSyncHidden(false);
+  const stopSync = () => {
+    abortRef.current?.abort();
+    setSync({ kind: 'idle' });
+    setSyncHidden(false);
+  };
 
-  return { session, sync, banner, signOut, dismissSync };
+  return {
+    session,
+    sync,
+    banner,
+    syncHidden,
+    signOut,
+    dismissSync,
+    hideSync,
+    showSync,
+    stopSync,
+  };
 }

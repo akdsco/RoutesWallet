@@ -24,6 +24,10 @@ type Props = {
   scopeSlot?: ReactNode;
   /** The account avatar (signed in) — replaces the theme toggle in the corner. */
   accountSlot?: ReactNode;
+  /** The first-sync panel — when present, replaces the list (account redesign). */
+  syncPanel?: ReactNode;
+  /** The slim sync strip — when present, sits atop the list. */
+  syncStrip?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -56,6 +60,8 @@ export function Sidebar(props: Props) {
     banner,
     scopeSlot,
     accountSlot,
+    syncPanel,
+    syncStrip,
     placeLabel,
     groups,
     selectedId,
@@ -131,27 +137,33 @@ export function Sidebar(props: Props) {
         </div>
       )}
 
-      {!selectedId && filterPanel}
-
-      <RouteList
-        query={query}
-        banner={banner}
-        placeLabel={placeLabel}
-        groups={groups}
-        selectedId={selectedId}
-        backLabel={backLabel}
-        theme={theme}
-        countLine={countLine}
-        sortControl={sortControl}
-        flat={flat}
-        openGroups={openGroups}
-        onToggleGroup={onToggleGroup}
-        filterEmpty={filterEmpty}
-        onClear={onClear}
-        onSelect={onSelect}
-        onDeselect={onDeselect}
-        onHover={onHover}
-      />
+      {syncPanel && !selectedId ? (
+        syncPanel
+      ) : (
+        <>
+          {!selectedId && filterPanel}
+          {!selectedId && syncStrip}
+          <RouteList
+            query={query}
+            banner={banner}
+            placeLabel={placeLabel}
+            groups={groups}
+            selectedId={selectedId}
+            backLabel={backLabel}
+            theme={theme}
+            countLine={countLine}
+            sortControl={sortControl}
+            flat={flat}
+            openGroups={openGroups}
+            onToggleGroup={onToggleGroup}
+            filterEmpty={filterEmpty}
+            onClear={onClear}
+            onSelect={onSelect}
+            onDeselect={onDeselect}
+            onHover={onHover}
+          />
+        </>
+      )}
     </aside>
   );
 }

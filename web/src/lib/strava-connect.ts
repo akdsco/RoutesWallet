@@ -105,8 +105,8 @@ function toSyncResult(data: unknown): SyncResult {
 }
 
 /** Run the route pull for the just-signed-in member (call 2 of the flow). */
-export async function runSync(): Promise<SyncResult> {
-  const res = await fetch('/connect/sync', { method: 'POST' });
+export async function runSync(signal?: AbortSignal): Promise<SyncResult> {
+  const res = await fetch('/connect/sync', { method: 'POST', signal });
   if (!res.ok) throw new Error(`sync failed: ${res.status}`);
   return toSyncResult(await res.json());
 }

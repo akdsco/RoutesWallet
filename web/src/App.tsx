@@ -28,7 +28,8 @@ import {
   type Snap,
 } from './lib/sheet.ts';
 import { loadRoutes } from './lib/routes-data.ts';
-import { scopeRoutes } from './lib/scope.ts';
+import { scopeRoutes, ownedCount } from './lib/scope.ts';
+import { SyncPanel, SyncStrip } from './components/SyncPanel.tsx';
 import type { SessionState } from './lib/strava-connect.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -226,6 +227,19 @@ export function App() {
         scope === 'mine' && session.signedIn ? String(session.athleteId) : null
       ),
     [allRoutes, scope, session]
+  );
+
+  // Routes already in the pool that aren't this member's — the "already in the
+  // library" count the sync summary shows.
+  const alreadyInLibrary = useMemo(
+    () =>
+      session.signedIn
+        ? Math.max(
+            0,
+            allRoutes.length - ownedCount(allRoutes, String(session.athleteId))
+          )
+        : 0,
+    [allRoutes, session]
   );
 
   // Domains + the filter pool. Before init, use the widest defaults so the pool
@@ -713,11 +727,31 @@ export function App() {
           theme={theme}
           filterPanel={filterPanel}
           connectSlot={
-            <ConnectStrava
-              session={session}
-              sync={connect.sync}
-              banner={connect.banner}
-            />
+            <ConnectStrava session={session} banner={connect.banner} />
+          }
+          syncPanel={
+            session.signedIn &&
+            connect.sync.kind !== 'idle' &&
+            !connect.syncHidden ? (
+              <SyncPanel
+                phase={connect.sync}
+                alreadyInLibrary={alreadyInLibrary}
+                onHide={connect.hideSync}
+                onStop={connect.stopSync}
+                onDone={connect.dismissSync}
+                onSeeMyRoutes={() => {
+                  setScope('mine');
+                  connect.dismissSync();
+                }}
+              />
+            ) : null
+          }
+          syncStrip={
+            session.signedIn &&
+            connect.sync.kind !== 'idle' &&
+            connect.syncHidden ? (
+              <SyncStrip phase={connect.sync} onView={connect.showSync} />
+            ) : null
           }
           accountSlot={
             session.signedIn ? (
