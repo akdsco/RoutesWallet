@@ -30,6 +30,10 @@ import {
 import { loadRoutes } from './lib/routes-data.ts';
 import { scopeRoutes, ownedCount } from './lib/scope.ts';
 import { SyncPanel, SyncStrip } from './components/SyncPanel.tsx';
+import { SettingsPanel } from './components/SettingsPanel.tsx';
+import { readUnits, saveUnits, type Units } from './lib/units.ts';
+import { UnitsContext } from './lib/units-context.ts';
+import { relativeTime } from './lib/ago.ts';
 import type { SessionState } from './lib/strava-connect.ts';
 import { geocode } from './lib/geocode.ts';
 import { routesNear } from './lib/search.ts';
@@ -121,6 +125,20 @@ export function App() {
   // The signed-in member (TB-116) + which routes they're viewing. `mine` narrows
   // the whole pool to their own contributions via the owner id already on routes.
   const [scope, setScope] = useState<RouteScope>('all');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [units, setUnits] = useState<Units>(readUnits);
+  const [lastSynced, setLastSynced] = useState<number | null>(() => {
+    try {
+      const v = Number(window.localStorage.getItem('rw:last-synced'));
+      return Number.isFinite(v) && v > 0 ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  const changeUnits = useCallback((u: Units) => {
+    setUnits(u);
+    saveUnits(u);
+  }, []);
   const [query, setQuery] = useState('');
   const [place, setPlace] = useState<Place | null>(null);
   const [geoFail, setGeoFail] = useState(false);
@@ -211,8 +229,19 @@ export function App() {
   }, [reloadRoutes]);
 
   // The whole client side of Sign in with Strava (session, sync, sign out). A
-  // fresh sync reloads the pool so the member's just-added routes appear.
-  const connect = useConnect(reloadRoutes);
+  // fresh sync records the last-synced time and reloads the pool so the member's
+  // just-added routes appear.
+  const onSynced = useCallback(() => {
+    const now = Date.now();
+    try {
+      window.localStorage.setItem('rw:last-synced', String(now));
+    } catch {
+      // silent-ok: storage disabled → the last-synced line just won't persist.
+    }
+    setLastSynced(now);
+    reloadRoutes();
+  }, [reloadRoutes]);
+  const connect = useConnect(onSynced);
   const session = useMemo<SessionState>(
     () => connect.session ?? { signedIn: false },
     [connect.session]
@@ -227,6 +256,13 @@ export function App() {
         scope === 'mine' && session.signedIn ? String(session.athleteId) : null
       ),
     [allRoutes, scope, session]
+  );
+
+  // How many pool routes are this member's own — the Settings "N of yours" line.
+  const myOwnedCount = useMemo(
+    () =>
+      session.signedIn ? ownedCount(allRoutes, String(session.athleteId)) : 0,
+    [allRoutes, session]
   );
 
   // Routes already in the pool that aren't this member's — the "already in the
@@ -714,322 +750,347 @@ export function App() {
   };
 
   return (
-    <div className={isDesktop ? 'flex h-screen' : 'relative h-dvh w-full'}>
-      {isDesktop && (
-        <Sidebar
-          query={query}
-          hint={hint}
-          banner={displayBanner}
-          placeLabel={place?.name ?? ''}
-          groups={groups}
-          selectedId={selectedId}
-          backLabel={backLabel}
-          theme={theme}
-          filterPanel={filterPanel}
-          connectSlot={
-            <ConnectStrava session={session} banner={connect.banner} />
-          }
-          syncPanel={
-            session.signedIn &&
-            connect.sync.kind !== 'idle' &&
-            !connect.syncHidden ? (
-              <SyncPanel
-                phase={connect.sync}
-                alreadyInLibrary={alreadyInLibrary}
-                onHide={connect.hideSync}
-                onStop={connect.stopSync}
-                onDone={connect.dismissSync}
-                onSeeMyRoutes={() => {
-                  setScope('mine');
-                  connect.dismissSync();
-                }}
-              />
-            ) : null
-          }
-          syncStrip={
-            session.signedIn &&
-            connect.sync.kind !== 'idle' &&
-            connect.syncHidden ? (
-              <SyncStrip phase={connect.sync} onView={connect.showSync} />
-            ) : null
-          }
-          accountSlot={
-            session.signedIn ? (
-              <AccountMenu
-                name={session.name}
-                photo={session.photo}
-                theme={themeChoice}
-                onSetTheme={setTheme}
-                onOpenSettings={() => {}}
-                onSignOut={() => void connect.signOut()}
-              />
-            ) : null
-          }
-          scopeSlot={
-            session.signedIn ? (
-              <RouteScopeToggle value={scope} onChange={setScope} />
-            ) : null
-          }
-          countLine={countLineText}
-          sortControl={sortControl}
-          flat={flat}
-          openGroups={openGroups}
-          onToggleGroup={toggleGroup}
-          filterEmpty={filterEmpty}
-          onQueryChange={setQuery}
-          onSubmit={(v) => void runSearch(v)}
-          onClear={clearSearch}
-          onSelect={onSelect}
-          onDeselect={onDeselect}
-          onHover={onHover}
-          onToggleTheme={toggleTheme}
-          onSearchFocusChange={setSearchFocused}
-        />
-      )}
-
-      <div className={isDesktop ? 'relative flex-1' : 'absolute inset-0'}>
-        <RouteMap
-          routes={pool}
-          matchedIds={matchedIds}
-          selectedId={selectedId}
-          hoverId={hoverId}
-          searchPoint={searchPoint}
-          radiusKm={RADIUS_KM}
-          theme={theme}
-          basemap={basemap}
-          poiTypes={poiTypes}
-          onHover={onHover}
-          onSelect={onSelect}
-          onDeselect={onDeselect}
-        />
-
-        <BasemapControl
-          basemap={basemap}
-          theme={theme}
-          onChange={setBasemap}
-          mobile={!isDesktop}
-          // Ride the sheet's ACTUAL edge — the content-fit detail height when a
-          // route is selected, not the fixed snap height (§H), so the button
-          // tracks the fluid sheet instead of detaching from it.
-          bottomCss={
-            isDesktop
-              ? undefined
-              : `${sheetHeightPx(snap, vh, detailPx) + 12}px`
-          }
-        />
-
-        <div
-          className={`absolute z-[500] flex items-center gap-1.5 md:left-5 max-md:inset-x-0 max-md:overflow-x-auto max-md:px-5 ${
-            selectedId ? 'top-5 max-md:hidden' : 'top-[68px]'
-          }`}
-        >
-          {/* Mobile only: the Filters pill leads the chip row (it's the one chip
-              that isn't a POI toggle). Filled + counted when active; opens the
-              sheet's filter view (§G/§F). Desktop uses the disclosure panel. */}
-          {!isDesktop && initialised && (
-            <button
-              type="button"
-              // The pill is the second design exit (§G.6): it toggles the filter
-              // view, so re-tapping it closes the form back to the map (TB-66).
-              onClick={
-                mobileFiltersOpen ? closeMobileFilters : openMobileFilters
-              }
-              aria-label="Filters"
-              aria-expanded={mobileFiltersOpen}
-              className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-semibold ${
-                activeCount > 0
-                  ? 'border-sel bg-sel text-white dark:text-bg'
-                  : 'border-line bg-surface text-text'
-              }`}
-            >
-              Filters
-              {activeCount > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/30 px-1 font-mono text-[10px]">
-                  {activeCount}
-                </span>
-              )}
-            </button>
-          )}
-          {(
-            [
-              ['cafe', '☕', 'Cafés'],
-              ['toilet', '🚻', 'Toilets'],
-              ['water', '💧', 'Water'],
-              ['station', '🚉', 'Stations'],
-            ] as const
-          ).map(([t, icon, label]) => {
-            const on = poiTypes.has(t);
-            return (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={on}
-                aria-label={label}
-                title={label}
-                onClick={() => togglePoi(t)}
-                className={`flex flex-none items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
-                  on
-                    ? 'border-line bg-surface text-text'
-                    : 'border-line bg-surface/60 text-muted opacity-60'
-                }`}
-              >
-                <span aria-hidden="true">{icon}</span>
-                {/* Mobile is width-constrained (the chip row overflowed to a
-                    scrollbar), so drop the labels there — emoji + aria-label/title
-                    carry the meaning; desktop keeps the words (TB-66). */}
-                <span className="max-md:hidden">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {!selectedId && (
-          <Legend
-            searching={searchPoint !== null}
+    <UnitsContext.Provider value={units}>
+      <div className={isDesktop ? 'flex h-screen' : 'relative h-dvh w-full'}>
+        {isDesktop && (
+          <Sidebar
+            query={query}
+            hint={hint}
+            banner={displayBanner}
+            placeLabel={place?.name ?? ''}
+            groups={groups}
+            selectedId={selectedId}
+            backLabel={backLabel}
             theme={theme}
-            className="max-md:top-[112px]"
+            filterPanel={filterPanel}
+            connectSlot={
+              <ConnectStrava session={session} banner={connect.banner} />
+            }
+            syncPanel={
+              session.signedIn &&
+              connect.sync.kind !== 'idle' &&
+              !connect.syncHidden ? (
+                <SyncPanel
+                  phase={connect.sync}
+                  alreadyInLibrary={alreadyInLibrary}
+                  onHide={connect.hideSync}
+                  onStop={connect.stopSync}
+                  onDone={connect.dismissSync}
+                  onSeeMyRoutes={() => {
+                    setScope('mine');
+                    connect.dismissSync();
+                  }}
+                />
+              ) : null
+            }
+            syncStrip={
+              session.signedIn &&
+              connect.sync.kind !== 'idle' &&
+              connect.syncHidden ? (
+                <SyncStrip phase={connect.sync} onView={connect.showSync} />
+              ) : null
+            }
+            accountSlot={
+              session.signedIn ? (
+                <AccountMenu
+                  name={session.name}
+                  photo={session.photo}
+                  theme={themeChoice}
+                  onSetTheme={setTheme}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                  onSignOut={() => void connect.signOut()}
+                />
+              ) : null
+            }
+            settingsPanel={
+              session.signedIn && settingsOpen ? (
+                <SettingsPanel
+                  name={session.name}
+                  lastSyncedLabel={
+                    lastSynced
+                      ? `Last synced ${relativeTime(lastSynced)} · ${myOwnedCount} of yours`
+                      : 'Not synced yet'
+                  }
+                  syncing={connect.sync.kind === 'syncing'}
+                  ownedCount={myOwnedCount}
+                  theme={themeChoice}
+                  onSetTheme={setTheme}
+                  units={units}
+                  onSetUnits={changeUnits}
+                  onDisconnect={() => {
+                    void connect.signOut();
+                    setSettingsOpen(false);
+                  }}
+                  onBack={() => setSettingsOpen(false)}
+                />
+              ) : null
+            }
+            scopeSlot={
+              session.signedIn ? (
+                <RouteScopeToggle value={scope} onChange={setScope} />
+              ) : null
+            }
+            countLine={countLineText}
+            sortControl={sortControl}
+            flat={flat}
+            openGroups={openGroups}
+            onToggleGroup={toggleGroup}
+            filterEmpty={filterEmpty}
+            onQueryChange={setQuery}
+            onSubmit={(v) => void runSearch(v)}
+            onClear={clearSearch}
+            onSelect={onSelect}
+            onDeselect={onDeselect}
+            onHover={onHover}
+            onToggleTheme={toggleTheme}
+            onSearchFocusChange={setSearchFocused}
           />
         )}
 
-        {/* §H: back moves out of the sheet onto the map — sitting in the top-left
+        <div className={isDesktop ? 'relative flex-1' : 'absolute inset-0'}>
+          <RouteMap
+            routes={pool}
+            matchedIds={matchedIds}
+            selectedId={selectedId}
+            hoverId={hoverId}
+            searchPoint={searchPoint}
+            radiusKm={RADIUS_KM}
+            theme={theme}
+            basemap={basemap}
+            poiTypes={poiTypes}
+            onHover={onHover}
+            onSelect={onSelect}
+            onDeselect={onDeselect}
+          />
+
+          <BasemapControl
+            basemap={basemap}
+            theme={theme}
+            onChange={setBasemap}
+            mobile={!isDesktop}
+            // Ride the sheet's ACTUAL edge — the content-fit detail height when a
+            // route is selected, not the fixed snap height (§H), so the button
+            // tracks the fluid sheet instead of detaching from it.
+            bottomCss={
+              isDesktop
+                ? undefined
+                : `${sheetHeightPx(snap, vh, detailPx) + 12}px`
+            }
+          />
+
+          <div
+            className={`absolute z-[500] flex items-center gap-1.5 md:left-5 max-md:inset-x-0 max-md:overflow-x-auto max-md:px-5 ${
+              selectedId ? 'top-5 max-md:hidden' : 'top-[68px]'
+            }`}
+          >
+            {/* Mobile only: the Filters pill leads the chip row (it's the one chip
+              that isn't a POI toggle). Filled + counted when active; opens the
+              sheet's filter view (§G/§F). Desktop uses the disclosure panel. */}
+            {!isDesktop && initialised && (
+              <button
+                type="button"
+                // The pill is the second design exit (§G.6): it toggles the filter
+                // view, so re-tapping it closes the form back to the map (TB-66).
+                onClick={
+                  mobileFiltersOpen ? closeMobileFilters : openMobileFilters
+                }
+                aria-label="Filters"
+                aria-expanded={mobileFiltersOpen}
+                className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-semibold ${
+                  activeCount > 0
+                    ? 'border-sel bg-sel text-white dark:text-bg'
+                    : 'border-line bg-surface text-text'
+                }`}
+              >
+                Filters
+                {activeCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/30 px-1 font-mono text-[10px]">
+                    {activeCount}
+                  </span>
+                )}
+              </button>
+            )}
+            {(
+              [
+                ['cafe', '☕', 'Cafés'],
+                ['toilet', '🚻', 'Toilets'],
+                ['water', '💧', 'Water'],
+                ['station', '🚉', 'Stations'],
+              ] as const
+            ).map(([t, icon, label]) => {
+              const on = poiTypes.has(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={label}
+                  title={label}
+                  onClick={() => togglePoi(t)}
+                  className={`flex flex-none items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[12px] transition-colors ${
+                    on
+                      ? 'border-line bg-surface text-text'
+                      : 'border-line bg-surface/60 text-muted opacity-60'
+                  }`}
+                >
+                  <span aria-hidden="true">{icon}</span>
+                  {/* Mobile is width-constrained (the chip row overflowed to a
+                    scrollbar), so drop the labels there — emoji + aria-label/title
+                    carry the meaning; desktop keeps the words (TB-66). */}
+                  <span className="max-md:hidden">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {!selectedId && (
+            <Legend
+              searching={searchPoint !== null}
+              theme={theme}
+              className="max-md:top-[112px]"
+            />
+          )}
+
+          {/* §H: back moves out of the sheet onto the map — sitting in the top-left
             control slot the POI/Filters row + legend vacate while a route is
             selected (top-[68px], right under the search), so it reads as the top
             control rather than floating with a gap, and the exit can't be dragged
             out of reach. Short word visible ("← Routes"/"← Results"); aria-label
             keeps the long form. Mobile only; desktop exits via the sidebar. */}
-        {!isDesktop && selectedRoute && (
-          <button
-            ref={backPillRef}
-            type="button"
-            onClick={onDeselect}
-            aria-label={backLabel}
-            className="absolute left-5 top-[68px] z-[500] inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
-          >
-            <span aria-hidden="true">←</span>
-            {matches ? 'Results' : 'Routes'}
-          </button>
-        )}
-
-        {hovered && (
-          <div
-            aria-hidden="true"
-            className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5 max-md:hidden"
-          >
-            <span className="text-[14px] font-medium text-text">
-              {hovered.name}
-            </span>
-            <span className="font-mono text-[12px] text-text-2">
-              {hovered.distance_km} km
-              {hovered.region ? ` · ${hovered.region}` : ''}
-            </span>
-            <span className="text-[12px] text-muted">
-              {SOURCE_META[hovered.source].blurb}
-            </span>
-          </div>
-        )}
-
-        <span className="sr-only" aria-live="polite">
-          {geoFail
-            ? `Couldn't find “${query}”. Try a town, village or landmark.`
-            : displayBanner === 'nomatch'
-              ? `No routes within ${RADIUS_KM} km of ${place?.name ?? query}`
-              : matches
-                ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
-                : ''}
-        </span>
-
-        <span className="sr-only" aria-live="polite">
-          {announce}
-        </span>
-      </div>
-
-      {!isDesktop && (
-        <>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void runSearch(query);
-            }}
-            className="absolute inset-x-3 top-3 z-[600] flex items-center gap-2"
-          >
-            <SearchField
-              query={query}
-              onQueryChange={setQuery}
-              onClear={clearSearch}
-              onFocusChange={setSearchFocused}
-              ariaLabel="Find routes near a place"
-              className="flex h-12 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-within:border-sel"
-            />
+          {!isDesktop && selectedRoute && (
             <button
+              ref={backPillRef}
               type="button"
-              aria-pressed={theme === 'dark'}
-              aria-label={
-                theme === 'dark'
-                  ? 'Switch to light theme'
-                  : 'Switch to dark theme'
-              }
-              onClick={toggleTheme}
-              className="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-line bg-surface text-[15px] text-text-2 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+              onClick={onDeselect}
+              aria-label={backLabel}
+              className="absolute left-5 top-[68px] z-[500] inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 text-[13px] font-medium text-text shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sel"
             >
-              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+              <span aria-hidden="true">←</span>
+              {matches ? 'Results' : 'Routes'}
             </button>
-          </form>
+          )}
 
-          <BottomSheet
-            snap={snap}
-            snaps={snaps}
-            vh={vh}
-            // §H: open the selected sheet content-fit — as far as the detail needs,
-            // capped at mid (clampDetailPx from the measured content height).
-            detailPx={detailPx}
-            // The filter form pins a "Show N routes" footer to its foot; cap the
-            // content to the visible window so that footer stays on-screen at
-            // every snap instead of below the 100dvh sheet's fold (TB-66).
-            constrainToSnap={mobileFiltersOpen && initialised}
-            onSnapChange={setSnap}
-          >
-            {mobileFiltersOpen && initialised ? (
-              <MobileFilterSheet
-                {...filterBodyProps}
-                // what the list will actually show on commit: the searched matches
-                // when a search is active, else the filtered pool.
-                matchCount={matches?.length ?? previewPoolCount}
-                onClearAll={clearFilters}
-                onDone={closeMobileFilters}
-              />
-            ) : selectedRoute ? (
-              // §H compact detail — back lives on the map (below), not in the sheet.
-              <MobileRouteDetail
-                route={selectedRoute}
-                nearKm={selectedId ? nearKm.get(selectedId) : undefined}
-                theme={theme}
-                onMeasure={setDetailContentPx}
-              />
-            ) : (
-              <RouteList
+          {hovered && (
+            <div
+              aria-hidden="true"
+              className="absolute right-5 top-5 z-[500] flex w-[250px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5 max-md:hidden"
+            >
+              <span className="text-[14px] font-medium text-text">
+                {hovered.name}
+              </span>
+              <span className="font-mono text-[12px] text-text-2">
+                {hovered.distance_km} km
+                {hovered.region ? ` · ${hovered.region}` : ''}
+              </span>
+              <span className="text-[12px] text-muted">
+                {SOURCE_META[hovered.source].blurb}
+              </span>
+            </div>
+          )}
+
+          <span className="sr-only" aria-live="polite">
+            {geoFail
+              ? `Couldn't find “${query}”. Try a town, village or landmark.`
+              : displayBanner === 'nomatch'
+                ? `No routes within ${RADIUS_KM} km of ${place?.name ?? query}`
+                : matches
+                  ? `${matches.length} routes within ${RADIUS_KM} km of ${place?.name ?? ''}`
+                  : ''}
+          </span>
+
+          <span className="sr-only" aria-live="polite">
+            {announce}
+          </span>
+        </div>
+
+        {!isDesktop && (
+          <>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runSearch(query);
+              }}
+              className="absolute inset-x-3 top-3 z-[600] flex items-center gap-2"
+            >
+              <SearchField
                 query={query}
-                banner={displayBanner}
-                placeLabel={place?.name ?? ''}
-                groups={groups}
-                selectedId={selectedId}
-                backLabel={backLabel}
-                theme={theme}
-                countLine={countLineText}
-                sortControl={sortControl}
-                flat={flat}
-                openGroups={openGroups}
-                onToggleGroup={toggleGroup}
-                filterEmpty={filterEmpty}
-                mapAttribution={BASEMAPS[basemap].credit}
+                onQueryChange={setQuery}
                 onClear={clearSearch}
-                onSelect={onSelect}
-                onDeselect={onDeselect}
-                onHover={onHover}
+                onFocusChange={setSearchFocused}
+                ariaLabel="Find routes near a place"
+                className="flex h-12 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 shadow-[0_2px_8px_rgba(0,0,0,0.12)] focus-within:border-sel"
               />
-            )}
-          </BottomSheet>
-        </>
-      )}
-    </div>
+              <button
+                type="button"
+                aria-pressed={theme === 'dark'}
+                aria-label={
+                  theme === 'dark'
+                    ? 'Switch to light theme'
+                    : 'Switch to dark theme'
+                }
+                onClick={toggleTheme}
+                className="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-line bg-surface text-[15px] text-text-2 shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
+              >
+                <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+              </button>
+            </form>
+
+            <BottomSheet
+              snap={snap}
+              snaps={snaps}
+              vh={vh}
+              // §H: open the selected sheet content-fit — as far as the detail needs,
+              // capped at mid (clampDetailPx from the measured content height).
+              detailPx={detailPx}
+              // The filter form pins a "Show N routes" footer to its foot; cap the
+              // content to the visible window so that footer stays on-screen at
+              // every snap instead of below the 100dvh sheet's fold (TB-66).
+              constrainToSnap={mobileFiltersOpen && initialised}
+              onSnapChange={setSnap}
+            >
+              {mobileFiltersOpen && initialised ? (
+                <MobileFilterSheet
+                  {...filterBodyProps}
+                  // what the list will actually show on commit: the searched matches
+                  // when a search is active, else the filtered pool.
+                  matchCount={matches?.length ?? previewPoolCount}
+                  onClearAll={clearFilters}
+                  onDone={closeMobileFilters}
+                />
+              ) : selectedRoute ? (
+                // §H compact detail — back lives on the map (below), not in the sheet.
+                <MobileRouteDetail
+                  route={selectedRoute}
+                  nearKm={selectedId ? nearKm.get(selectedId) : undefined}
+                  theme={theme}
+                  onMeasure={setDetailContentPx}
+                />
+              ) : (
+                <RouteList
+                  query={query}
+                  banner={displayBanner}
+                  placeLabel={place?.name ?? ''}
+                  groups={groups}
+                  selectedId={selectedId}
+                  backLabel={backLabel}
+                  theme={theme}
+                  countLine={countLineText}
+                  sortControl={sortControl}
+                  flat={flat}
+                  openGroups={openGroups}
+                  onToggleGroup={toggleGroup}
+                  filterEmpty={filterEmpty}
+                  mapAttribution={BASEMAPS[basemap].credit}
+                  onClear={clearSearch}
+                  onSelect={onSelect}
+                  onDeselect={onDeselect}
+                  onHover={onHover}
+                />
+              )}
+            </BottomSheet>
+          </>
+        )}
+      </div>
+    </UnitsContext.Provider>
   );
 }

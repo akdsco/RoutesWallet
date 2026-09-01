@@ -28,6 +28,8 @@ type Props = {
   syncPanel?: ReactNode;
   /** The slim sync strip — when present, sits atop the list. */
   syncStrip?: ReactNode;
+  /** The Settings panel — when present, replaces the list (account redesign). */
+  settingsPanel?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -62,6 +64,7 @@ export function Sidebar(props: Props) {
     accountSlot,
     syncPanel,
     syncStrip,
+    settingsPanel,
     placeLabel,
     groups,
     selectedId,
@@ -137,8 +140,8 @@ export function Sidebar(props: Props) {
         </div>
       )}
 
-      {syncPanel && !selectedId ? (
-        syncPanel
+      {(settingsPanel || syncPanel) && !selectedId ? (
+        (settingsPanel ?? syncPanel)
       ) : (
         <>
           {!selectedId && filterPanel}
