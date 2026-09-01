@@ -48,6 +48,14 @@ table + a Strava login — **not** a platform. Anything beyond that narrow path 
   `SESSION_SECRET`, and the D1/KV bindings live in Cloudflare env vars only. Do
   **not** grow this into a database schema, an ORM, a stored-token store, or a
   relational user/club model — identity stays cookie-only.
+- **Account UI (frontend-first).** On top of the flow: an avatar menu (identity +
+  Settings + Sign out + Light/Dark/System theme), a first-sync panel/strip/summary
+  (Added/Updated/Already-in), Settings (Sync now, Disconnect, km/mi units), and
+  `session.photo` from Strava. Client orchestration lives in `src/lib/useConnect.ts`;
+  distances go through `formatDistance` + a units context. **Deferred to the DB
+  phase (stubbed, not built):** resumable sync across reloads, a determinate
+  "N of M" progress stream, per-route geometry+elevation, and a **true** Strava
+  de-authorisation on Disconnect (v1 just ends the session).
 - Stack is fixed: **Vite + React + TypeScript (strict), Leaflet + OSM raster tiles,
   Turf.js** for geo maths. Do not swap the map lib or add a framework.
 - **Never hand-roll geo maths** — distance/near-point goes through Turf.

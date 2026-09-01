@@ -202,6 +202,15 @@ table, no stored tokens** (the conscious scope step past TB-110's anonymous pool
 the browser holds only the opaque handle (the normal "BFF" pattern). KV's TTL makes
 it ephemeral (not a stored token, not a new table).
 
+**Account UI (frontend-first).** On top of the flow above the app has the full
+account experience — an avatar menu (identity, Settings, Sign out, theme), a
+first-sync panel/strip/summary (Added/Updated/Already-in), and Settings (Sync now,
+Disconnect, km/mi units). `/api/me` also returns the athlete's `photo`. Four pieces
+are **deliberately deferred** to the DB phase, not built: a resumable/durable sync
+that survives a reload, a determinate "N of M" progress stream, a per-route
+geometry+elevation pull, and a **true** Strava de-authorisation on Disconnect
+(we throw the token away, so v1 Disconnect just ends the session).
+
 **Provisioning status (done — on top of §8a):**
 
 - ✅ KV namespace `SYNC` created (`id b5c4f807dbe74dccac77f2a31ebbb2b6`) and
