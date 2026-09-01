@@ -27,6 +27,8 @@ describe('buildAuthorizeUrl', () => {
     );
     expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
     expect(url.searchParams.get('state')).toBe('STATE123');
+    // force = always show Strava's consent screen (visible, testable login).
+    expect(url.searchParams.get('approval_prompt')).toBe('force');
   });
 });
 

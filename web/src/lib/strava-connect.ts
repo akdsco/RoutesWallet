@@ -29,7 +29,10 @@ export function buildAuthorizeUrl(
     client_id: clientId,
     response_type: 'code',
     redirect_uri: `${origin}/connect/callback`,
-    approval_prompt: 'auto',
+    // `force` = Strava shows its consent screen on every connect, even for a
+    // returning/already-authorised member — so the login is always visible and
+    // testable (vs `auto`, which silently skips it for returning users).
+    approval_prompt: 'force',
     scope: SCOPE,
     state,
   });
