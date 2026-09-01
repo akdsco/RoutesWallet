@@ -36,6 +36,8 @@ export type ExchangeResult = {
   athleteId: number;
   /** Display name for "Signed in as …" — never a secret, safe in the cookie. */
   athleteName: string;
+  /** Profile photo URL, if the athlete has a real (non-default) one. */
+  athletePhoto?: string;
 };
 
 export async function exchangeToken(
@@ -63,7 +65,12 @@ export async function exchangeToken(
   }
   const data = (await res.json()) as {
     access_token?: string;
-    athlete?: { id?: number; firstname?: string; lastname?: string };
+    athlete?: {
+      id?: number;
+      firstname?: string;
+      lastname?: string;
+      profile_medium?: string;
+    };
   };
   const athlete = data.athlete;
   if (!data.access_token || typeof athlete?.id !== 'number') {
@@ -75,7 +82,19 @@ export async function exchangeToken(
     accessToken: data.access_token,
     athleteId: athlete.id,
     athleteName: displayName(athlete.id, athlete.firstname, athlete.lastname),
+    athletePhoto: realPhoto(athlete.profile_medium),
   };
+}
+
+/**
+ * A usable profile photo URL, or undefined. Strava returns a **default** avatar
+ * (path contains `avatar/athlete`) when the athlete has none — we drop those so
+ * the UI shows initials rather than a generic silhouette (per the design).
+ */
+function realPhoto(url: string | undefined): string | undefined {
+  if (typeof url !== 'string' || !url.startsWith('http')) return undefined;
+  if (url.includes('avatar/athlete')) return undefined;
+  return url;
 }
 
 /** Join firstname + lastname, falling back to "Athlete <id>" when Strava sends none. */

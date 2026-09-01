@@ -29,7 +29,12 @@ describe('exchangeToken', () => {
     const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(
       ok({
         access_token: 'AT',
-        athlete: { id: 42, firstname: 'Ada', lastname: 'Lovelace' },
+        athlete: {
+          id: 42,
+          firstname: 'Ada',
+          lastname: 'Lovelace',
+          profile_medium: 'https://example.com/ada.jpg',
+        },
       })
     );
 
@@ -42,6 +47,7 @@ describe('exchangeToken', () => {
       accessToken: 'AT',
       athleteId: 42,
       athleteName: 'Ada Lovelace',
+      athletePhoto: 'https://example.com/ada.jpg',
     });
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toContain('/oauth/token');
@@ -73,6 +79,36 @@ describe('exchangeToken', () => {
         .mockResolvedValue(ok({ access_token: 'AT', athlete: { id: 7 } }))
     );
     expect(nameless.athleteName).toBe('Athlete 7');
+  });
+
+  it('takes a real profile photo but ignores Strava’s default avatar', async () => {
+    const custom = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi.fn<FetchLike>().mockResolvedValue(
+        ok({
+          access_token: 'AT',
+          athlete: { id: 7, profile_medium: 'https://cdn.example/p.jpg' },
+        })
+      )
+    );
+    expect(custom.athletePhoto).toBe('https://cdn.example/p.jpg');
+
+    // Strava's placeholder avatar (path contains avatar/athlete) → treat as none,
+    // so the UI falls back to initials rather than a generic silhouette.
+    const dflt = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi.fn<FetchLike>().mockResolvedValue(
+        ok({
+          access_token: 'AT',
+          athlete: {
+            id: 7,
+            profile_medium:
+              'https://d3.cloudfront.net/assets/avatar/athlete/medium.png',
+          },
+        })
+      )
+    );
+    expect(dflt.athletePhoto).toBeUndefined();
   });
 
   it('throws loudly on a non-ok token response, including Strava’s reason', async () => {

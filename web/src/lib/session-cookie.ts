@@ -23,7 +23,8 @@ const SYNC_MAX_AGE_SECONDS = 300;
 const STATE_MAX_AGE_SECONDS = 600;
 
 export type SessionState =
-  { signedIn: true; athleteId: number; name: string } | { signedIn: false };
+  | { signedIn: true; athleteId: number; name: string; photo?: string }
+  | { signedIn: false };
 
 /** Parse a `Cookie:` header value into a name→value map. */
 export function parseCookies(header: string | null): Record<string, string> {
@@ -47,7 +48,12 @@ export async function readSession(
   if (!raw) return { signedIn: false };
   const session = await verifySession(raw, secret);
   if (!session) return { signedIn: false };
-  return { signedIn: true, athleteId: session.athleteId, name: session.name };
+  return {
+    signedIn: true,
+    athleteId: session.athleteId,
+    name: session.name,
+    ...(session.photo ? { photo: session.photo } : {}),
+  };
 }
 
 const ATTRS = 'HttpOnly; Secure; SameSite=Lax; Path=/';

@@ -58,6 +58,26 @@ describe('startConnect (call 1 — exchange + stash, no pull)', () => {
     });
   });
 
+  it('carries a profile photo into the session when Strava returns one', async () => {
+    const deps: StartDeps = {
+      exchangeToken: vi.fn(() =>
+        Promise.resolve({
+          accessToken: 'AT',
+          athleteId: 9,
+          athleteName: 'Jo',
+          athletePhoto: 'https://cdn/jo.jpg',
+        })
+      ),
+      stash: vi.fn(() => Promise.resolve('S')),
+    };
+    const { session } = await startConnect('CODE', deps);
+    expect(session).toEqual({
+      athleteId: 9,
+      name: 'Jo',
+      photo: 'https://cdn/jo.jpg',
+    });
+  });
+
   it('propagates a token-exchange failure (fail loud, no swallow)', async () => {
     const deps: StartDeps = {
       exchangeToken: vi.fn(() =>

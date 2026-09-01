@@ -9,7 +9,7 @@
  * Pure over WebCrypto (`crypto.subtle`), which exists in both the Workers runtime
  * and Node — so this is unit-tested without the network or a real request.
  */
-export type Session = { athleteId: number; name: string };
+export type Session = { athleteId: number; name: string; photo?: string };
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -81,8 +81,10 @@ export async function verifySession(
       typeof (parsed as Session).athleteId === 'number' &&
       typeof (parsed as Session).name === 'string'
     ) {
-      const { athleteId, name } = parsed as Session;
-      return { athleteId, name };
+      const { athleteId, name, photo } = parsed as Session;
+      return typeof photo === 'string'
+        ? { athleteId, name, photo }
+        : { athleteId, name };
     }
     return null;
   } catch {

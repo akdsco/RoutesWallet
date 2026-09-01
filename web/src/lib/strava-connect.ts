@@ -69,7 +69,12 @@ function toSessionState(data: unknown): SessionState {
       typeof d.athleteId === 'number' &&
       typeof d.name === 'string'
     ) {
-      return { signedIn: true, athleteId: d.athleteId, name: d.name };
+      return {
+        signedIn: true,
+        athleteId: d.athleteId,
+        name: d.name,
+        ...(typeof d.photo === 'string' ? { photo: d.photo } : {}),
+      };
     }
   }
   return { signedIn: false };

@@ -27,6 +27,7 @@ export type StartDeps = {
     accessToken: string;
     athleteId: number;
     athleteName: string;
+    athletePhoto?: string;
   }>;
   /** Stash the token bridge server-side; returns the opaque handle. */
   stash: (bridge: TokenBridge) => Promise<string>;
@@ -38,10 +39,12 @@ export async function startConnect(
   code: string,
   deps: StartDeps
 ): Promise<StartResult> {
-  const { accessToken, athleteId, athleteName } =
+  const { accessToken, athleteId, athleteName, athletePhoto } =
     await deps.exchangeToken(code);
   const syncId = await deps.stash({ accessToken, athleteId });
-  return { session: { athleteId, name: athleteName }, syncId };
+  const session: Session = { athleteId, name: athleteName };
+  if (athletePhoto) session.photo = athletePhoto;
+  return { session, syncId };
 }
 
 export type SyncDeps = {

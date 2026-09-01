@@ -11,6 +11,13 @@ describe('session cookie sign/verify', () => {
     expect(await verifySession(value, SECRET)).toEqual(SESSION);
   });
 
+  it('round-trips an optional profile photo', async () => {
+    const withPhoto = { ...SESSION, photo: 'https://cdn/x.jpg' };
+    expect(
+      await verifySession(await signSession(withPhoto, SECRET), SECRET)
+    ).toEqual(withPhoto);
+  });
+
   it('rejects a value signed for a different payload (tampered payload)', async () => {
     const a = await signSession({ athleteId: 1, name: 'A' }, SECRET);
     const b = await signSession({ athleteId: 2, name: 'B' }, SECRET);
