@@ -1,5 +1,10 @@
 import { ingestMemberRoutes } from './member-ingest.ts';
-import { upsertFeatures, type D1Like, type StoredFeature } from './store.ts';
+import {
+  upsertFeatures,
+  existingIds,
+  type D1Like,
+  type StoredFeature,
+} from './store.ts';
 import type { TokenBridge } from './sync-store.ts';
 import type { Session } from './session.ts';
 import type { StravaRouteInput } from './strava-route.ts';
@@ -59,8 +64,10 @@ export type SyncDeps = {
 };
 
 export type SyncResult = {
-  /** Routes written to the shared pool. */
-  ingested: number;
+  /** Routes newly inserted into the shared pool this sync. */
+  added: number;
+  /** Routes that already existed and were re-written (name/notes/geometry). */
+  updated: number;
   /** Routes dropped for having no usable line (observable, not silent). */
   skipped: number;
 };
@@ -72,7 +79,14 @@ export async function syncConnectedRoutes(
   const bridge = await deps.take(syncId);
   if (!bridge) return null; // expired/spent/unknown handle — caller returns 401
   const routes = await deps.fetchRoutes(bridge.accessToken, bridge.athleteId);
-  const { fc, ingested, skipped } = ingestMemberRoutes(routes, deps.lookups);
-  await upsertFeatures(deps.store, fc.features as StoredFeature[]);
-  return { ingested, skipped };
+  const { fc, skipped } = ingestMemberRoutes(routes, deps.lookups);
+  const features = fc.features as StoredFeature[];
+  const ids = features
+    .map((f) => f.properties?.id)
+    .filter((id): id is string => typeof id === 'string' && id !== '');
+  // Classify against the pool BEFORE the upsert, so we can report Added vs Updated.
+  const present = await existingIds(deps.store, ids);
+  await upsertFeatures(deps.store, features);
+  const added = ids.filter((id) => !present.has(id)).length;
+  return { added, updated: ids.length - added, skipped };
 }

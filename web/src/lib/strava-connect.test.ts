@@ -67,10 +67,10 @@ describe('runSync', () => {
   it('POSTs /connect/sync and returns the added/skipped counts', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonRes({ added: 12, skipped: 1 }));
+      .mockResolvedValue(jsonRes({ added: 12, updated: 2, skipped: 1 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    expect(await runSync()).toEqual({ added: 12, skipped: 1 });
+    expect(await runSync()).toEqual({ added: 12, updated: 2, skipped: 1 });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/connect/sync');
     expect(init.method).toBe('POST');

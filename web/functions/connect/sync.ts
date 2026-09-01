@@ -39,7 +39,11 @@ export const onRequestPost = async ({
     });
     // Null handle: expired/spent/unknown — clear the stale cookie and 401.
     if (!result) return json({ error: 'sync-expired' }, 401, true);
-    return json({ added: result.ingested, skipped: result.skipped }, 200, true);
+    return json(
+      { added: result.added, updated: result.updated, skipped: result.skipped },
+      200,
+      true
+    );
   } catch (err) {
     // Fail loud: the token is already consumed, so clear the stale cookie and
     // surface a 500 the client shows as "try again", never a silent success.

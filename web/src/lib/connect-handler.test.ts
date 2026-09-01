@@ -6,7 +6,7 @@ import {
   type SyncDeps,
 } from './connect-handler.ts';
 import type { StravaRouteInput } from './strava-route.ts';
-import type { D1Like } from './store.ts';
+import type { D1Like, D1PreparedLike } from './store.ts';
 
 const canonical = '_p~iF~ps|U_ulLnnqC_mqNvxq`@';
 
@@ -106,7 +106,8 @@ describe('syncConnectedRoutes (call 2 — take handle, pull, ingest)', () => {
 
     expect(deps.take).toHaveBeenCalledWith('SYNC-ID');
     expect(deps.fetchRoutes).toHaveBeenCalledWith('AT', 9);
-    expect(res).toEqual({ ingested: 2, skipped: 0 });
+    // Fresh (empty) store → both routes are Added, none Updated.
+    expect(res).toEqual({ added: 2, updated: 0, skipped: 0 });
     expect(store.written.sort()).toEqual(['a', 'b']);
   });
 
@@ -122,8 +123,39 @@ describe('syncConnectedRoutes (call 2 — take handle, pull, ingest)', () => {
       ),
     });
     const res = await syncConnectedRoutes('SYNC-ID', deps);
-    expect(res).toEqual({ ingested: 1, skipped: 1 });
+    expect(res).toEqual({ added: 1, updated: 0, skipped: 1 });
     expect(store.written).toEqual(['good']);
+  });
+
+  it('splits Added vs Updated by what already exists in the pool', async () => {
+    // A store where 'a' already exists (the IN-query reports it), 'b' is new.
+    const store: D1Like = {
+      prepare: (sql: string) => {
+        const mk = (args: unknown[]): D1PreparedLike =>
+          ({
+            bind: (...v: unknown[]) => mk(v),
+            run: () => Promise.resolve({}),
+            all: () =>
+              Promise.resolve({
+                results: /id_str IN/i.test(sql)
+                  ? (args as string[])
+                      .filter((id) => id === 'a')
+                      .map((id) => ({ id_str: id }))
+                  : [],
+              }),
+          }) as D1PreparedLike;
+        return mk([]);
+      },
+    };
+    const deps = baseSyncDeps({
+      store,
+      fetchRoutes: vi.fn(() => Promise.resolve([route('a'), route('b')])),
+    });
+    expect(await syncConnectedRoutes('SYNC-ID', deps)).toEqual({
+      added: 1, // b
+      updated: 1, // a
+      skipped: 0,
+    });
   });
 
   it('returns null for an expired/invalid handle (no pull, caller 401s)', async () => {

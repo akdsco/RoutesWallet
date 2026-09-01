@@ -68,7 +68,11 @@ describe('ConnectStrava — signed in', () => {
       athleteId: 9,
       name: 'Jo',
     });
-    let resolveSync!: (r: { added: number; skipped: number }) => void;
+    let resolveSync!: (r: {
+      added: number;
+      updated: number;
+      skipped: number;
+    }) => void;
     vi.spyOn(api, 'runSync').mockReturnValue(
       new Promise((res) => {
         resolveSync = res;
@@ -80,7 +84,7 @@ describe('ConnectStrava — signed in', () => {
     // Progress while the pull runs — not a frozen blank.
     expect(await screen.findByRole('status')).toHaveTextContent(/sync/i);
 
-    resolveSync({ added: 12, skipped: 1 });
+    resolveSync({ added: 12, updated: 2, skipped: 1 });
 
     // The count is the unit under test — assert on the number, not the copy.
     await waitFor(() =>
@@ -114,7 +118,11 @@ describe('ConnectStrava — signed in', () => {
       athleteId: 9,
       name: 'Jo',
     });
-    vi.spyOn(api, 'runSync').mockResolvedValue({ added: 0, skipped: 0 });
+    vi.spyOn(api, 'runSync').mockResolvedValue({
+      added: 0,
+      updated: 0,
+      skipped: 0,
+    });
     setUrl('?connect=start');
     render(<ConnectStrava />);
 

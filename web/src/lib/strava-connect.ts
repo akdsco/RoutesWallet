@@ -88,7 +88,7 @@ export async function fetchSession(): Promise<SessionState> {
   return toSessionState(await res.json());
 }
 
-export type SyncResult = { added: number; skipped: number };
+export type SyncResult = { added: number; updated: number; skipped: number };
 
 /** Narrow an untrusted /connect/sync body — missing counts default to 0, not NaN. */
 function toSyncResult(data: unknown): SyncResult {
@@ -96,9 +96,11 @@ function toSyncResult(data: unknown): SyncResult {
     string,
     unknown
   >;
+  const num = (v: unknown) => (typeof v === 'number' ? v : 0);
   return {
-    added: typeof d.added === 'number' ? d.added : 0,
-    skipped: typeof d.skipped === 'number' ? d.skipped : 0,
+    added: num(d.added),
+    updated: num(d.updated),
+    skipped: num(d.skipped),
   };
 }
 

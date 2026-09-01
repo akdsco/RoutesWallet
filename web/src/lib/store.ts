@@ -73,6 +73,30 @@ export async function upsertFeatures(
   return written;
 }
 
+/**
+ * Which of the given ids already exist in the pool — so a sync can report Added
+ * (new) vs Updated (already present) counts. Queried in chunks to stay well under
+ * D1's bound-variable limit. Read-only.
+ */
+export async function existingIds(
+  db: D1Like,
+  ids: readonly string[]
+): Promise<Set<string>> {
+  const present = new Set<string>();
+  const CHUNK = 50;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    if (chunk.length === 0) break;
+    const placeholders = chunk.map(() => '?').join(',');
+    const { results } = await db
+      .prepare(`SELECT id_str FROM routes WHERE id_str IN (${placeholders})`)
+      .bind(...chunk)
+      .all<{ id_str: string }>();
+    for (const row of results) present.add(row.id_str);
+  }
+  return present;
+}
+
 /** Double single quotes so a value is safe inside a SQL string literal. */
 function q(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
