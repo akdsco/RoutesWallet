@@ -22,6 +22,8 @@ type Props = {
   connectSlot?: ReactNode;
   /** The "my routes vs all" toggle (TB-116), shown to signed-in members. */
   scopeSlot?: ReactNode;
+  /** The account avatar (signed in) — replaces the theme toggle in the corner. */
+  accountSlot?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -53,6 +55,7 @@ export function Sidebar(props: Props) {
     hint,
     banner,
     scopeSlot,
+    accountSlot,
     placeLabel,
     groups,
     selectedId,
@@ -92,20 +95,22 @@ export function Sidebar(props: Props) {
               </span>
               <span className="text-[13px] text-muted">routes</span>
             </div>
-            <button
-              type="button"
-              aria-pressed={theme === 'dark'}
-              aria-label={
-                theme === 'dark'
-                  ? 'Switch to light theme'
-                  : 'Switch to dark theme'
-              }
-              onClick={onToggleTheme}
-              title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
-            >
-              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
-            </button>
+            {accountSlot ?? (
+              <button
+                type="button"
+                aria-pressed={theme === 'dark'}
+                aria-label={
+                  theme === 'dark'
+                    ? 'Switch to light theme'
+                    : 'Switch to dark theme'
+                }
+                onClick={onToggleTheme}
+                title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
+              >
+                <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+              </button>
+            )}
           </div>
 
           <form className="flex flex-col gap-2" onSubmit={submit}>

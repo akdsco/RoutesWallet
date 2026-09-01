@@ -6,10 +6,12 @@ import { BasemapControl } from './components/BasemapControl.tsx';
 import { Sidebar, type Banner, type GroupVM } from './components/Sidebar.tsx';
 import { SearchField } from './components/SearchField.tsx';
 import { ConnectStrava } from './components/ConnectStrava.tsx';
+import { AccountMenu, type ThemeChoice } from './components/AccountMenu.tsx';
 import {
   RouteScopeToggle,
   type RouteScope,
 } from './components/RouteScopeToggle.tsx';
+import { useConnect } from './lib/useConnect.ts';
 import { RouteList, type FilterEmpty } from './components/RouteList.tsx';
 import { FilterPanel } from './components/FilterPanel.tsx';
 import { MobileFilterSheet } from './components/MobileFilterSheet.tsx';
@@ -117,7 +119,6 @@ export function App() {
   const [loading, setLoading] = useState(true);
   // The signed-in member (TB-116) + which routes they're viewing. `mine` narrows
   // the whole pool to their own contributions via the owner id already on routes.
-  const [session, setSession] = useState<SessionState>({ signedIn: false });
   const [scope, setScope] = useState<RouteScope>('all');
   const [query, setQuery] = useState('');
   const [place, setPlace] = useState<Place | null>(null);
@@ -181,8 +182,13 @@ export function App() {
     []
   );
 
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme: themeSetting, resolvedTheme, setTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'dark' ? 'dark' : 'light';
+  // The raw appearance choice (may be 'system') for the 3-way account control.
+  const themeChoice: ThemeChoice =
+    themeSetting === 'light' || themeSetting === 'dark'
+      ? themeSetting
+      : 'system';
 
   // Load (and reload) the shared pool. Exposed as a callback so a fresh member
   // sync (below) can refresh it and see their just-added routes.
@@ -203,8 +209,16 @@ export function App() {
     reloadRoutes();
   }, [reloadRoutes]);
 
+  // The whole client side of Sign in with Strava (session, sync, sign out). A
+  // fresh sync reloads the pool so the member's just-added routes appear.
+  const connect = useConnect(reloadRoutes);
+  const session = useMemo<SessionState>(
+    () => connect.session ?? { signedIn: false },
+    [connect.session]
+  );
+
   // The viewer's pool: all club routes, or just the signed-in member's own when
-  // they've switched to "My routes".
+  // they've switched to "My routes". (Signed out, the guard forces "all".)
   const routes = useMemo(
     () =>
       scopeRoutes(
@@ -213,12 +227,6 @@ export function App() {
       ),
     [allRoutes, scope, session]
   );
-
-  // Told by the connect card who's signed in; signing out drops back to all routes.
-  const handleSessionChange = useCallback((s: SessionState) => {
-    setSession(s);
-    if (!s.signedIn) setScope('all');
-  }, []);
 
   // Domains + the filter pool. Before init, use the widest defaults so the pool
   // is everything (avoids a one-frame "filtered to nothing" flash on load).
@@ -706,9 +714,22 @@ export function App() {
           filterPanel={filterPanel}
           connectSlot={
             <ConnectStrava
-              onSessionChange={handleSessionChange}
-              onSynced={reloadRoutes}
+              session={session}
+              sync={connect.sync}
+              banner={connect.banner}
             />
+          }
+          accountSlot={
+            session.signedIn ? (
+              <AccountMenu
+                name={session.name}
+                photo={session.photo}
+                theme={themeChoice}
+                onSetTheme={setTheme}
+                onOpenSettings={() => {}}
+                onSignOut={() => void connect.signOut()}
+              />
+            ) : null
           }
           scopeSlot={
             session.signedIn ? (
