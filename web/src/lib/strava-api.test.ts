@@ -8,8 +8,13 @@ import {
 
 const ok = (body: unknown): Response =>
   ({ ok: true, status: 200, json: () => Promise.resolve(body) }) as Response;
-const fail = (status: number): Response =>
-  ({ ok: false, status, json: () => Promise.resolve({}) }) as Response;
+const fail = (status: number, body = ''): Response =>
+  ({
+    ok: false,
+    status,
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(body),
+  }) as Response;
 
 describe('hasRequiredScope', () => {
   it('requires activity:read_all (Strava returns "read,activity:read_all")', () => {
@@ -21,16 +26,29 @@ describe('hasRequiredScope', () => {
 
 describe('exchangeToken', () => {
   it('POSTs the code + secret and returns the token + athlete id', async () => {
-    const fetchImpl = vi
-      .fn<FetchLike>()
-      .mockResolvedValue(ok({ access_token: 'AT', athlete: { id: 42 } }));
+    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(
+      ok({
+        access_token: 'AT',
+        athlete: {
+          id: 42,
+          firstname: 'Ada',
+          lastname: 'Lovelace',
+          profile_medium: 'https://example.com/ada.jpg',
+        },
+      })
+    );
 
     const res = await exchangeToken(
       { code: 'C', clientId: 'CID', clientSecret: 'SEC' },
       fetchImpl
     );
 
-    expect(res).toEqual({ accessToken: 'AT', athleteId: 42 });
+    expect(res).toEqual({
+      accessToken: 'AT',
+      athleteId: 42,
+      athleteName: 'Ada Lovelace',
+      athletePhoto: 'https://example.com/ada.jpg',
+    });
     const [url, init] = fetchImpl.mock.calls[0]!;
     expect(url).toContain('/oauth/token');
     expect(init!.method).toBe('POST');
@@ -43,11 +61,68 @@ describe('exchangeToken', () => {
     });
   });
 
-  it('throws loudly on a non-ok token response', async () => {
-    const fetchImpl = vi.fn<FetchLike>().mockResolvedValue(fail(400));
+  it('derives a display name from firstname/lastname, falling back to the id', async () => {
+    const firstOnly = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi
+        .fn<FetchLike>()
+        .mockResolvedValue(
+          ok({ access_token: 'AT', athlete: { id: 7, firstname: 'Jo' } })
+        )
+    );
+    expect(firstOnly.athleteName).toBe('Jo');
+
+    const nameless = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi
+        .fn<FetchLike>()
+        .mockResolvedValue(ok({ access_token: 'AT', athlete: { id: 7 } }))
+    );
+    expect(nameless.athleteName).toBe('Athlete 7');
+  });
+
+  it('takes a real profile photo but ignores Strava’s default avatar', async () => {
+    const custom = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi.fn<FetchLike>().mockResolvedValue(
+        ok({
+          access_token: 'AT',
+          athlete: { id: 7, profile_medium: 'https://cdn.example/p.jpg' },
+        })
+      )
+    );
+    expect(custom.athletePhoto).toBe('https://cdn.example/p.jpg');
+
+    // Strava's placeholder avatar (path contains avatar/athlete) → treat as none,
+    // so the UI falls back to initials rather than a generic silhouette.
+    const dflt = await exchangeToken(
+      { code: 'C', clientId: 'x', clientSecret: 'y' },
+      vi.fn<FetchLike>().mockResolvedValue(
+        ok({
+          access_token: 'AT',
+          athlete: {
+            id: 7,
+            profile_medium:
+              'https://d3.cloudfront.net/assets/avatar/athlete/medium.png',
+          },
+        })
+      )
+    );
+    expect(dflt.athletePhoto).toBeUndefined();
+  });
+
+  it('throws loudly on a non-ok token response, including Strava’s reason', async () => {
+    const fetchImpl = vi
+      .fn<FetchLike>()
+      .mockResolvedValue(
+        fail(
+          400,
+          '{"message":"Bad Request","errors":[{"field":"client_secret"}]}'
+        )
+      );
     await expect(
       exchangeToken({ code: 'C', clientId: 'x', clientSecret: 'y' }, fetchImpl)
-    ).rejects.toThrow(/token exchange failed: 400/);
+    ).rejects.toThrow(/token exchange failed: 400.*client_secret/s);
   });
 });
 

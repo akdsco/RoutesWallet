@@ -3,6 +3,7 @@ import type { Feature, LineString } from 'geojson';
 import {
   readAllFeatures,
   upsertFeatures,
+  existingIds,
   buildSeedSql,
   type D1Like,
   type D1PreparedLike,
@@ -38,10 +39,18 @@ class FakeD1 implements D1Like {
         }
         return Promise.resolve({});
       },
-      all: () =>
-        Promise.resolve({
+      all: () => {
+        // Model the two SELECTs the store issues: existing-id lookup vs read-all.
+        if (/id_str FROM routes WHERE id_str IN/i.test(sql)) {
+          const results = (args as string[])
+            .filter((id) => this.rows.has(id))
+            .map((id_str) => ({ id_str }));
+          return Promise.resolve({ results });
+        }
+        return Promise.resolve({
           results: [...this.rows.values()].map((r) => ({ feature: r.feature })),
-        }),
+        });
+      },
     } as D1PreparedLike;
   }
 }
@@ -88,6 +97,20 @@ describe('store: upsertFeatures / readAllFeatures', () => {
     );
     expect(spy).toHaveBeenCalled(); // the skip is observable, not silent
     spy.mockRestore();
+  });
+});
+
+describe('store: existingIds', () => {
+  it('returns which of the given ids are already in the pool', async () => {
+    const db = new FakeD1();
+    await upsertFeatures(db, [feat('a'), feat('b')]);
+    const present = await existingIds(db, ['a', 'c', 'b', 'd']);
+    expect([...present].sort()).toEqual(['a', 'b']);
+  });
+
+  it('is empty for no ids (no query issued)', async () => {
+    const db = new FakeD1();
+    expect((await existingIds(db, [])).size).toBe(0);
   });
 });
 

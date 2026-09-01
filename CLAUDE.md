@@ -35,12 +35,27 @@ table + a Strava login — **not** a platform. Anything beyond that narrow path 
 ### Architecture invariants
 
 - **Static site + a thin serverless edge for the member path.** The app is still a
-  static Vite bundle on Cloudflare Pages; the only server code is the two Cloudflare
-  Pages **Functions** in `web/functions/` (`/api/routes` reads the pool, and
-  `/connect/callback` does the Strava OAuth token exchange + ingest). State is one
-  **D1** table (`web/migrations/`), seeded from `routes.geojson`. **Still no secrets
-  in the repo** — the Strava client secret + D1 binding live in Cloudflare env vars
-  only. Do **not** grow this into a database schema, an ORM, or a user/club model.
+  static Vite bundle on Cloudflare Pages; the only server code is the Cloudflare
+  Pages **Functions** in `web/functions/`: `/api/routes` reads the pool;
+  `/connect/start` mints the OAuth CSRF `state` + redirects to Strava;
+  `/connect/callback` validates `state`, does the token exchange, then redirects fast;
+  `/connect/sync` does the list-only pull + ingest; `/api/me` + `/connect/logout`
+  are the session endpoints (TB-116). Persistent state is one **D1** table
+  (`web/migrations/`, seeded from `routes.geojson`); TB-116 added a **signed
+  identity cookie** (`{athleteId, name}` — no user table) and a **KV namespace
+  `SYNC`** holding the ephemeral, single-use access token between the two connect
+  calls. **Still no secrets in the repo** — the Strava client secret,
+  `SESSION_SECRET`, and the D1/KV bindings live in Cloudflare env vars only. Do
+  **not** grow this into a database schema, an ORM, a stored-token store, or a
+  relational user/club model — identity stays cookie-only.
+- **Account UI (frontend-first).** On top of the flow: an avatar menu (identity +
+  Settings + Sign out + Light/Dark/System theme), a first-sync panel/strip/summary
+  (Added/Updated/Already-in), Settings (Sync now, Disconnect, km/mi units), and
+  `session.photo` from Strava. Client orchestration lives in `src/lib/useConnect.ts`;
+  distances go through `formatDistance` + a units context. **Deferred to the DB
+  phase (stubbed, not built):** resumable sync across reloads, a determinate
+  "N of M" progress stream, per-route geometry+elevation, and a **true** Strava
+  de-authorisation on Disconnect (v1 just ends the session).
 - Stack is fixed: **Vite + React + TypeScript (strict), Leaflet + OSM raster tiles,
   Turf.js** for geo maths. Do not swap the map lib or add a framework.
 - **Never hand-roll geo maths** — distance/near-point goes through Turf.

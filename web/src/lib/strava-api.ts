@@ -31,10 +31,19 @@ export type ExchangeInput = {
   clientSecret: string;
 };
 
+export type ExchangeResult = {
+  accessToken: string;
+  athleteId: number;
+  /** Display name for "Signed in as …" — never a secret, safe in the cookie. */
+  athleteName: string;
+  /** Profile photo URL, if the athlete has a real (non-default) one. */
+  athletePhoto?: string;
+};
+
 export async function exchangeToken(
   { code, clientId, clientSecret }: ExchangeInput,
   fetchImpl: FetchLike = fetch
-): Promise<{ accessToken: string; athleteId: number }> {
+): Promise<ExchangeResult> {
   const res = await fetchImpl(TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -46,18 +55,59 @@ export async function exchangeToken(
     }),
   });
   if (!res.ok) {
-    throw new Error(`Strava token exchange failed: ${res.status}`);
+    // Fail loud + explicit: carry Strava's own error body so the log says WHY
+    // (a bad client_secret reads differently from a spent/invalid code), instead
+    // of a bare status the operator can't act on. Truncated to keep logs sane.
+    const body = await res.text().catch(() => '');
+    throw new Error(
+      `Strava token exchange failed: ${res.status} ${body.slice(0, 300)}`.trim()
+    );
   }
   const data = (await res.json()) as {
     access_token?: string;
-    athlete?: { id?: number };
+    athlete?: {
+      id?: number;
+      firstname?: string;
+      lastname?: string;
+      profile_medium?: string;
+    };
   };
-  if (!data.access_token || typeof data.athlete?.id !== 'number') {
+  const athlete = data.athlete;
+  if (!data.access_token || typeof athlete?.id !== 'number') {
     throw new Error(
       'Strava token exchange returned no access_token/athlete id'
     );
   }
-  return { accessToken: data.access_token, athleteId: data.athlete.id };
+  return {
+    accessToken: data.access_token,
+    athleteId: athlete.id,
+    athleteName: displayName(athlete.id, athlete.firstname, athlete.lastname),
+    athletePhoto: realPhoto(athlete.profile_medium),
+  };
+}
+
+/**
+ * A usable profile photo URL, or undefined. Strava returns a **default** avatar
+ * (path contains `avatar/athlete`) when the athlete has none — we drop those so
+ * the UI shows initials rather than a generic silhouette (per the design).
+ */
+function realPhoto(url: string | undefined): string | undefined {
+  if (typeof url !== 'string' || !url.startsWith('http')) return undefined;
+  if (url.includes('avatar/athlete')) return undefined;
+  return url;
+}
+
+/** Join firstname + lastname, falling back to "Athlete <id>" when Strava sends none. */
+function displayName(
+  id: number,
+  firstname?: string,
+  lastname?: string
+): string {
+  const name = [firstname, lastname]
+    .filter((p): p is string => typeof p === 'string' && p.trim() !== '')
+    .join(' ')
+    .trim();
+  return name || `Athlete ${id}`;
 }
 
 /**

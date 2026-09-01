@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { stubExternal } from './helpers.ts';
 
-const CONNECT = /connect strava/i;
-const RECONNECT = /add more from strava/i;
+const CONNECT = /connect with strava/i;
 
-// The pool after a member has connected (as the callback Function would have
-// upserted it): the seeded routes plus one fresh Kent member contribution.
+// The shared pool after a member has connected: a seeded club route plus one Kent
+// member contribution owned by athlete 99.
 const POOL_WITH_MEMBER = {
   type: 'FeatureCollection',
   features: [
@@ -52,45 +52,108 @@ const POOL_WITH_MEMBER = {
   ],
 };
 
-test.beforeEach(async ({ page }) => {
-  await stubExternal(page);
-});
-
-test('offers a Connect Strava CTA linking to the OAuth consent screen', async ({
-  page,
-}) => {
-  await page.goto('/');
-
-  const link = page.getByRole('link', { name: CONNECT });
-  await expect(link).toBeVisible();
-
-  const url = new URL((await link.getAttribute('href'))!);
-  expect(url.origin + url.pathname).toBe(
-    'https://www.strava.com/oauth/authorize'
+/** Sign the member in: /api/me reports them, /api/routes carries their route. */
+async function signIn(page: Page) {
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ signedIn: true, athleteId: 99, name: 'Jo Rider' }),
+    })
   );
-  expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
-  expect(url.searchParams.get('redirect_uri')).toContain('/connect/callback');
-});
-
-test('after a member connects, their route joins the pool everyone sees', async ({
-  page,
-}) => {
-  // The pool now carries the member's contribution.
   await page.route('**/api/routes', (route) =>
     route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify(POOL_WITH_MEMBER),
     })
   );
+}
 
-  // Return from Strava's callback.
-  await page.goto('/?connect=ok&added=1');
+test.beforeEach(async ({ page }) => {
+  await stubExternal(page);
+});
 
-  // Success status + the CTA relabels (browser "contributed" flag set).
-  await expect(page.getByRole('status')).toContainText(/club pool/i);
-  await expect(page.getByRole('link', { name: RECONNECT })).toBeVisible();
+test('offers a Connect CTA that begins the server-side OAuth flow', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const link = page.getByRole('link', { name: CONNECT });
+  await expect(link).toBeVisible();
+  expect(await link.getAttribute('href')).toBe('/connect/start');
+});
 
-  // The member route is now visible in the shared pool.
+test('signing in: loading panel → itemised summary → See my routes', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.route('**/connect/sync', async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ added: 1, updated: 0, skipped: 0 }),
+    });
+  });
+
+  await page.goto('/?connect=start');
+
+  // A designed loading state (not a bare line), then the itemised summary.
+  await expect(
+    page.getByRole('heading', { name: /bringing in your routes/i })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: /your routes are in/i })
+  ).toBeVisible();
+  await expect(page.getByRole('status')).toContainText(/added/i);
+
+  // The avatar marks the signed-in account.
+  await expect(
+    page.getByRole('button', { name: /account, jo rider/i })
+  ).toBeVisible();
+
+  // "See my routes" narrows to the member's own contribution.
+  await page.getByRole('button', { name: /see my routes/i }).click();
+  await expect(
+    page.getByRole('button', { name: /ashdown forest loop/i })
+  ).toBeVisible();
+  await expect(page.getByText('Cambridge Loop')).toHaveCount(0);
+});
+
+test('my routes vs all, then sign out via the account menu', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/');
+
   await expect(page.getByText('Ashdown Forest Loop')).toBeVisible();
-  await expect(page.getByText('2 routes')).toBeVisible();
+  await expect(page.getByText('Cambridge Loop')).toBeVisible();
+
+  await page.getByRole('button', { name: /my routes/i }).click();
+  await expect(page.getByText('Cambridge Loop')).toHaveCount(0);
+  await page.getByRole('button', { name: /all routes/i }).click();
+  await expect(page.getByText('Cambridge Loop')).toBeVisible();
+
+  // Sign out lives in the avatar menu now.
+  await page.getByRole('button', { name: /account, jo rider/i }).click();
+  await page.getByRole('menuitem', { name: /sign out/i }).click();
+  await expect(page.getByRole('link', { name: CONNECT })).toBeVisible();
+  await expect(page.getByText('Cambridge Loop')).toBeVisible();
+});
+
+test('opens Settings from the account menu and can disconnect', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /account, jo rider/i }).click();
+  await page.getByRole('menuitem', { name: /settings/i }).click();
+
+  // Settings replaces the list.
+  await expect(page.getByRole('link', { name: /sync now/i })).toBeVisible();
+  await expect(page.getByRole('group', { name: /units/i })).toBeVisible();
+
+  // Disconnect confirms inline, then returns to the signed-out CTA.
+  await page.getByRole('button', { name: /^disconnect$/i }).click();
+  await expect(page.getByText(/stay in the library/i)).toBeVisible();
+  await page.getByRole('button', { name: /^disconnect$/i }).click();
+  await expect(page.getByRole('link', { name: CONNECT })).toBeVisible();
 });

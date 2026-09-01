@@ -139,9 +139,10 @@ kept only as the D1 **seed** source.
 
 - `web/functions/api/routes.ts` → `GET /api/routes`: reads the D1 pool, returns GeoJSON.
 - `web/functions/connect/callback.ts` → `GET /connect/callback`: Strava OAuth
-  redirect target — server-side token exchange (the client secret), list-only route
-  pull, region/country normalise (bundled `functions/assets/uk-counties.json`),
-  upsert into D1. Errors log + redirect home `?connect=error` (never a bare 500).
+  redirect target — server-side token exchange (the client secret) then a fast
+  redirect (TB-116 split the pull out; see §8b). The list-only pull + region/country
+  normalise (bundled `functions/assets/uk-counties.json`) + D1 upsert now live in
+  `functions/connect/sync.ts`. Errors log + surface visibly (never a bare 500).
 - `web/migrations/0001_routes.sql` (schema) + `npm run build:seed-sql` →
   `migrations/seed-routes.sql` (the 125 club routes; gitignored, ~7 MB).
 - `web/wrangler.toml` binds the D1 database as `DB`.
@@ -174,6 +175,64 @@ real country from the offline normalise). Full-res geometry + the elevation
 `npx wrangler d1 delete routeswallet`, remove `web/functions/`, and revert the
 `loadRoutes()` default to `/routes.geojson`. The static app returns untouched.
 
+## 8b. TB-116 realised — "Sign in with Strava" (persistent identity)
+
+The anonymous connect became a real login: visible progress while routes sync, an
+unmissable added-count, a session that persists across visits, and a "my routes vs
+all club routes" view. Deliberately **lightweight** — a signed cookie, **no user
+table, no stored tokens** (the conscious scope step past TB-110's anonymous pool).
+
+**The flow is two calls, so the slow pull never blocks the redirect:**
+
+- `GET /connect/start` — mints a random CSRF `state`, sets it in a short-lived
+  HttpOnly cookie, and redirects to Strava's consent screen (client id server-side).
+  The browser links here; it never builds the authorize URL. The callback rejects
+  any `code` whose `state` doesn't match the cookie → defeats login-CSRF.
+- `GET /connect/callback` (call 1) — validates `state`, exchanges the OAuth code, stashes
+  the access token in KV under a random single-use handle, sets the signed identity
+  cookie (`{athleteId, name}`) + the opaque handle cookie, and **redirects home
+  instantly** (`?connect=start`). No pull here → no frozen blank.
+- `POST /connect/sync` (call 2) — the app runs this while showing progress; it
+  consumes the token from KV by its handle, pulls the member's routes list-only,
+  ingests them into the pool, returns `{added, skipped}`, and deletes the handle.
+- `GET /api/me` — reports the signed-in athlete (drives "Signed in as …" + the
+  my-routes filter). `POST /connect/logout` — clears the identity cookie.
+
+**Why KV, not the browser or D1:** the token bridges the two calls **server-side**;
+the browser holds only the opaque handle (the normal "BFF" pattern). KV's TTL makes
+it ephemeral (not a stored token, not a new table).
+
+**Account UI (frontend-first).** On top of the flow above the app has the full
+account experience — an avatar menu (identity, Settings, Sign out, theme), a
+first-sync panel/strip/summary (Added/Updated/Already-in), and Settings (Sync now,
+Disconnect, km/mi units). `/api/me` also returns the athlete's `photo`. Four pieces
+are **deliberately deferred** to the DB phase, not built: a resumable/durable sync
+that survives a reload, a determinate "N of M" progress stream, a per-route
+geometry+elevation pull, and a **true** Strava de-authorisation on Disconnect
+(we throw the token away, so v1 Disconnect just ends the session).
+
+**Provisioning status (done — on top of §8a):**
+
+- ✅ KV namespace `SYNC` created (`id b5c4f807dbe74dccac77f2a31ebbb2b6`) and
+  committed in `wrangler.toml` as the `SYNC` binding — the git-connected Pages
+  build reads it, so it binds on the next production deploy.
+- ✅ `SESSION_SECRET` set as an encrypted **production** Secret on the
+  `routeswallet` Pages project (`wrangler pages secret put SESSION_SECRET`).
+- ⬜ **Preview** deployments: set `SESSION_SECRET` for the Preview environment in
+  the Pages dashboard (Settings → Env vars → Preview) — wrangler's `pages secret
+  put` only targets production. Only needed to exercise the flow on branch previews.
+- ⬜ **Local** `wrangler pages dev`: add `SESSION_SECRET` to `.dev.vars`; the KV
+  binding is picked up from `wrangler.toml` (a local namespace is auto-provisioned).
+
+**Troubleshooting:** if Connect shows **"temporarily unavailable"**, a required
+secret is unset for that environment — the callback's config guard names which one
+in the Function log (`connect callback: server misconfigured … { missing: [...] }`,
+via `wrangler pages deployment tail <id>`). A dashboard secret only takes effect on
+the **next** deployment, so redeploy after adding one.
+
+To recreate from scratch: `npx wrangler kv namespace create SYNC` → put the id in
+`wrangler.toml`; then set the two secrets as above.
+
 ## 9. Environment & secrets
 
 Two keyed concerns today: the Strava connect (TB-110) and the CARTO basemap.
@@ -195,6 +254,18 @@ Two keyed concerns today: the Strava connect (TB-110) and the CARTO basemap.
 - `STRAVA_CLIENT_SECRET` — **server-side only**; set as an encrypted **Secret** in
   the Pages dashboard. Read solely in `functions/connect/callback.ts`. Never exposed.
 - `DB` — the D1 binding (in `wrangler.toml`).
+
+**Sign in with Strava (TB-116).** Turns the connect into a real login; needs two
+new bindings (see §8b):
+
+- `SESSION_SECRET` — **server-side only** encrypted **Secret** (Pages dashboard).
+  The HMAC key that signs the identity cookie (`{athleteId, name}` only — no token).
+  Any long random value (`openssl rand -hex 32`); rotating it signs everyone out.
+- `SYNC` — a **KV namespace** binding holding the short-lived, single-use Strava
+  access token between the OAuth callback and `/connect/sync`. Create it and add
+  the id to `wrangler.toml` (the block is committed but commented until it exists).
+  The token lives only in KV (server-side, ~5-min TTL, deleted on use) — the
+  browser ever only holds the opaque handle, so no token is exposed to it.
 
 **CARTO basemap.** `VITE_CARTO_BASEMAP_KEY` — CARTO now requires a free API key for
 its raster basemaps and watermarks keyless requests ("API KEY REQUIRED"), so the

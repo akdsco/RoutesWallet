@@ -2,6 +2,8 @@ import { useLayoutEffect, useRef } from 'react';
 import type { Route } from '../types.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
+import { formatDistance } from '../lib/units.ts';
+import { useUnits } from '../lib/units-context.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { ContributorByline } from './ContributorByline.tsx';
 import { TrustGlyph } from './TrustGlyph.tsx';
@@ -42,6 +44,7 @@ export function MobileRouteDetail({
     return () => ro.disconnect();
   }, [onMeasure, r.id, nearKm]);
 
+  const units = useUnits();
   const gain = formatGain(r.elevation_gain_m);
   const download = isGpxLink(r.link);
   const hasNotes = !!(r.cafe || r.notes);
@@ -79,7 +82,9 @@ export function MobileRouteDetail({
       </div>
 
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 font-mono text-[13px]">
-        <span className="text-text">{r.distance_km} km</span>
+        <span className="text-text">
+          {formatDistance(r.distance_km, units)}
+        </span>
         {gain && (
           <>
             <span aria-hidden="true" className="text-muted">
@@ -105,7 +110,9 @@ export function MobileRouteDetail({
             <span aria-hidden="true" className="text-muted">
               ·
             </span>
-            <span className="text-muted">{nearKm.toFixed(1)} km away</span>
+            <span className="text-muted">
+              {formatDistance(nearKm, units, 1)} away
+            </span>
           </>
         )}
       </div>

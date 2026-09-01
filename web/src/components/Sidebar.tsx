@@ -20,6 +20,16 @@ type Props = {
   filterPanel?: ReactNode;
   /** The "Connect Strava" CTA (TB-110), rendered in the search header. */
   connectSlot?: ReactNode;
+  /** The "my routes vs all" toggle (TB-116), shown to signed-in members. */
+  scopeSlot?: ReactNode;
+  /** The account avatar (signed in) — replaces the theme toggle in the corner. */
+  accountSlot?: ReactNode;
+  /** The first-sync panel — when present, replaces the list (account redesign). */
+  syncPanel?: ReactNode;
+  /** The slim sync strip — when present, sits atop the list. */
+  syncStrip?: ReactNode;
+  /** The Settings panel — when present, replaces the list (account redesign). */
+  settingsPanel?: ReactNode;
   /** Count-line phrasing for the list's count row. */
   countLine?: string;
   /** The sort control on the count row. */
@@ -50,6 +60,11 @@ export function Sidebar(props: Props) {
     query,
     hint,
     banner,
+    scopeSlot,
+    accountSlot,
+    syncPanel,
+    syncStrip,
+    settingsPanel,
     placeLabel,
     groups,
     selectedId,
@@ -89,20 +104,22 @@ export function Sidebar(props: Props) {
               </span>
               <span className="text-[13px] text-muted">routes</span>
             </div>
-            <button
-              type="button"
-              aria-pressed={theme === 'dark'}
-              aria-label={
-                theme === 'dark'
-                  ? 'Switch to light theme'
-                  : 'Switch to dark theme'
-              }
-              onClick={onToggleTheme}
-              title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
-            >
-              <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
-            </button>
+            {accountSlot ?? (
+              <button
+                type="button"
+                aria-pressed={theme === 'dark'}
+                aria-label={
+                  theme === 'dark'
+                    ? 'Switch to light theme'
+                    : 'Switch to dark theme'
+                }
+                onClick={onToggleTheme}
+                title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-line text-[13px] text-text-2 hover:bg-surface-2"
+              >
+                <span aria-hidden="true">{theme === 'dark' ? '☀︎' : '☾'}</span>
+              </button>
+            )}
           </div>
 
           <form className="flex flex-col gap-2" onSubmit={submit}>
@@ -119,30 +136,37 @@ export function Sidebar(props: Props) {
           </form>
 
           {connectSlot}
+          {scopeSlot}
         </div>
       )}
 
-      {!selectedId && filterPanel}
-
-      <RouteList
-        query={query}
-        banner={banner}
-        placeLabel={placeLabel}
-        groups={groups}
-        selectedId={selectedId}
-        backLabel={backLabel}
-        theme={theme}
-        countLine={countLine}
-        sortControl={sortControl}
-        flat={flat}
-        openGroups={openGroups}
-        onToggleGroup={onToggleGroup}
-        filterEmpty={filterEmpty}
-        onClear={onClear}
-        onSelect={onSelect}
-        onDeselect={onDeselect}
-        onHover={onHover}
-      />
+      {(settingsPanel || syncPanel) && !selectedId ? (
+        (settingsPanel ?? syncPanel)
+      ) : (
+        <>
+          {!selectedId && filterPanel}
+          {!selectedId && syncStrip}
+          <RouteList
+            query={query}
+            banner={banner}
+            placeLabel={placeLabel}
+            groups={groups}
+            selectedId={selectedId}
+            backLabel={backLabel}
+            theme={theme}
+            countLine={countLine}
+            sortControl={sortControl}
+            flat={flat}
+            openGroups={openGroups}
+            onToggleGroup={onToggleGroup}
+            filterEmpty={filterEmpty}
+            onClear={onClear}
+            onSelect={onSelect}
+            onDeselect={onDeselect}
+            onHover={onHover}
+          />
+        </>
+      )}
     </aside>
   );
 }

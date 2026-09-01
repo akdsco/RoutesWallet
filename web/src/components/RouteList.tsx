@@ -9,6 +9,8 @@ import {
 import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { formatGain } from '../lib/format.ts';
+import { formatDistance } from '../lib/units.ts';
+import { useUnits } from '../lib/units-context.ts';
 import { cssEscape } from '../lib/css.ts';
 import { nextRouteId, type NavKey } from '../lib/list-nav.ts';
 import {
@@ -461,6 +463,7 @@ function RouteCard({
   onFocusCard: (id: string) => void;
   onHover: (id: string | null) => void;
 }) {
+  const units = useUnits();
   const select = () => onSelect(r.id);
   const gain = formatGain(r.elevation_gain_m);
   const owner = contributorName(r.owner_name);
@@ -514,7 +517,7 @@ function RouteCard({
             {r.name}
           </span>
           <span className="flex-none whitespace-nowrap font-mono text-[12px] text-text-2">
-            {r.distance_km} km
+            {formatDistance(r.distance_km, units)}
             {/* §H: total climb paired with distance, mono; muted so distance leads.
                 The · and ◺ are decorative — AT hears "climb" instead. */}
             {gain && (
@@ -536,7 +539,7 @@ function RouteCard({
           )}
           {nearKm != null && (
             <span className="text-[12px] text-muted">
-              · {nearKm.toFixed(1)} km away
+              · {formatDistance(nearKm, units, 1)} away
             </span>
           )}
         </div>

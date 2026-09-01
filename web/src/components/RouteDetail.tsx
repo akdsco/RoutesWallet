@@ -3,6 +3,8 @@ import type { Route } from '../types.ts';
 import { routeThumbnail } from '../lib/thumbnail.ts';
 import { sourceShortLabel, isGpxLink, openLabel } from '../lib/links.ts';
 import { formatGain } from '../lib/format.ts';
+import { formatDistance } from '../lib/units.ts';
+import { useUnits } from '../lib/units-context.ts';
 import { safeHref } from '../lib/sanitize.ts';
 import { ContributorByline } from './ContributorByline.tsx';
 import { SourceBadge } from './SourceBadge.tsx';
@@ -35,6 +37,7 @@ export function RouteDetail({
 }: Props) {
   const pts = routeThumbnail(r.geometry.coordinates, 150, 104, 10);
   const [sx, sy] = (pts.split(' ')[0] ?? '0,0').split(',');
+  const units = useUnits();
   const gain = formatGain(r.elevation_gain_m);
 
   return (
@@ -90,7 +93,7 @@ export function RouteDetail({
           </h3>
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="font-mono text-[14px] text-text">
-              {r.distance_km} km
+              {formatDistance(r.distance_km, units)}
             </span>
             {/* §H: total climb paired with distance, mono (shown only when known). */}
             {gain && (
@@ -108,7 +111,7 @@ export function RouteDetail({
                 <span className="text-[12.5px] text-muted">
                   {r.region}
                   {nearKm != null &&
-                    `${r.region ? ' · ' : ''}${nearKm.toFixed(1)} km away`}
+                    `${r.region ? ' · ' : ''}${formatDistance(nearKm, units, 1)} away`}
                 </span>
               </>
             )}

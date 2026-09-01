@@ -1,63 +1,30 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ConnectStrava } from './ConnectStrava.tsx';
 
-function setUrl(search: string) {
-  window.history.replaceState({}, '', `/${search}`);
-}
+const OUT = { signedIn: false } as const;
+const IN = { signedIn: true, athleteId: 9, name: 'Jo' } as const;
 
 describe('ConnectStrava', () => {
-  beforeEach(() => {
-    window.localStorage.clear();
-    setUrl('');
-    vi.stubEnv('VITE_STRAVA_CLIENT_ID', 'CID123');
-  });
-  afterEach(() => vi.unstubAllEnvs());
-
-  it('renders a Strava authorize link with the callback redirect + route scope', () => {
-    render(<ConnectStrava />);
-    const link = screen.getByRole('link');
-    const url = new URL(link.getAttribute('href')!);
-    expect(url.origin + url.pathname).toBe(
-      'https://www.strava.com/oauth/authorize'
-    );
-    expect(url.searchParams.get('client_id')).toBe('CID123');
-    expect(url.searchParams.get('scope')).toBe('read,activity:read_all');
-    expect(url.searchParams.get('redirect_uri')).toContain('/connect/callback');
+  it('offers a Connect CTA that starts the server-side OAuth flow', () => {
+    render(<ConnectStrava session={OUT} banner={null} />);
+    const link = screen.getByRole('link', { name: /connect with strava/i });
+    expect(link).toHaveAttribute('href', '/connect/start');
+    expect(screen.getByText(/only read your routes/i)).toBeVisible();
   });
 
-  it('falls back to the committed default client id when no env override is set', () => {
-    // Cloudflare Pages [vars] don't reach the Vite build, so the public client id
-    // is committed as a default; an env var overrides it when present.
-    vi.stubEnv('VITE_STRAVA_CLIENT_ID', '');
-    render(<ConnectStrava />);
-    const url = new URL(screen.getByRole('link').getAttribute('href')!);
-    expect(url.searchParams.get('client_id')).toBe('136750');
+  it.each([
+    ['denied', /cancel/i],
+    ['scope', /route access/i],
+    ['error', /went wrong/i],
+    ['unavailable', /temporarily unavailable/i],
+  ] as const)('shows the %s banner from the callback', (banner, copy) => {
+    render(<ConnectStrava session={OUT} banner={banner} />);
+    expect(screen.getByRole('status')).toHaveTextContent(copy);
   });
 
-  it('relabels the CTA once this browser has already contributed', () => {
-    render(<ConnectStrava />);
-    expect(screen.getByRole('link')).toHaveTextContent(/connect strava/i);
-    // A prior successful connect leaves the browser flag set.
-    window.localStorage.setItem('rw:strava-contributed', '1');
-    screen.getByRole('link'); // sanity: still one link
-    render(<ConnectStrava />);
-    expect(screen.getAllByRole('link').at(-1)).toHaveTextContent(
-      /add more from strava/i
-    );
-  });
-
-  it('shows a success status and sets the contributed flag on connect=ok', () => {
-    setUrl('?connect=ok&added=4');
-    render(<ConnectStrava />);
-    expect(screen.getByRole('status')).toHaveTextContent(/club pool/i);
-    expect(window.localStorage.getItem('rw:strava-contributed')).toBe('1');
-  });
-
-  it('shows a failure status without marking contributed on connect=error', () => {
-    setUrl('?connect=error');
-    render(<ConnectStrava />);
-    expect(screen.getByRole('status')).toHaveTextContent(/went wrong/i);
-    expect(window.localStorage.getItem('rw:strava-contributed')).toBeNull();
+  it('renders nothing when signed in (avatar + panel own that UI)', () => {
+    const { container } = render(<ConnectStrava session={IN} banner={null} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
