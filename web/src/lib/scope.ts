@@ -11,3 +11,11 @@ export function scopeRoutes(routes: Route[], ownerId: string | null): Route[] {
   if (ownerId === null) return routes;
   return routes.filter((r) => r.owner_strava_id === ownerId);
 }
+
+/** How many pool routes belong to the athlete — the Settings "N of yours" line. */
+export function ownedCount(routes: Route[], ownerId: string): number {
+  return routes.reduce(
+    (n, r) => (r.owner_strava_id === ownerId ? n + 1 : n),
+    0
+  );
+}
